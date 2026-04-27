@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+@theme {
+  /* Gray Scale */
+  --color-gray-50: #F8F9FA;
+  --color-gray-100: #F1F2F4;
+  --color-gray-200: #D1D5DB;
+  --color-gray-300: #B3B8C2;
+  --color-gray-400: #9DA4B0;
+  --color-gray-500: #8E94A3;
+  --color-gray-600: #717684;
+  --color-gray-700: #4B4E59;
+  --color-gray-800: #373A41;
+  --color-gray-900: #1C1E23;
+
+  /* Primary */
+  --color-primary-100: #EEF0FF;
+  --color-primary-200: #D2D6FF;
+  --color-primary-300: #A5ACFF;
+  --color-primary-400: #838BFF;
+  --color-primary-500: #5D5FEF;
+  --color-primary-600: #4A4CD9;
+  --color-primary-700: #3739B3;
+  --color-primary-800: #26288C;
+  --color-primary-900: #10113B;
+
+  /* Secondary */
+  --color-secondary-100: #FFF0EB;
+  --color-secondary-200: #FFD9CC;
+  --color-secondary-300: #FFB399;
+  --color-secondary-400: #FF8C66;
+  --color-secondary-500: #FF6B3D;
+  --color-secondary-600: #E65A2E;
+  --color-secondary-700: #B34624;
+  --color-secondary-800: #80321A;
+  --color-secondary-900: #4D1E10;
+
+  /* Success */
+  --color-success-100: #E7F7ED;
+  --color-success-200: #CEF0DB;
+  --color-success-300: #9DE0B7;
+  --color-success-400: #6CD193;
+  --color-success-500: #27AE60;
+  --color-success-600: #219653;
+  --color-success-700: #19703E;
+  --color-success-800: #114D2B;
+  --color-success-900: #082615;
+  --color-success: #27AE60;
+
+  /* Warning */
+  --color-warning-100: #FFF5E9;
+  --color-warning-200: #FFEBCC;
+  --color-warning-300: #FFD699;
+  --color-warning-400: #FFC266;
+  --color-warning-500: #F2994A;
+  --color-warning-600: #D98942;
+  --color-warning-700: #A66932;
+  --color-warning-800: #734923;
+  --color-warning-900: #402914;
+  --color-warning: #F2994A;
+
+  /* Danger */
+  --color-danger-100: #FEEFF0;
+  --color-danger-200: #FCD9DB;
+  --color-danger-300: #F9B3B7;
+  --color-danger-400: #F68D93;
+  --color-danger-500: #EB5757;
+  --color-danger-600: #D14D4D;
+  --color-danger-700: #9E3A3A;
+  --color-danger-800: #6B2727;
+  --color-danger-900: #381414;
+  --color-danger: #EB5757;
+
+  /* Fonts */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui;
+  --font-logo: "Fortusnova", serif;
+  --font-general: "General Sans", sans-serif;
+}
+
+/* 🔤 Font Face Definitions */
+@font-face {
+  font-family: "Fortusnova";
+  src: url("/fonts/CFFortusnovaDemo.otf") format("opentype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "General Sans";
+  src: url("/fonts/GeneralSans-Regular.otf") format("opentype");
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    /* Primary - Tone xanh tím chủ đạo */
+    --primary-500: #5d5fef;
+    --primary-600: #4a4cd9;
+    --primary-700: #3739b3;
+
+    /* Secondary - Tone cam/nâu ấm */
+    --secondary-500: #ff6b3d;
+
+    /* Gray Scale - Cho text và border */
+    --gray-900: #1c1e23;
+    --gray-500: #8e94a3;
+    --gray-100: #f1f2f4;
+
+    /* Status Colors */
+    --success-500: #27ae60;
+    --warning-500: #f2994a;
+    --danger-500: #eb5757;
+  }
+  h1 {
+    @apply font-sans text-4xl font-bold tracking-tight text-gray-900;
+  }
+  h2 {
+    @apply font-sans text-2xl font-semibold text-gray-900;
+  }
+  p {
+    @apply font-sans text-base text-gray-500 leading-relaxed;
+  }
+}
+
+/* 🎨 Explicit font class rules */
+@layer components {
+  .font-logo {
+    @apply font-['Fortusnova'];
+  }
+
+  .font-general {
+    @apply font-['General_Sans'];
+  }
+}
