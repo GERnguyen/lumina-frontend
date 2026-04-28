@@ -21,9 +21,9 @@ const RegisterPage = () => {
         <form action="" className="flex flex-col gap-2 justify-between w-[50%]">
            <h1 className="text-center mb-4">Create your account</h1> 
            <Input label="Name" placeholder="Enter your name"></Input>
-           <Input label="Email" placeholder="Enter your email"></Input>
-           <Input label="Password" placeholder="Enter your password"></Input>
-           <Input label="Confirm Password" placeholder="Enter your confirm password"></Input>
+           <Input label="Email" placeholder="Enter your email" type='email'></Input>
+           <Input label="Password" placeholder="Enter your password" type='password'></Input>
+           <Input label="Confirm Password" placeholder="Enter your confirm password" type='password'></Input>
            <Button content="Create Account"></Button>
            
         </form>

@@ -9,7 +9,7 @@ interface CheckboxProps extends InputHTMLAttributes<HTMLInputElement> {
   // Nên có children để linh hoạt hơn content
 }
 
-const InputCheckBox = ({
+const CheckBox = ({
   label,
   errorMessage,
   className,
@@ -89,4 +89,4 @@ const InputCheckBox = ({
     </div>
   );
 };
-export default InputCheckBox;
+export default CheckBox;

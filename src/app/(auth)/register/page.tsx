@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Input, Button, InputCheckBox } from "@/components/ui";
+import { Input, Button, CheckBox } from "@/components/ui";
 
 const RegisterPage = () => {
   return (
@@ -27,7 +27,7 @@ const RegisterPage = () => {
              <Input label="Confirm Password" placeholder="Enter your confirm password"></Input>
            </div>
            <div className="flex items-center justify-between mt-5">
-              <InputCheckBox label="I Agree with all of your Terms & Conditions"></InputCheckBox>
+              <CheckBox label="I Agree with all of your Terms & Conditions"></CheckBox>
              <Button content="Create Account"></Button>
            </div>
            
