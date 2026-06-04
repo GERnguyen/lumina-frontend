@@ -1,12 +1,24 @@
-import { Inter } from "next/font/google";
+import { Manrope } from "next/font/google";
+import type { Metadata } from "next";
 import "@/styles/globals.css";
+import { AppProviders } from "@/components/providers/AppProviders";
 
-// Cấu hình font Inter
-const inter = Inter({
-  subsets: ["latin", "vietnamese"], // Thêm vietnamese để hiển thị tiếng Việt chuẩn
+const manrope = Manrope({
+  subsets: ["latin", "vietnamese"],
   display: "swap",
-  variable: "--font-inter", // Tạo một biến CSS variable để Tailwind dùng
+  variable: "--font-manrope",
 });
+
+export const metadata: Metadata = {
+  title: {
+    default: "Lumina",
+    template: "%s | Lumina",
+  },
+  description:
+    "Lumina is an online learning platform for discovering courses, learning with interactive lessons, and managing instructor content.",
+  applicationName: "Lumina",
+  metadataBase: new URL("https://shiny.id.vn"),
+};
 
 export default function RootLayout({
   children,
@@ -14,8 +26,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="vi" className={inter.variable} suppressHydrationWarning>
-      <body className="font-sans">{children}</body>
+    <html lang="vi" className={manrope.variable} suppressHydrationWarning>
+      <body className="font-sans antialiased">
+        <AppProviders>{children}</AppProviders>
+      </body>
     </html>
   );
 }

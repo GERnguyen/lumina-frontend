@@ -1,5 +1,6 @@
 import React from "react";
 import { ButtonHTMLAttributes, ReactNode } from "react";
+import { LoaderCircle } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -26,7 +27,7 @@ const Button = ({
   ...props
 }: ButtonProps) => {
   const variants = {
-    primary: "bg-primary-500 text-white hover:bg-primary-600",
+    primary: "bg-indigo-500 text-white hover:bg-indigo-600",
     secondary: "bg-secondary-500 text-white hover:bg-secondary-600",
     success: "bg-success text-white hover:bg-success/90",
     warning: "bg-warning text-white hover:bg-warning/90",
@@ -55,10 +56,7 @@ const Button = ({
       {/* Hiển thị Icon Loading nếu đang xử lý */}
       {isLoading && (
         <span className="mr-2 animate-spin">
-          {/* Em có thể dùng icon từ Lucide-react hoặc svg xoay ở đây */}
-          <svg className="w-4 h-4" viewBox="0 0 24 24">
-            ...
-          </svg>
+          <LoaderCircle className="size-4" />
         </span>
       )}
 

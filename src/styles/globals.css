@@ -1,80 +1,96 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/forms";
 
 @theme {
   /* Gray Scale */
-  --color-gray-50: #F8F9FA;
-  --color-gray-100: #F1F2F4;
-  --color-gray-200: #D1D5DB;
-  --color-gray-300: #B3B8C2;
-  --color-gray-400: #9DA4B0;
-  --color-gray-500: #8E94A3;
+  --color-gray-50: #f8f9fa;
+  --color-gray-100: #f1f2f4;
+  --color-gray-200: #d1d5db;
+  --color-gray-300: #b3b8c2;
+  --color-gray-400: #9da4b0;
+  --color-gray-500: #8e94a3;
   --color-gray-600: #717684;
-  --color-gray-700: #4B4E59;
-  --color-gray-800: #373A41;
-  --color-gray-900: #1C1E23;
+  --color-gray-700: #4b4e59;
+  --color-gray-800: #373a41;
+  --color-gray-900: #1c1e23;
 
   /* Primary */
-  --color-primary-100: #EEF0FF;
-  --color-primary-200: #D2D6FF;
-  --color-primary-300: #A5ACFF;
-  --color-primary-400: #838BFF;
-  --color-primary-500: #5D5FEF;
-  --color-primary-600: #4A4CD9;
-  --color-primary-700: #3739B3;
-  --color-primary-800: #26288C;
-  --color-primary-900: #10113B;
+  --color-primary-50: #f5f7ff;
+  --color-primary-100: #eef0ff;
+  --color-primary-200: #d2d6ff;
+  --color-primary-300: #a5acff;
+  --color-primary-400: #838bff;
+  --color-primary-500: #5d5fef;
+  --color-primary-600: #4a4cd9;
+  --color-primary-700: #3739b3;
+  --color-primary-800: #26288c;
+  --color-primary-900: #10113b;
+  --color-primary-950: #080824;
 
   /* Secondary */
-  --color-secondary-100: #FFF0EB;
-  --color-secondary-200: #FFD9CC;
-  --color-secondary-300: #FFB399;
-  --color-secondary-400: #FF8C66;
-  --color-secondary-500: #FF6B3D;
-  --color-secondary-600: #E65A2E;
-  --color-secondary-700: #B34624;
-  --color-secondary-800: #80321A;
-  --color-secondary-900: #4D1E10;
+  --color-secondary-100: #fff0eb;
+  --color-secondary-200: #ffd9cc;
+  --color-secondary-300: #ffb399;
+  --color-secondary-400: #ff8c66;
+  --color-secondary-500: #ff6b3d;
+  --color-secondary-600: #e65a2e;
+  --color-secondary-700: #b34624;
+  --color-secondary-800: #80321a;
+  --color-secondary-900: #4d1e10;
 
   /* Success */
-  --color-success-100: #E7F7ED;
-  --color-success-200: #CEF0DB;
-  --color-success-300: #9DE0B7;
-  --color-success-400: #6CD193;
-  --color-success-500: #27AE60;
+  --color-success-100: #e7f7ed;
+  --color-success-200: #cef0db;
+  --color-success-300: #9de0b7;
+  --color-success-400: #6cd193;
+  --color-success-500: #27ae60;
   --color-success-600: #219653;
-  --color-success-700: #19703E;
-  --color-success-800: #114D2B;
+  --color-success-700: #19703e;
+  --color-success-800: #114d2b;
   --color-success-900: #082615;
-  --color-success: #27AE60;
+  --color-success: #27ae60;
 
   /* Warning */
-  --color-warning-100: #FFF5E9;
-  --color-warning-200: #FFEBCC;
-  --color-warning-300: #FFD699;
-  --color-warning-400: #FFC266;
-  --color-warning-500: #F2994A;
-  --color-warning-600: #D98942;
-  --color-warning-700: #A66932;
+  --color-warning-100: #fff5e9;
+  --color-warning-200: #ffebcc;
+  --color-warning-300: #ffd699;
+  --color-warning-400: #ffc266;
+  --color-warning-500: #f2994a;
+  --color-warning-600: #d98942;
+  --color-warning-700: #a66932;
   --color-warning-800: #734923;
   --color-warning-900: #402914;
-  --color-warning: #F2994A;
+  --color-warning: #f2994a;
 
   /* Danger */
-  --color-danger-100: #FEEFF0;
-  --color-danger-200: #FCD9DB;
-  --color-danger-300: #F9B3B7;
-  --color-danger-400: #F68D93;
-  --color-danger-500: #EB5757;
-  --color-danger-600: #D14D4D;
-  --color-danger-700: #9E3A3A;
-  --color-danger-800: #6B2727;
+  --color-danger-100: #feeff0;
+  --color-danger-200: #fcd9db;
+  --color-danger-300: #f9b3b7;
+  --color-danger-400: #f68d93;
+  --color-danger-500: #eb5757;
+  --color-danger-600: #d14d4d;
+  --color-danger-700: #9e3a3a;
+  --color-danger-800: #6b2727;
   --color-danger-900: #381414;
-  --color-danger: #EB5757;
+  --color-danger: #eb5757;
 
   /* Fonts */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui;
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui;
   --font-logo: "Fortusnova", serif;
   --font-general: "General Sans", sans-serif;
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-focus: var(--primary-focus);
+  --color-primary-active: var(--primary-active);
+  --color-primary-checked: var(--primary-checked);
+
+  --color-layer: var(--layer);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted-foreground-1: var(--muted-foreground-1);
 }
 
 /* 🔤 Font Face Definitions */
@@ -87,6 +103,21 @@
 @font-face {
   font-family: "General Sans";
   src: url("/fonts/GeneralSans-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "General Sans";
+  src: url("/general-sans/GeneralSans-Semibold.otf") format("opentype");
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "General Sans";
+  src: url("/general-sans/GeneralSans-Bold.otf") format("opentype");
+  font-weight: 700;
   font-display: swap;
 }
 
@@ -121,6 +152,15 @@
   }
 }
 
+@layer utilities {
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
 /* 🎨 Explicit font class rules */
 @layer components {
   .font-logo {
@@ -131,3 +171,5 @@
     @apply font-['General_Sans'];
   }
 }
+
+@import "./themes/theme.css";
