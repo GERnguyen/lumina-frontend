@@ -1,0 +1,122 @@
+{
+  "services": [
+    {
+      "name": "auth",
+      "input": "https://api.shiny.id.vn/v3/api-docs/auth",
+      "typesDir": "src/types/auth",
+      "servicesDir": "src/services/auth",
+      "typesImport": "@/types",
+      "sharedImport": "@/types",
+      "axiosImport": "@/lib/axios",
+      "axiosClientName": "api",
+      "axiosClientImport": "named",
+      "paramsStyle": "object",
+      "enumStyle": "union"
+    },
+    {
+      "name": "cart",
+      "input": "https://api.shiny.id.vn/v3/api-docs/cart",
+      "typesDir": "src/types/cart",
+      "servicesDir": "src/services/cart",
+      "typesImport": "@/types",
+      "sharedImport": "@/types",
+      "axiosImport": "@/lib/axios",
+      "axiosClientName": "api",
+      "axiosClientImport": "named",
+      "paramsStyle": "object",
+      "enumStyle": "union"
+    },
+    {
+      "name": "user",
+      "input": "https://api.shiny.id.vn/v3/api-docs/user",
+      "typesDir": "src/types/user",
+      "servicesDir": "src/services/user",
+      "typesImport": "@/types",
+      "sharedImport": "@/types",
+      "axiosImport": "@/lib/axios",
+      "axiosClientName": "api",
+      "axiosClientImport": "named",
+      "paramsStyle": "object",
+      "enumStyle": "union"
+    },
+    {
+      "name": "course",
+      "input": "https://api.shiny.id.vn/v3/api-docs/course",
+      "typesDir": "src/types/course",
+      "servicesDir": "src/services/course",
+      "typesImport": "@/types",
+      "sharedImport": "@/types",
+      "axiosImport": "@/lib/axios",
+      "axiosClientName": "api",
+      "axiosClientImport": "named",
+      "paramsStyle": "object",
+      "enumStyle": "union"
+    },
+    {
+      "name": "learning",
+      "input": "https://api.shiny.id.vn/v3/api-docs/learning",
+      "typesDir": "src/types/learning",
+      "servicesDir": "src/services/learning",
+      "typesImport": "@/types",
+      "sharedImport": "@/types",
+      "axiosImport": "@/lib/axios",
+      "axiosClientName": "api",
+      "axiosClientImport": "named",
+      "paramsStyle": "object",
+      "enumStyle": "union"
+    },
+    {
+      "name": "enrollment",
+      "input": "https://api.shiny.id.vn/v3/api-docs/enrollment",
+      "typesDir": "src/types/enrollment",
+      "servicesDir": "src/services/enrollment",
+      "typesImport": "@/types",
+      "sharedImport": "@/types",
+      "axiosImport": "@/lib/axios",
+      "axiosClientName": "api",
+      "axiosClientImport": "named",
+      "paramsStyle": "object",
+      "enumStyle": "union"
+    },
+    {
+      "name": "notification",
+      "input": "https://api.shiny.id.vn/v3/api-docs/notification",
+      "typesDir": "src/types/notification",
+      "servicesDir": "src/services/notification",
+      "typesImport": "@/types",
+      "sharedImport": "@/types",
+      "axiosImport": "@/lib/axios",
+      "axiosClientName": "api",
+      "axiosClientImport": "named",
+      "paramsStyle": "object",
+      "enumStyle": "union"
+    },
+    {
+      "name": "payment",
+      "input": "https://api.shiny.id.vn/v3/api-docs/payment",
+      "typesDir": "src/types/payment",
+      "servicesDir": "src/services/payment",
+      "typesImport": "@/types",
+      "sharedImport": "@/types",
+      "axiosImport": "@/lib/axios",
+      "axiosClientName": "api",
+      "axiosClientImport": "named",
+      "paramsStyle": "object",
+      "enumStyle": "union"
+    },
+    {
+      "name": "social",
+      "input": "https://api.shiny.id.vn/v3/api-docs/social",
+      "typesDir": "src/types/social",
+      "servicesDir": "src/services/social",
+      "typesImport": "@/types",
+      "sharedImport": "@/types",
+      "axiosImport": "@/lib/axios",
+      "axiosClientName": "api",
+      "axiosClientImport": "named",
+      "paramsStyle": "object",
+      "enumStyle": "union"
+    }
+  ],
+  "watchInterval": 3000
+}
