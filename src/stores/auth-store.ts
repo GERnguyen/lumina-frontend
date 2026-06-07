@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import type { UserDto } from "@/api/generated/user";
+import type { UserDto } from "@/types";
 
 type AuthTokens = {
   accessToken?: string;
