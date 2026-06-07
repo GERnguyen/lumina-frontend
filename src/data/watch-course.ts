@@ -43,7 +43,7 @@ export type WatchCourseData = {
   tabs: Array<{ label: string; badge?: string }>;
   description: string[];
   notes: string[];
-  attachment: {
+  attachment?: {
     name: string;
     size: string;
   };

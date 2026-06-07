@@ -8,7 +8,7 @@ import { WatchLessonContent } from "./WatchLessonContent";
 import { WatchLessonTabs } from "./WatchLessonTabs";
 import { WatchVideoPlayer } from "./WatchVideoPlayer";
 
-export function WatchCoursePage({ course, isFallback }: { course: WatchCourseData; isFallback?: boolean }) {
+export function WatchCoursePage({ course }: { course: WatchCourseData }) {
   return (
     <main className="min-h-screen bg-white">
       <CoursesTopNav />
@@ -19,11 +19,6 @@ export function WatchCoursePage({ course, isFallback }: { course: WatchCourseDat
           <WatchVideoPlayer course={course} />
           <div className="mt-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              {isFallback ? (
-                <span className="mb-3 inline-flex rounded-full bg-[#FFF4E5] px-3 py-1 text-xs font-semibold text-[#B85C00]">
-                  Mock fallback
-                </span>
-              ) : null}
               <h1 className="text-[32px] font-semibold leading-10 text-[#1D2026]">{course.currentLesson}</h1>
             </div>
             <div className="flex shrink-0 gap-6 text-sm text-[#6E7485]">

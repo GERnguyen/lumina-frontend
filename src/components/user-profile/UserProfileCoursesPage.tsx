@@ -6,7 +6,7 @@ import { UserProfileCoursesPagination } from "./UserProfileCoursesPagination";
 import { UserProfileHero } from "./UserProfileHero";
 import { UserProfileTopNav } from "./UserProfileTopNav";
 
-export function UserProfileCoursesPage({ coursesPage, isFallback }: { coursesPage: UserProfileCoursesData; isFallback?: boolean }) {
+export function UserProfileCoursesPage({ coursesPage }: { coursesPage: UserProfileCoursesData }) {
   return (
     <main className="min-h-screen bg-white">
       <UserProfileTopNav avatar={coursesPage.user.avatar} />
@@ -18,11 +18,6 @@ export function UserProfileCoursesPage({ coursesPage, isFallback }: { coursesPag
             <h2 className="text-2xl font-semibold tracking-normal text-[#1D2026]">
               Courses <span className="font-normal">({coursesPage.totalCourses})</span>
             </h2>
-            {isFallback ? (
-              <span className="rounded-full bg-[#FFF4E5] px-3 py-1 text-xs font-semibold text-[#B85C00]">
-                Mock fallback
-              </span>
-            ) : null}
           </div>
 
           <div className="mt-6">

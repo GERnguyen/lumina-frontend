@@ -12,7 +12,7 @@ export function LandingNavbar() {
 
       <nav className="hidden items-center gap-10 rounded-full px-8 py-3 text-base font-normal text-[#272F3A] md:flex">
         {landingNavItems.map((item) => (
-          <Link key={item.href} href={item.href} className="transition hover:text-[#0066FF]">
+          <Link key={item.label} href={item.href} className="transition hover:text-[#0066FF]">
             {item.label}
           </Link>
         ))}

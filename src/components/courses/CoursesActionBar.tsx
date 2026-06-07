@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronDown, SlidersHorizontal, Search } from "lucide-react";
 import { courseSuggestions } from "@/data/courses";
-import type { CourseCatalogFilters } from "@/services/course-catalog-service";
+import type { CourseCatalogFilters } from "@/types";
 
 const sortOptions = [
   { label: "Newest", value: "createdAt,desc" },
@@ -13,11 +13,10 @@ const sortOptions = [
 type CoursesActionBarProps = {
   filters: CourseCatalogFilters;
   totalElements: number;
-  isFallback: boolean;
   queryString: (updates: Partial<CourseCatalogFilters>) => string;
 };
 
-export function CoursesActionBar({ filters, totalElements, isFallback, queryString }: CoursesActionBarProps) {
+export function CoursesActionBar({ filters, totalElements, queryString }: CoursesActionBarProps) {
   const activeFilters = [filters.categoryId, filters.query, filters.rating, filters.priceFrom, filters.priceTo].filter(Boolean).length;
   const searchLabel = filters.query || "all courses";
 
@@ -85,7 +84,6 @@ export function CoursesActionBar({ filters, totalElements, isFallback, queryStri
         <p className="text-sm tracking-[-0.14px] text-[#4E5566]">
           <strong className="font-medium text-[#1D2026]">{new Intl.NumberFormat("en-US").format(totalElements)}</strong>{" "}
           results found for <span>&quot;{searchLabel}&quot;</span>
-          {isFallback ? <span className="ml-2 text-xs text-[#8C94A3]">(mock fallback)</span> : null}
         </p>
       </div>
     </section>

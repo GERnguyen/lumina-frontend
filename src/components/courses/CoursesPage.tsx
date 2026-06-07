@@ -1,11 +1,78 @@
-import type { CourseCatalogFilters } from "@/services/course-catalog-service";
-import { getCourseCatalog, getCourseCategories } from "@/services/course-catalog-service";
+import type { CourseCatalogFilters, CourseCategoryFilter, CourseResponse, CategoryResponse } from "@/types";
+import { CourseService, CategoryService } from "@/services/courseService";
 import { CourseListingCard } from "./CourseListingCard";
 import { CoursesActionBar } from "./CoursesActionBar";
 import { CoursesFilterSidebar } from "./CoursesFilterSidebar";
 import { CoursesFooter } from "./CoursesFooter";
 import { CoursesPagination } from "./CoursesPagination";
 import { CoursesTopNav } from "./CoursesTopNav";
+import { money, compactNumber, formatDuration } from "@/lib/format";
+
+function firstImage(course: CourseResponse) {
+  return course.images?.[0]?.imageUrl || "/courses/course-01.png";
+}
+
+function mapCourseResponseToCatalogItem(course: CourseResponse) {
+  const image = firstImage(course);
+  const category = course.category?.name || "Software Dev";
+  const discounted = course.discountedPrice ?? course.price;
+  const original = course.discountedPrice && course.price && course.discountedPrice < course.price ? money(course.price) : undefined;
+
+  return {
+    id: course.id,
+    title: course.title || "Untitled course",
+    image,
+    category,
+    price: money(discounted),
+    originalPrice: original,
+    rating: typeof course.rating === "number" ? course.rating.toFixed(1) : "0.0",
+    students: compactNumber(course.enrollmentCount),
+    instructor: course.instructor?.name,
+    duration: formatDuration(course.duration),
+    badgeTone: "purple" as const,
+    href: course.id ? `/courses/${course.id}` : "/courses",
+  };
+}
+
+async function getCourseCatalog(filters: CourseCatalogFilters) {
+  try {
+    const payload = await CourseService.getAllCourses(filters);
+    if (!payload?.data) {
+      return {
+        courses: [],
+        meta: { page: filters.page || 1, limit: filters.size || 9, totalElements: 0, totalPages: 1 },
+      };
+    }
+
+    return {
+      courses: payload.data.map(mapCourseResponseToCatalogItem),
+      meta: payload.meta || {
+        page: filters.page,
+        limit: filters.size,
+        totalElements: payload.data.length,
+        totalPages: 1,
+      },
+    };
+  } catch {
+    return {
+      courses: [],
+      meta: { page: filters.page || 1, limit: filters.size || 9, totalElements: 0, totalPages: 1 },
+    };
+  }
+}
+
+async function getCourseCategories(): Promise<CourseCategoryFilter[]> {
+  try {
+    const payload = await CategoryService.getAllCategories();
+    return payload?.data?.map((category: CategoryResponse) => ({
+      id: category.id || "",
+      label: category.name || "Untitled",
+      count: "Live",
+    })).filter((category) => category.id && category.label) || [];
+  } catch {
+    return [];
+  }
+}
 
 type CoursesPageProps = {
   filters: CourseCatalogFilters;
@@ -44,7 +111,7 @@ export async function CoursesPage({ filters }: CoursesPageProps) {
     <main className="min-h-screen bg-white">
       <CoursesTopNav />
       <section className="mx-auto flex max-w-[1320px] flex-col gap-10 px-5 pb-10 pt-10 sm:px-8">
-        <CoursesActionBar filters={filters} totalElements={totalElements} isFallback={catalog.isFallback} queryString={queryString} />
+        <CoursesActionBar filters={filters} totalElements={totalElements} queryString={queryString} />
         <div className="flex gap-6">
           <CoursesFilterSidebar categories={categories} filters={filters} queryString={queryString} />
           <div className="flex flex-1 flex-col gap-10">

@@ -10,11 +10,11 @@ import { CourseOverview } from "./CourseOverview";
 import { CoursePurchaseCard } from "./CoursePurchaseCard";
 import { CourseReviews } from "./CourseReviews";
 
-export function CourseDetailPage({ course, isFallback }: { course: CourseDetail; isFallback?: boolean }) {
+export function CourseDetailPage({ course }: { course: CourseDetail }) {
   return (
     <main className="min-h-screen bg-white">
       <CoursesTopNav />
-      <CourseDetailHeader course={course} isFallback={isFallback} />
+      <CourseDetailHeader course={course} />
 
       <section className="px-6 pb-16 lg:px-8">
         <div className="mx-auto grid max-w-[1320px] gap-10 lg:grid-cols-[minmax(0,872px)_424px] lg:items-start">

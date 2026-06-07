@@ -12,12 +12,35 @@ import {
   Select,
   FileUpload,
 } from "@/components/ui";
-import type { RegisterRequest } from "@/api/generated/auth";
-import { register, uploadInstructorCv } from "@/services/auth-service";
+import axios from "axios";
+import type { RegisterRequest } from "@/types";
+import { AuthService, PresignedUrlService } from "@/services";
 import { getErrorMessage } from "@/lib/errors";
 
 type RegisterRole = NonNullable<RegisterRequest["role"]>;
 type RegisterGender = NonNullable<RegisterRequest["gender"]>;
+
+async function uploadInstructorCv(file: File) {
+  const response = await PresignedUrlService.getPresignedUrl({
+    fileName: file.name,
+    contentType: file.type || "application/pdf",
+  });
+
+  const presignedUrl = response.data?.presignedUrl;
+  const fileKey = response.data?.fileKey;
+
+  if (!presignedUrl || !fileKey) {
+    throw new Error(response.message || "Could not prepare CV upload");
+  }
+
+  await axios.put(presignedUrl, file, {
+    headers: {
+      "Content-Type": file.type || "application/pdf",
+    },
+  });
+
+  return fileKey;
+}
 
 const RegisterForm = () => {
   const [formData, setFormData] = useState({
@@ -62,16 +85,24 @@ const RegisterForm = () => {
         cvFileKey = await uploadInstructorCv(cvFile);
       }
 
-      return register({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        role: formData.role,
-        gender: formData.gender,
-        phoneNumber: formData.phoneNumber || undefined,
-        bio: formData.bio || undefined,
-        cvFileKey,
+      const res = await AuthService.register({
+        body: {
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          role: formData.role,
+          gender: formData.gender,
+          phoneNumber: formData.phoneNumber || undefined,
+          bio: formData.bio || undefined,
+          cvFileKey,
+        },
       });
+
+      if (res.success === false) {
+        throw new Error(res.message || "Registration failed");
+      }
+
+      return res;
     },
     onSuccess: () => {
       setSuccessMessage(

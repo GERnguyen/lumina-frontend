@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { UserProfileDashboardPage } from "@/components/user-profile/UserProfileDashboardPage";
-import { getUserProfileDashboard } from "@/services/user-profile-service";
+import { getUserProfileDashboard } from "@/components/user-profile/profile-helpers";
 
 export const metadata: Metadata = {
   title: "Dashboard - Lumina",
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-  const { dashboard, isFallback } = await getUserProfileDashboard();
+  const { dashboard } = await getUserProfileDashboard();
 
-  return <UserProfileDashboardPage dashboard={dashboard} isFallback={isFallback} />;
+  return <UserProfileDashboardPage dashboard={dashboard} />;
 }

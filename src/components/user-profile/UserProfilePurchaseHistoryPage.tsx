@@ -6,10 +6,8 @@ import { UserProfileTopNav } from "./UserProfileTopNav";
 
 export function UserProfilePurchaseHistoryPage({
   purchaseHistoryPage,
-  isFallback,
 }: {
   purchaseHistoryPage: UserProfilePurchaseHistoryData;
-  isFallback?: boolean;
 }) {
   return (
     <main className="min-h-screen bg-white">
@@ -20,11 +18,6 @@ export function UserProfilePurchaseHistoryPage({
         <div className="mx-auto max-w-[1320px]">
           <div className="mb-6 flex flex-wrap items-center gap-3">
             <h2 className="text-2xl font-semibold tracking-normal text-[#1D2026]">Purchase History</h2>
-            {isFallback ? (
-              <span className="rounded-full bg-[#FFF4E5] px-3 py-1 text-xs font-semibold text-[#B85C00]">
-                Mock fallback
-              </span>
-            ) : null}
           </div>
 
           <UserProfilePurchaseHistoryList purchases={purchaseHistoryPage.purchases} />

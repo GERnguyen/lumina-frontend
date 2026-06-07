@@ -1,9 +1,7 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactNode, useEffect, useState } from "react";
-import { configureOpenApiClients } from "@/api/configure";
-import { setupHttpInterceptors } from "@/lib/http";
+import { ReactNode, useState } from "react";
 
 export function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -18,11 +16,6 @@ export function AppProviders({ children }: { children: ReactNode }) {
         },
       }),
   );
-
-  useEffect(() => {
-    configureOpenApiClients();
-    setupHttpInterceptors();
-  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>

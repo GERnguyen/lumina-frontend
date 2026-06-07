@@ -6,7 +6,7 @@ import { UserProfileLearningCard } from "./UserProfileLearningCard";
 import { UserProfileStatCard } from "./UserProfileStatCard";
 import { UserProfileTopNav } from "./UserProfileTopNav";
 
-export function UserProfileDashboardPage({ dashboard, isFallback }: { dashboard: UserProfileDashboardData; isFallback?: boolean }) {
+export function UserProfileDashboardPage({ dashboard }: { dashboard: UserProfileDashboardData }) {
   return (
     <main className="min-h-screen bg-white">
       <UserProfileTopNav avatar={dashboard.user.avatar} />
@@ -16,11 +16,6 @@ export function UserProfileDashboardPage({ dashboard, isFallback }: { dashboard:
         <div className="mx-auto max-w-[1320px]">
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-semibold tracking-normal text-[#1D2026]">Dashboard</h2>
-            {isFallback ? (
-              <span className="rounded-full bg-[#FFF4E5] px-3 py-1 text-xs font-semibold text-[#B85C00]">
-                Mock fallback
-              </span>
-            ) : null}
           </div>
 
           <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">

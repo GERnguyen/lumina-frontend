@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { FormEvent, useState } from "react";
-import { Button, Input, Password } from "@/components/ui";
-import { login } from "@/services/auth-service";
+import { Button, Input, Password, Radio } from "@/components/ui";
+import { AuthService } from "@/services";
 import { useAuthStore } from "@/stores/auth-store";
 import { getErrorMessage } from "@/lib/errors";
 
@@ -14,9 +14,16 @@ export default function LoginForm() {
   const setTokens = useAuthStore((state) => state.setTokens);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState<"USER" | "INSTRUCTOR">("USER");
 
   const loginMutation = useMutation({
-    mutationFn: login,
+    mutationFn: async (body: any) => {
+      const res = await AuthService.login({ body });
+      if (!res.success || !res.data) {
+        throw new Error(res.message || "Unable to sign in");
+      }
+      return res.data;
+    },
     onSuccess: (tokens) => {
       setTokens(tokens);
       router.push("/");
@@ -25,7 +32,7 @@ export default function LoginForm() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    loginMutation.mutate({ email, password });
+    loginMutation.mutate({ email, password, role });
   }
 
   const error = loginMutation.error
@@ -47,6 +54,30 @@ export default function LoginForm() {
           {error}
         </div>
       )}
+
+      <div className="flex flex-col">
+        <label className="block mb-2 text-sm font-medium text-foreground">
+          User Type
+        </label>
+        <div className="flex flex-row gap-4">
+          <Radio
+            name="role"
+            value="USER"
+            checked={role === "USER"}
+            onChange={() => setRole("USER")}
+            label="Student"
+            id="USER"
+          />
+          <Radio
+            name="role"
+            value="INSTRUCTOR"
+            checked={role === "INSTRUCTOR"}
+            onChange={() => setRole("INSTRUCTOR")}
+            label="Instructor"
+            id="INSTRUCTOR"
+          />
+        </div>
+      </div>
 
       <Input
         id="email"

@@ -28,23 +28,25 @@ export function WatchLessonContent({ course }: { course: WatchCourseData }) {
         </div>
       </section>
 
-      <section id="attach-file">
-        <h2 className="text-2xl font-semibold text-[#1D2026]">Attach Files (01)</h2>
-        <div className="mt-5 flex items-center justify-between gap-4 bg-[#F5F7FA] p-6">
-          <div className="flex items-center gap-4">
-            <span className="flex size-12 items-center justify-center bg-white text-[#7872FD]">
-              <FileText className="size-6" />
-            </span>
-            <div>
-              <h3 className="text-sm font-semibold text-[#1D2026]">{course.attachment.name}</h3>
-              <p className="text-xs text-[#6E7485]">{course.attachment.size}</p>
+      {course.attachment && (
+        <section id="attach-file">
+          <h2 className="text-2xl font-semibold text-[#1D2026]">Attach Files</h2>
+          <div className="mt-5 flex items-center justify-between gap-4 bg-[#F5F7FA] p-6">
+            <div className="flex items-center gap-4">
+              <span className="flex size-12 items-center justify-center bg-white text-[#7872FD]">
+                <FileText className="size-6" />
+              </span>
+              <div>
+                <h3 className="text-sm font-semibold text-[#1D2026]">{course.attachment.name}</h3>
+                <p className="text-xs text-[#6E7485]">{course.attachment.size}</p>
+              </div>
             </div>
+            <button type="button" className="h-12 rounded-[18px] bg-[#7872FD] px-6 text-sm font-semibold text-white">
+              Download File
+            </button>
           </div>
-          <button type="button" className="h-12 rounded-[18px] bg-[#7872FD] px-6 text-sm font-semibold text-white">
-            Download File
-          </button>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 }

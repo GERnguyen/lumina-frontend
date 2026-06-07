@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { UserProfilePurchaseHistoryPage } from "@/components/user-profile/UserProfilePurchaseHistoryPage";
-import { getUserProfilePurchaseHistory } from "@/services/user-profile-service";
+import { getUserProfilePurchaseHistory } from "@/components/user-profile/profile-helpers";
 
 export const metadata: Metadata = {
   title: "Purchase History - Lumina",
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-  const { purchaseHistoryPage, isFallback } = await getUserProfilePurchaseHistory();
+  const { purchaseHistoryPage } = await getUserProfilePurchaseHistory();
 
-  return <UserProfilePurchaseHistoryPage purchaseHistoryPage={purchaseHistoryPage} isFallback={isFallback} />;
+  return <UserProfilePurchaseHistoryPage purchaseHistoryPage={purchaseHistoryPage} />;
 }

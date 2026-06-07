@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Code2, ChevronDown, Star } from "lucide-react";
 import type { ReactNode } from "react";
-import type { CourseCatalogFilters, CourseCategoryFilter } from "@/services/course-catalog-service";
+import type { CourseCatalogFilters, CourseCategoryFilter } from "@/types";
 import { cn } from "@/lib/utils";
 
 type CoursesFilterSidebarProps = {

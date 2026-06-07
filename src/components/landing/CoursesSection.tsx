@@ -1,9 +1,38 @@
-import { ArrowRight } from "lucide-react";
-import { courseTabs } from "@/data/landing";
+import { ArrowRight, Code2 } from "lucide-react";
+import { courseTabs, type LandingCourse } from "@/data/landing";
 import { LandingButton } from "@/components/ui/LandingButton";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { getLandingCourses } from "@/services/course-service";
 import { CourseCard } from "./CourseCard";
+import type { CourseResponse } from "@/types";
+import { CourseService } from "@/services";
+import { money, compactNumber } from "@/lib/format";
+
+function firstImage(course: CourseResponse) {
+  return course.images?.[0]?.imageUrl || "/landing/figma/course-1.png";
+}
+
+function mapCourseToLandingCourse(course: CourseResponse): LandingCourse {
+  return {
+    id: course.id,
+    title: course.title || "Untitled course",
+    category: course.category?.name || "Software Dev",
+    price: money(course.discountedPrice ?? course.price),
+    image: firstImage(course),
+    students: compactNumber(course.enrollmentCount),
+    rating: typeof course.rating === "number" ? course.rating.toFixed(1) : "5.0",
+    href: course.id ? `/courses/${course.id}` : "/courses",
+    icon: Code2,
+  };
+}
+
+async function getLandingCourses(): Promise<LandingCourse[]> {
+  try {
+    const payload = await CourseService.getAllCourses({ page: 1, size: 8 });
+    return payload.data?.map(mapCourseToLandingCourse).filter((course) => course.title) || [];
+  } catch {
+    return [];
+  }
+}
 
 export async function CoursesSection() {
   const courses = await getLandingCourses();
@@ -32,11 +61,17 @@ export async function CoursesSection() {
           ))}
         </div>
 
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {courses.map((course, index) => (
-            <CourseCard key={`${course.id || course.title}-${index}`} course={course} />
-          ))}
-        </div>
+        {courses.length > 0 ? (
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {courses.map((course, index) => (
+              <CourseCard key={`${course.id || course.title}-${index}`} course={course} />
+            ))}
+          </div>
+        ) : (
+          <div className="mt-10 border border-[#E9EAF0] bg-white px-6 py-14 text-center">
+            <h3 className="text-xl font-semibold text-[#1D2026]">No courses available</h3>
+          </div>
+        )}
 
         <div className="mt-10 flex justify-center">
           <LandingButton href="/courses" rightIcon={<ArrowRight className="size-4" />}>

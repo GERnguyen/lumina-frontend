@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { UserProfileWishlistPage } from "@/components/user-profile/UserProfileWishlistPage";
-import { getUserProfileWishlist } from "@/services/user-profile-service";
+import { getUserProfileWishlist } from "@/components/user-profile/profile-helpers";
 
 export const metadata: Metadata = {
   title: "Wishlist - Lumina",
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-  const { wishlistPage, isFallback } = await getUserProfileWishlist();
+  const { wishlistPage } = await getUserProfileWishlist();
 
-  return <UserProfileWishlistPage wishlistPage={wishlistPage} isFallback={isFallback} />;
+  return <UserProfileWishlistPage wishlistPage={wishlistPage} />;
 }

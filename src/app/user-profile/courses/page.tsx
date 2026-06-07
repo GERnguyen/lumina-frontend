@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { UserProfileCoursesPage } from "@/components/user-profile/UserProfileCoursesPage";
 import type { ProfileCourseFilter } from "@/data/user-profile";
-import { getUserProfileCourses } from "@/services/user-profile-service";
+import { getUserProfileCourses } from "@/components/user-profile/profile-helpers";
 
 type UserProfileCoursesRouteProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -33,7 +33,7 @@ function parseFilters(params: Record<string, string | string[] | undefined>): Pr
 
 export default async function Page({ searchParams }: UserProfileCoursesRouteProps) {
   const params = await searchParams;
-  const { coursesPage, isFallback } = await getUserProfileCourses(parseFilters(params));
+  const { coursesPage } = await getUserProfileCourses(parseFilters(params));
 
-  return <UserProfileCoursesPage coursesPage={coursesPage} isFallback={isFallback} />;
+  return <UserProfileCoursesPage coursesPage={coursesPage} />;
 }
