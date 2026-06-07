@@ -4,14 +4,27 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "swagger-generate": "swagger-ts-codegen --config codegen.config.json",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "openapi:auth": "openapi --input https://shiny.id.vn/v3/api-docs/auth --output src/api/generated/auth --client axios --useOptions --useUnionTypes",
+    "openapi:cart": "openapi --input https://shiny.id.vn/v3/api-docs/cart --output src/api/generated/cart --client axios --useOptions --useUnionTypes",
+    "openapi:course": "openapi --input https://shiny.id.vn/v3/api-docs/course --output src/api/generated/course --client axios --useOptions --useUnionTypes",
+    "openapi:enrollment": "openapi --input https://shiny.id.vn/v3/api-docs/enrollment --output src/api/generated/enrollment --client axios --useOptions --useUnionTypes",
+    "openapi:learning": "openapi --input https://shiny.id.vn/v3/api-docs/learning --output src/api/generated/learning --client axios --useOptions --useUnionTypes",
+    "openapi:notification": "openapi --input https://shiny.id.vn/v3/api-docs/notification --output src/api/generated/notification --client axios --useOptions --useUnionTypes",
+    "openapi:payment": "openapi --input https://shiny.id.vn/v3/api-docs/payment --output src/api/generated/payment --client axios --useOptions --useUnionTypes",
+    "openapi:social": "openapi --input https://shiny.id.vn/v3/api-docs/social --output src/api/generated/social --client axios --useOptions --useUnionTypes",
+    "openapi:user": "openapi --input https://shiny.id.vn/v3/api-docs/user --output src/api/generated/user --client axios --useOptions --useUnionTypes",
+    "openapi:all": "npm run openapi:auth && npm run openapi:cart && npm run openapi:course && npm run openapi:enrollment && npm run openapi:learning && npm run openapi:notification && npm run openapi:payment && npm run openapi:social && npm run openapi:user"
   },
   "dependencies": {
+    "@iamkvnn/swagger-ts-codegen": "^1.0.1",
     "@tanstack/react-query": "^5.100.4",
     "axios": "^1.15.2",
     "clsx": "^2.1.1",
+    "hls.js": "^1.6.16",
     "lucide-react": "^1.11.0",
     "next": "16.2.4",
     "react": "19.2.4",
@@ -22,12 +35,14 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@tailwindcss/forms": "^0.5.11",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
+    "openapi-typescript-codegen": "^0.30.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
