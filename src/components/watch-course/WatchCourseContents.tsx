@@ -22,7 +22,7 @@ export function WatchCourseContents({ course }: { course: WatchCourseData }) {
         <span className="text-base font-semibold text-[#23BD33]">{course.progress}</span>
       </div>
       <div className="mt-4 h-1 bg-[#E9EAF0]">
-        <div className="h-full w-[15%] bg-[#23BD33]" />
+        <div className="h-full bg-[#23BD33]" style={{ width: `${course.progressPercent}%` }} />
       </div>
 
       <div className="mt-6 border border-[#E9EAF0] bg-white">

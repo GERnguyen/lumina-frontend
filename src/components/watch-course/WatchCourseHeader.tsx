@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ArrowLeft, Clock, FileText, PlayCircle } from "lucide-react";
 import type { WatchCourseData } from "@/data/watch-course";
 
+const statIcons = [FileText, PlayCircle, Clock];
+
 export function WatchCourseHeader({ course }: { course: WatchCourseData }) {
   return (
     <section className="border-b border-[#E9EAF0] bg-[#F5F7FA] px-6 py-6 lg:px-8">
@@ -13,18 +15,16 @@ export function WatchCourseHeader({ course }: { course: WatchCourseData }) {
           <div className="min-w-0">
             <h1 className="truncate text-lg font-semibold text-[#1D2026] lg:text-xl">{course.courseTitle}</h1>
             <div className="mt-2 flex flex-wrap gap-5 text-sm text-[#4E5566]">
-              <span className="inline-flex items-center gap-1.5">
-                <FileText className="size-4 text-[#7872FD]" />
-                6 Sections
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <PlayCircle className="size-4 text-[#7872FD]" />
-                202 lectures
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Clock className="size-4 text-[#7872FD]" />
-                19h 37m
-              </span>
+              {course.stats.map((stat, index) => {
+                const Icon = statIcons[index] ?? FileText;
+
+                return (
+                  <span key={stat.label} className="inline-flex items-center gap-1.5">
+                    <Icon className="size-4 text-[#7872FD]" />
+                    {stat.value} {stat.label.toLowerCase()}
+                  </span>
+                );
+              })}
             </div>
           </div>
         </div>

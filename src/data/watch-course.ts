@@ -1,7 +1,9 @@
 export type WatchLecture = {
+  id?: string;
   title: string;
   duration: string;
   status: "done" | "current" | "locked" | "next";
+  type?: "VIDEO" | "ARTICLE" | "QUIZ" | "ASSIGNMENT";
 };
 
 export type WatchSection = {
@@ -24,11 +26,19 @@ export type WatchComment = {
 
 export type WatchCourseData = {
   courseId: string;
+  lessonId?: string;
   courseTitle: string;
   currentLesson: string;
   lastUpdated: string;
   commentsCount: string;
   poster: string;
+  videoUrl?: string;
+  subtitles?: Array<{
+    label: string;
+    src: string;
+    srcLang: string;
+    default?: boolean;
+  }>;
   stats: Array<{ label: string; value: string }>;
   tabs: Array<{ label: string; badge?: string }>;
   description: string[];
@@ -38,6 +48,7 @@ export type WatchCourseData = {
     size: string;
   };
   progress: string;
+  progressPercent: number;
   sections: WatchSection[];
   comments: WatchComment[];
 };
@@ -48,11 +59,13 @@ const commentText =
 export function getWatchCourseData(courseId: string): WatchCourseData {
   return {
     courseId,
+    lessonId: "mock-webflow-sign-up",
     courseTitle: "Complete Website Responsive Design: from Figma to Webflow to Website Design",
     currentLesson: "2. Sign up in Webflow",
     lastUpdated: "Oct 26, 2020",
     commentsCount: "154",
     poster: "/watch-course/video-poster.png",
+    videoUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
     stats: [
       { label: "Sections", value: "6" },
       { label: "Lectures", value: "202" },
@@ -78,6 +91,7 @@ export function getWatchCourseData(courseId: string): WatchCourseData {
       size: "12.6 MB",
     },
     progress: "15% Completed",
+    progressPercent: 15,
     sections: [
       {
         title: "Getting Started",
