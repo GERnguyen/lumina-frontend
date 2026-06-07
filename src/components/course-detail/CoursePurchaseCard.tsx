@@ -34,7 +34,7 @@ export function CoursePurchaseCard({ course }: { course: CourseDetail }) {
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-baseline gap-2">
             <strong className="text-2xl font-semibold text-[#1D2026]">{course.price}</strong>
-            <span className="text-sm text-[#8C94A3] line-through">{course.originalPrice}</span>
+            {course.originalPrice ? <span className="text-sm text-[#8C94A3] line-through">{course.originalPrice}</span> : null}
           </div>
           <span className="rounded-[18px] bg-[#EBEBFF] px-3 py-1 text-xs font-semibold text-[#7872FD]">{course.discount}</span>
         </div>

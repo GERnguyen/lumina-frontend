@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ChevronRight, Star } from "lucide-react";
 import type { CourseDetail } from "@/data/course-detail";
 
-export function CourseDetailHeader({ course }: { course: CourseDetail }) {
+export function CourseDetailHeader({ course, isFallback }: { course: CourseDetail; isFallback?: boolean }) {
   return (
     <section className="bg-white px-6 pb-7 pt-10 lg:px-8">
       <div className="mx-auto max-w-[1320px]">
@@ -22,6 +22,11 @@ export function CourseDetailHeader({ course }: { course: CourseDetail }) {
         </nav>
 
         <div className="mt-4 max-w-[880px]">
+          {isFallback ? (
+            <span className="mb-3 inline-flex rounded-full bg-[#FFF4E5] px-3 py-1 text-xs font-semibold text-[#B85C00]">
+              Mock fallback
+            </span>
+          ) : null}
           <h1 className="max-w-[780px] text-[28px] font-semibold leading-[1.22] tracking-normal text-[#1D2026] md:text-[36px]">
             {course.title}
           </h1>

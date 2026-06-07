@@ -7,10 +7,10 @@ import { OpenAPI as NotificationOpenAPI } from "@/api/generated/notification";
 import { OpenAPI as PaymentOpenAPI } from "@/api/generated/payment";
 import { OpenAPI as SocialOpenAPI } from "@/api/generated/social";
 import { OpenAPI as UserOpenAPI } from "@/api/generated/user";
+import { API_BASE_URL } from "@/lib/api-base";
 import { useAuthStore } from "@/stores/auth-store";
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "https://shiny.id.vn";
+export { API_BASE_URL };
 
 const openApiClients = [
   AuthOpenAPI,

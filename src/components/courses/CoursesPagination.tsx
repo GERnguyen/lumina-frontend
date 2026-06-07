@@ -1,30 +1,51 @@
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-export function CoursesPagination() {
+type CoursesPaginationProps = {
+  currentPage: number;
+  totalPages: number;
+  queryString: (page: number) => string;
+};
+
+export function CoursesPagination({ currentPage, totalPages, queryString }: CoursesPaginationProps) {
+  const visiblePages = Array.from({ length: Math.min(totalPages, 5) }, (_, index) => {
+    if (totalPages <= 5) return index + 1;
+    const start = Math.min(Math.max(currentPage - 2, 1), totalPages - 4);
+    return start + index;
+  });
+
   return (
     <nav className="flex items-center justify-center gap-4" aria-label="Courses pagination">
-      <button className="flex size-12 items-center justify-center rounded-full opacity-50" aria-label="Previous page">
+      <Link
+        href={queryString(Math.max(1, currentPage - 1))}
+        className={cn("flex size-12 items-center justify-center rounded-full", currentPage <= 1 ? "pointer-events-none opacity-40" : "bg-[#F5F5FF] text-[#7872FD]")}
+        aria-label="Previous page"
+      >
         <ArrowLeft className="size-6" />
-      </button>
+      </Link>
       <div className="flex items-center">
-        {["01", "02", "03", "04", "05"].map((page) => (
-          <button
+        {visiblePages.map((page) => (
+          <Link
             key={page}
+            href={queryString(page)}
             className={cn(
               "flex h-12 w-12 items-center justify-center rounded-full text-sm font-medium tracking-[-0.14px]",
-              page === "02" && "bg-[#7872FD] text-white",
-              page === "04" && "bg-[#EBEBFF] text-[#7872FD]",
-              page !== "02" && page !== "04" && "text-[#1D2026]",
+              page === currentPage && "bg-[#7872FD] text-white",
+              page !== currentPage && "text-[#1D2026] hover:bg-[#EBEBFF] hover:text-[#7872FD]",
             )}
           >
-            {page}
-          </button>
+            {String(page).padStart(2, "0")}
+          </Link>
         ))}
       </div>
-      <button className="flex size-12 items-center justify-center rounded-full bg-[#EBEBFF] text-[#7872FD]" aria-label="Next page">
+      <Link
+        href={queryString(Math.min(totalPages, currentPage + 1))}
+        className={cn("flex size-12 items-center justify-center rounded-full bg-[#EBEBFF] text-[#7872FD]", currentPage >= totalPages && "pointer-events-none opacity-40")}
+        aria-label="Next page"
+      >
         <ArrowRight className="size-6" />
-      </button>
+      </Link>
     </nav>
   );
 }

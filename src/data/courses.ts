@@ -13,13 +13,18 @@ import {
 } from "lucide-react";
 
 export type CourseListingItem = {
+  id?: string;
   title: string;
   image: string;
   category: string;
   price: string;
+  originalPrice?: string;
   rating: string;
   students: string;
+  instructor?: string;
+  duration?: string;
   badgeTone: "purple" | "orange" | "blue" | "green";
+  href?: string;
 };
 
 export const courseSuggestions = [

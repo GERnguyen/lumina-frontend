@@ -24,7 +24,7 @@ export function LandingButton({
     <Link
       href={href}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0066FF]",
+        "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition duration-300 hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0066FF]",
         {
           "bg-[#0066FF] text-white shadow-[0_18px_45px_rgba(0,102,255,0.28)] hover:bg-[#0057D9]":
             variant === "primary",

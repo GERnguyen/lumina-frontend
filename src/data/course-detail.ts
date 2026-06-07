@@ -39,6 +39,7 @@ export type CourseDetail = {
   id: string;
   title: string;
   subtitle: string;
+  overview?: string[];
   categoryTrail: string[];
   authors: string[];
   authorAvatar: string;

@@ -11,8 +11,8 @@ export function FaqSection() {
   return (
     <section className="bg-white px-5 py-[88px] sm:px-8 lg:px-[100px]">
       <div className="mx-auto max-w-[1240px]">
-        <h2 className="font-general text-[56px] font-semibold leading-[1.2] text-[#1E242C]">
-          Frequently asked Questions
+        <h2 className="animate-fade-up font-general text-[56px] font-semibold leading-[1.2] text-[#1E242C]">
+          Frequently asked questions
         </h2>
 
         <div className="mt-[102px] grid gap-[30px] lg:grid-cols-2">
@@ -26,7 +26,7 @@ export function FaqSection() {
                   "flex gap-4 rounded-[20px] border p-6 transition",
                   isOpen
                     ? "border-[#8AB9FF] bg-[#E6F0FF] shadow-[10px_25px_50px_rgba(0,43,107,0.18)]"
-                    : "border-[#E6E9EA] bg-white",
+                    : "border-[#E6E9EA] bg-white hover:-translate-y-1 hover:border-[#C9DCFF] hover:shadow-[0_18px_42px_rgba(0,43,107,0.08)]",
                 )}
               >
                 <span className={cn("flex size-14 shrink-0 items-center justify-center rounded-full text-xl font-medium text-[#002B6B]", isOpen ? "bg-white" : "bg-[#EDEEF0]")}>
@@ -45,7 +45,7 @@ export function FaqSection() {
                   </span>
                 </button>
                 {isOpen ? (
-                  <p className="mt-4 max-w-xl text-sm leading-6 text-[#697589]">
+                  <p className="animate-fade-up mt-4 max-w-xl text-sm leading-6 text-[#697589]">
                     {item.answer}
                   </p>
                 ) : null}

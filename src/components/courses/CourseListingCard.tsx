@@ -11,15 +11,8 @@ const badgeTones = {
   green: "bg-[#E7F7ED] text-[#19703E]",
 };
 
-function slugifyCourseTitle(title: string) {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
-
 export function CourseListingCard({ course }: { course: CourseListingItem }) {
-  const href = `/courses/${slugifyCourseTitle(course.title)}`;
+  const href = course.href || (course.id ? `/courses/${course.id}` : "/courses/complete-website-responsive-design");
 
   return (
     <Link href={href} className="group flex flex-col gap-3.5 border border-[#E9EAF0] bg-white pb-3.5 transition hover:-translate-y-0.5 hover:border-[#D8D6FF] hover:shadow-[0_16px_36px_rgba(29,32,38,0.08)]">
@@ -37,14 +30,17 @@ export function CourseListingCard({ course }: { course: CourseListingItem }) {
           <span className={cn("px-1.5 py-1 text-[10px] font-medium uppercase leading-3", badgeTones[course.badgeTone])}>
             {course.category}
           </span>
-          <span className="text-lg font-medium text-[#7872FD]">{course.price}</span>
+          <span className="flex items-baseline gap-2">
+            {course.originalPrice ? <span className="text-sm text-[#8C94A3] line-through">{course.originalPrice}</span> : null}
+            <span className="text-lg font-medium text-[#7872FD]">{course.price}</span>
+          </span>
         </div>
         <h3 className="line-clamp-2 min-h-11 text-base font-medium leading-[22px] text-[#1D2026]">
           {course.title}
         </h3>
       </div>
       <div className="h-px bg-[#E9EAF0]" />
-      <div className="flex items-center justify-between px-[18px]">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-[18px]">
         <span className="flex items-center gap-1.5 text-sm font-medium text-[#4E5566]">
           <Star className="size-5 fill-[#FD8E1F] text-[#FD8E1F]" />
           {course.rating}
@@ -53,7 +49,9 @@ export function CourseListingCard({ course }: { course: CourseListingItem }) {
           <User className="size-5 text-[#7872FD]" />
           <strong className="font-medium text-[#4E5566]">{course.students}</strong> students
         </span>
+        {course.duration ? <span className="text-xs text-[#8C94A3]">{course.duration}</span> : null}
       </div>
+      {course.instructor ? <p className="px-[18px] text-xs text-[#6E7485]">By <span className="font-medium text-[#1D2026]">{course.instructor}</span></p> : null}
     </Link>
   );
 }

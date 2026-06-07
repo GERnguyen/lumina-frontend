@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { Star, UsersRound } from "lucide-react";
 import type { LandingCourse } from "@/data/landing";
 
@@ -10,7 +11,7 @@ export function CourseCard({ course }: CourseCardProps) {
   const Icon = course.icon;
 
   return (
-    <article className="group overflow-hidden rounded-[4px] border border-[#E6E9EA] bg-white transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(0,43,107,0.1)]">
+    <Link href={course.href || "/courses"} className="animate-fade-up group overflow-hidden rounded-[4px] border border-[#E6E9EA] bg-white transition duration-300 hover:-translate-y-1.5 hover:border-[#C9DCFF] hover:shadow-[0_20px_48px_rgba(0,43,107,0.14)]">
       <div className="relative aspect-[4/3] overflow-hidden bg-[#EAF2FF]">
         <Image
           src={course.image}
@@ -39,7 +40,7 @@ export function CourseCard({ course }: CourseCardProps) {
         <div className="mt-3 flex items-center justify-between border-t border-[#EEF2F7] pt-3 text-xs font-medium text-[#6C7787]">
           <span className="flex items-center gap-1.5 text-[#FFB547]">
             <Star className="size-4 fill-current" />
-            5.0
+            {course.rating || "5.0"}
           </span>
           <span className="flex items-center gap-1.5">
             <UsersRound className="size-4 text-[#0066FF]" />
@@ -47,6 +48,6 @@ export function CourseCard({ course }: CourseCardProps) {
           </span>
         </div>
       </div>
-    </article>
+    </Link>
   );
 }

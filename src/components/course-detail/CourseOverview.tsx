@@ -9,12 +9,14 @@ const paragraphs = [
 ];
 
 export function CourseOverview({ course }: { course: CourseDetail }) {
+  const overviewParagraphs = course.overview?.length ? course.overview : paragraphs;
+
   return (
     <section id="overview" className="space-y-10">
       <div>
         <h2 className="text-2xl font-semibold text-[#1D2026]">Description</h2>
         <div className="mt-4 space-y-4 text-sm leading-6 text-[#4E5566]">
-          {paragraphs.map((paragraph) => (
+          {overviewParagraphs.map((paragraph) => (
             <p key={paragraph}>{paragraph}</p>
           ))}
         </div>

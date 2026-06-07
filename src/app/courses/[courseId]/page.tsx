@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { CourseDetailPage } from "@/components/course-detail/CourseDetailPage";
-import { getCourseDetailById } from "@/data/course-detail";
+import { getCourseDetail } from "@/services/course-detail-service";
 
 type CourseDetailRouteProps = {
   params: Promise<{ courseId: string }>;
@@ -8,7 +8,7 @@ type CourseDetailRouteProps = {
 
 export async function generateMetadata({ params }: CourseDetailRouteProps): Promise<Metadata> {
   const { courseId } = await params;
-  const course = getCourseDetailById(courseId);
+  const { course } = await getCourseDetail(courseId);
 
   return {
     title: course.title,
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: CourseDetailRouteProps): Prom
 
 export default async function Page({ params }: CourseDetailRouteProps) {
   const { courseId } = await params;
-  const course = getCourseDetailById(courseId);
+  const { course, isFallback } = await getCourseDetail(courseId);
 
-  return <CourseDetailPage course={course} />;
+  return <CourseDetailPage course={course} isFallback={isFallback} />;
 }

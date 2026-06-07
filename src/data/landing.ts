@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Apple,
   BookOpenCheck,
   BriefcaseBusiness,
   Code2,
@@ -15,29 +16,57 @@ import {
 } from "lucide-react";
 
 export const landingNavItems = [
-  { label: "Explore", href: "#explore" },
-  { label: "Courses", href: "#courses" },
+  { label: "Explore", href: "/courses" },
+  { label: "Courses", href: "/courses" },
   { label: "Skillsets", href: "#skillsets" },
   { label: "Contact Us", href: "#contact" },
 ];
 
-export const trustedLogos = ["Google", "IBM", "Microsoft", "Meta"];
+export type TrustedLogo =
+  | {
+      name: string;
+      image: string;
+      width: number;
+      height: number;
+      text?: never;
+      icon?: never;
+    }
+  | {
+      name: string;
+      text: string;
+      icon?: LucideIcon;
+      image?: never;
+      width?: never;
+      height?: never;
+    };
+
+export const trustedLogos: TrustedLogo[] = [
+  { name: "Google", image: "/landing/figma/hero-google.png", width: 216, height: 212 },
+  { name: "IBM", image: "/landing/figma/hero-ibm.png", width: 255, height: 104 },
+  { name: "Microsoft", image: "/landing/figma/hero-microsoft.png", width: 381, height: 122 },
+  { name: "Meta", image: "/landing/figma/hero-meta.png", width: 238, height: 230 },
+  { name: "AWS", text: "aws" },
+  { name: "Apple", text: "Apple", icon: Apple },
+];
 
 export const courseTabs = [
-  "UX / UI Designer",
-  "Developer",
+  "Software Dev",
+  "UX / UI Design",
+  "Data Science",
+  "Business",
   "Project Manager",
-  "Designer",
-  "Accountant",
-  "Support",
+  "Design",
 ];
 
 export type LandingCourse = {
+  id?: string;
   title: string;
   category: string;
   price: string;
   image: string;
   students: string;
+  rating?: string;
+  href?: string;
   icon: LucideIcon;
 };
 
@@ -189,29 +218,29 @@ export const showcaseItems = [
 
 export const faqs = [
   {
-    question: "How do I create an account on the job board?",
+    question: "How do I start learning on Lumina?",
     answer:
-      "Use the signup flow, enter your basic information, verify your email, and start building your learner profile.",
+      "Create an account, choose a course that matches your goal, and follow each lesson with notes, files, and progress tracking.",
   },
   {
-    question: "How do I apply for a job through the platform?",
+    question: "Can Lumina help me choose the right course?",
     answer:
-      "Search by skill, target role, or preferred location, then use your profile and portfolio to apply with stronger context.",
+      "Yes. You can explore by category, search by skill, and use learning paths to find courses that fit your current level.",
   },
   {
-    question: "How can I track the status of my job applications?",
+    question: "How is my course progress tracked?",
     answer:
-      "Application updates and learning progress are kept in your dashboard so you can follow every next step.",
+      "Lumina keeps your enrolled courses, completed lessons, watch progress, notes, and certificates in your learning dashboard.",
   },
   {
-    question: "How do I create an account on the job board?",
+    question: "Can instructors publish courses on Lumina?",
     answer:
-      "Use the search bar on the homepage to enter keywords related to your skills, job title, or preferred location. You can also use advanced filters to narrow down results by industry, job type, and experience level.",
+      "Instructors can create course drafts, organize sections and lessons, upload resources, then submit courses for review before publishing.",
   },
   {
-    question: "Is there a cost to use the job board, and what features are free?",
+    question: "Do courses include files, subtitles, and certificates?",
     answer:
-      "Core discovery and learning features are available to get started. Premium courses and advanced career features can be added later.",
+      "Course creators can include downloadable files, subtitles, quizzes, assignments, and completion certificates depending on the course.",
   },
 ];
 

@@ -19,7 +19,17 @@ export function LandingNavbar() {
       </nav>
 
       <div className="hidden items-center gap-3 md:flex">
-        <LandingButton href="/register" variant="ghost" size="sm" className="border border-white/80 pl-6 pr-1 text-white" rightIcon={<span className="flex size-10 items-center justify-center rounded-full bg-white text-[#002B6B]"><ArrowRight className="size-4 -rotate-45" /></span>}>
+        <LandingButton
+          href="/register"
+          variant="ghost"
+          size="sm"
+          className="group h-14 gap-5 border border-white/85 py-1 pl-8 pr-1.5 text-lg text-white hover:border-white hover:bg-white/10"
+          rightIcon={
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-white text-[#002B6B] transition duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
+              <ArrowRight className="size-5 -rotate-45" />
+            </span>
+          }
+        >
           Register Now
         </LandingButton>
       </div>
