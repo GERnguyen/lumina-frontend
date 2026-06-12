@@ -1,4 +1,4 @@
-import type { OrderDetailResponse } from "@/api/generated/enrollment";
+import type { OrderDetailResponse } from "@/types";
 import { API_BASE_URL } from "@/lib/api-base";
 import { authHeaders } from "@/lib/server-auth";
 import { money } from "./cart-service";

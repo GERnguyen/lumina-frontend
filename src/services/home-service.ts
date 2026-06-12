@@ -1,8 +1,8 @@
-import type { CourseResponse as CatalogCourseResponse } from "@/api/generated/course";
-import type { CourseResponse as EnrolledCourseResponse } from "@/api/generated/enrollment";
-import type { CourseProgressResponse, DailyGoalResponse, UserStreakResponse } from "@/api/generated/learning";
-import type { UserNotificationResponse } from "@/api/generated/notification";
-import type { UserDto } from "@/api/generated/user";
+import type { CourseResponse as CatalogCourseResponse } from "@/types";
+import type { CourseResponse as EnrolledCourseResponse } from "@/types";
+import type { CourseProgressResponse, DailyGoalResponse, UserStreakResponse } from "@/types";
+import type { UserNotificationResponse } from "@/types";
+import type { UserDto } from "@/types";
 import { API_BASE_URL } from "@/lib/api-base";
 import { authHeaders } from "@/lib/server-auth";
 

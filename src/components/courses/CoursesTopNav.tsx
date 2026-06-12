@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Bell, Heart, Search, ShoppingCart } from "lucide-react";
-import type { UserDto } from "@/api/generated/user";
+import type { UserDto } from "@/types";
 import { CoursesUserMenu } from "@/components/courses/CoursesUserMenu";
 import { TopNavLinks } from "@/components/courses/TopNavLinks";
 import { BrandLogo } from "@/components/ui/BrandLogo";

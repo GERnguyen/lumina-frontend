@@ -1,4 +1,4 @@
-import type { CategoryResponse, CourseResponse, PaginatedMetadata } from "@/api/generated/course";
+import type { CategoryResponse, CourseResponse, PaginatedMetadata } from "@/types";
 import { courseListingItems } from "@/data/courses";
 import { API_BASE_URL } from "@/lib/api-base";
 

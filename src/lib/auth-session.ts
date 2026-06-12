@@ -1,4 +1,4 @@
-import type { TokenResponseDto } from "@/api/generated/auth";
+import type { TokenResponseDto } from "@/types";
 
 export const ACCESS_TOKEN_COOKIE = "lumina_access_token";
 export const REFRESH_TOKEN_COOKIE = "lumina_refresh_token";

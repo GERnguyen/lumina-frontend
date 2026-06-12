@@ -1,4 +1,4 @@
-import type { VoucherResponse } from "@/api/generated/enrollment";
+import type { VoucherResponse } from "@/types";
 import { API_BASE_URL } from "@/lib/api-base";
 import { authHeaders } from "@/lib/server-auth";
 import { getCartPageData, money, type CartCourseItem } from "./cart-service";

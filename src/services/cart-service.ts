@@ -1,4 +1,4 @@
-import type { CartItemResponse } from "@/api/generated/cart";
+import type { CartItemResponse } from "@/types";
 import { API_BASE_URL } from "@/lib/api-base";
 import { authHeaders, getServerAccessToken } from "@/lib/server-auth";
 

@@ -1,7 +1,7 @@
-import type { CourseResponse as EnrollmentCourseResponse, OrderDetailResponse, PaginatedMetadata } from "@/api/generated/enrollment";
-import type { CourseProgressResponse } from "@/api/generated/learning";
-import type { WishlistItemResponse } from "@/api/generated/social";
-import type { UserDto } from "@/api/generated/user";
+import type { CourseResponse as EnrollmentCourseResponse, OrderDetailResponse, PaginatedMetadata } from "@/types";
+import type { CourseProgressResponse } from "@/types";
+import type { WishlistItemResponse } from "@/types";
+import type { UserDto } from "@/types";
 import { authHeaders } from "@/lib/server-auth";
 import {
   getProfileTabs,

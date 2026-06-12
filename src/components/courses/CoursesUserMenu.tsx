@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogOut, UserRound } from "lucide-react";
 import { useState } from "react";
-import type { UserDto } from "@/api/generated/user";
+import type { UserDto } from "@/types";
 import { clearAuthSession } from "@/lib/auth-session";
 import { useAuthStore } from "@/stores/auth-store";
 

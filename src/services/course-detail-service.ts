@@ -1,8 +1,8 @@
-import type { CourseCurriculumResponse, CourseResponse } from "@/api/generated/course";
-import type { CartItemResponse } from "@/api/generated/cart";
-import type { CheckEnrollmentStatus } from "@/api/generated/enrollment";
-import type { ReviewResponse, ReviewStatisticsResponse, WishlistItemResponse } from "@/api/generated/social";
-import type { UserDto } from "@/api/generated/user";
+import type { CourseCurriculumResponse, CourseResponse } from "@/types";
+import type { CartItemResponse } from "@/types";
+import type { CheckEnrollmentStatus } from "@/types";
+import type { ReviewResponse, ReviewStatisticsResponse, WishlistItemResponse } from "@/types";
+import type { UserDto } from "@/types";
 import { courseDetail, type CourseDetail } from "@/data/course-detail";
 import { API_BASE_URL } from "@/lib/api-base";
 import { authHeaders, getServerAccessToken } from "@/lib/server-auth";

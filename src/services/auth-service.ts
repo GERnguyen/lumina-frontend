@@ -1,17 +1,14 @@
 import axios from "axios";
-import {
-  AuthControllerService,
-  PresignedUrlControllerService,
-  type AuthRequestDto,
-  type RegisterRequest,
-} from "@/api/generated/auth";
+import type { AuthRequestDto, RegisterRequest } from "@/types";
+import { AuthService } from "./authService";
+import { PresignedUrlService } from "./userService";
 
 export type LoginRequest = AuthRequestDto & {
   role: "USER" | "INSTRUCTOR" | "ADMIN";
 };
 
 export async function login(requestBody: LoginRequest) {
-  const response = await AuthControllerService.login({ requestBody });
+  const response = await AuthService.login({ body: requestBody });
 
   if (!response.data?.accessToken || !response.data.refreshToken) {
     throw new Error(response.message || "Login failed");
@@ -21,7 +18,7 @@ export async function login(requestBody: LoginRequest) {
 }
 
 export async function register(requestBody: RegisterRequest) {
-  const response = await AuthControllerService.register({ requestBody });
+  const response = await AuthService.register({ body: requestBody });
 
   if (response.success === false) {
     throw new Error(response.message || "Registration failed");
@@ -31,7 +28,7 @@ export async function register(requestBody: RegisterRequest) {
 }
 
 export async function uploadInstructorCv(file: File) {
-  const response = await PresignedUrlControllerService.getPresignedUrl({
+  const response = await PresignedUrlService.getPresignedUrl({
     fileName: file.name,
     contentType: file.type || "application/pdf",
   });

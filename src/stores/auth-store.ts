@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { UserDto } from "@/api/generated/user";
+import type { UserDto } from "@/types";
 
 type AuthTokens = {
   accessToken?: string;

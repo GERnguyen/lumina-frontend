@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import type { TokenResponseDto } from "@/api/generated/auth";
+import type { TokenResponseDto } from "@/types";
 import {
   ACCESS_TOKEN_COOKIE,
   ACCESS_TOKEN_MAX_AGE,
