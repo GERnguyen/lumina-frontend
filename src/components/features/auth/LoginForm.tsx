@@ -5,30 +5,38 @@ import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { FormEvent, useState } from "react";
 import { Button, Input, Password, Radio } from "@/components/ui";
-import { AuthService } from "@/services";
+import { login, type LoginRequest } from "@/services/auth-service";
 import { useAuthStore } from "@/stores/auth-store";
 import { getErrorMessage } from "@/lib/errors";
+import { persistAuthSession } from "@/lib/auth-session";
+
+type LoginRole = Extract<LoginRequest["role"], "USER" | "INSTRUCTOR">;
+
+const roleOptions: Array<{ label: string; value: LoginRole }> = [
+  { label: "Student", value: "USER" },
+  { label: "Instructor", value: "INSTRUCTOR" },
+];
 
 export default function LoginForm() {
   const router = useRouter();
-  const setTokens = useAuthStore((state) => state.setTokens);
+  const setSession = useAuthStore((state) => state.setSession);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"USER" | "INSTRUCTOR">("USER");
+  const [role, setRole] = useState<LoginRole>("USER");
 
   const loginMutation = useMutation({
-    mutationFn: async (body: any) => {
-      const res = await AuthService.login({ body });
-      if (!res.success || !res.data) {
-        throw new Error(res.message || "Unable to sign in");
-      }
-      return res.data;
-    },
-    onSuccess: (tokens) => {
-      setTokens(tokens);
-      router.push("/");
+    mutationFn: login,
+    onSuccess: async (tokens) => {
+      const session = await persistAuthSession(tokens);
+      setSession({ accessToken: session.accessToken });
+      router.push("/courses");
+      router.refresh();
     },
   });
+
+  function handleRoleChange(event: React.ChangeEvent<HTMLInputElement>) {
+    setRole(event.target.value as LoginRole);
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -55,30 +63,6 @@ export default function LoginForm() {
         </div>
       )}
 
-      <div className="flex flex-col">
-        <label className="block mb-2 text-sm font-medium text-foreground">
-          User Type
-        </label>
-        <div className="flex flex-row gap-4">
-          <Radio
-            name="role"
-            value="USER"
-            checked={role === "USER"}
-            onChange={() => setRole("USER")}
-            label="Student"
-            id="USER"
-          />
-          <Radio
-            name="role"
-            value="INSTRUCTOR"
-            checked={role === "INSTRUCTOR"}
-            onChange={() => setRole("INSTRUCTOR")}
-            label="Instructor"
-            id="INSTRUCTOR"
-          />
-        </div>
-      </div>
-
       <Input
         id="email"
         name="email"
@@ -100,6 +84,25 @@ export default function LoginForm() {
         autoComplete="current-password"
         required
       />
+
+      <div className="flex flex-col">
+        <label className="mb-2 block text-sm font-medium text-foreground">
+          Account type
+        </label>
+        <div className="flex flex-row gap-2">
+          {roleOptions.map((option) => (
+            <Radio
+              key={option.value}
+              name="role"
+              value={option.value}
+              checked={role === option.value}
+              onChange={handleRoleChange}
+              label={option.label}
+              id={`login-${option.value}`}
+            />
+          ))}
+        </div>
+      </div>
 
       <div className="flex items-center justify-between">
         <Link

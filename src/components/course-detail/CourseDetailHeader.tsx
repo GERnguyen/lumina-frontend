@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronRight, Star } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import type { CourseDetail } from "@/data/course-detail";
+import { CourseRatingStars } from "./CourseRatingStars";
 
 export function CourseDetailHeader({ course }: { course: CourseDetail }) {
   return (
@@ -39,13 +40,9 @@ export function CourseDetailHeader({ course }: { course: CourseDetail }) {
             </div>
 
             <div className="flex items-center gap-2 text-sm text-[#6E7485]">
-              <span className="inline-flex items-center gap-1 text-[#7872FD]">
-                {Array.from({ length: 5 }, (_, index) => (
-                  <Star key={index} className="size-5 fill-current" />
-                ))}
-              </span>
+              <CourseRatingStars rating={course.ratingValue || 0} size="md" />
               <strong className="font-medium text-[#1D2026]">{course.rating}</strong>
-              <span>({course.ratingCount} Rating)</span>
+              <span>({course.ratingCount} {course.ratingCount === "1" ? "review" : "reviews"})</span>
             </div>
           </div>
         </div>

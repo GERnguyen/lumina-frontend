@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import { CheckSquare, PlayCircle, Trophy, Users } from "lucide-react";
 
 export type ProfileTab = {
   label: string;
@@ -106,6 +107,17 @@ export type UserProfilePurchaseHistoryData = {
   purchases: ProfilePurchaseHistoryItem[];
 };
 
+export type UserProfileSettingsData = {
+  user: UserProfileDashboardData["user"] & {
+    id?: string;
+    email: string;
+    fullName: string;
+    username: string;
+    bio: string;
+  };
+  tabs: ProfileTab[];
+};
+
 export const profileTabs: ProfileTab[] = [
   { label: "Dashboard", href: "/user-profile", active: true },
   { label: "Courses", href: "/user-profile/courses" },
@@ -120,3 +132,55 @@ export function getProfileTabs(activeLabel: string): ProfileTab[] {
     active: tab.label === activeLabel,
   }));
 }
+
+export const mockUserProfileDashboard: UserProfileDashboardData = {
+  user: {
+    name: "Lumina Learner",
+    headline: "Lifelong learner on Lumina",
+    avatar: "https://ui-avatars.com/api/?name=Lumina+Learner&background=EBEBFF&color=564FFD&bold=true",
+  },
+  tabs: getProfileTabs("Dashboard"),
+  stats: [
+    { label: "Enrolled Courses", value: "0", icon: PlayCircle, tone: "purple" },
+    { label: "Active Courses", value: "0", icon: CheckSquare, tone: "purple" },
+    { label: "Completed Courses", value: "0", icon: Trophy, tone: "green" },
+    { label: "Course Instructors", value: "0", icon: Users, tone: "orange" },
+  ],
+  learningCourses: [
+    {
+      id: "fallback-course",
+      title: "Start learning with Lumina",
+      lesson: "Choose a course to begin",
+      image: "/courses/course-01.png",
+      href: "/courses",
+    },
+  ],
+};
+
+export const mockProfileCourses: ProfileCourseItem[] = [
+  {
+    id: "fallback-course",
+    title: "Start learning with Lumina",
+    lesson: "Choose a course to begin",
+    image: "/courses/course-01.png",
+    progress: 0,
+    href: "/courses",
+    teacher: "Lumina Instructor",
+    status: "active",
+  },
+];
+
+export const mockProfileWishlist: ProfileWishlistItem[] = [
+  {
+    id: "fallback-wishlist",
+    courseId: "fallback-course",
+    title: "Save a course to your wishlist",
+    image: "/courses/course-02.png",
+    rating: "No reviews yet",
+    reviews: "",
+    instructors: ["Lumina Instructor"],
+    price: "Free",
+  },
+];
+
+export const mockProfilePurchaseHistory: ProfilePurchaseHistoryItem[] = [];

@@ -7,6 +7,7 @@ export type CurriculumLecture = {
   title: string;
   duration: string;
   preview?: boolean;
+  type?: string;
 };
 
 export type CurriculumSection = {
@@ -28,11 +29,13 @@ export type CourseInstructor = {
 };
 
 export type CourseReview = {
+  id?: string;
   name: string;
   time: string;
   avatar: string;
   rating: number;
   text: string;
+  reply?: string;
 };
 
 export type CourseDetail = {
@@ -44,6 +47,7 @@ export type CourseDetail = {
   authors: string[];
   authorAvatar: string;
   rating: string;
+  ratingValue?: number;
   ratingCount: string;
   heroImage: string;
   price: string;
@@ -60,6 +64,11 @@ export type CourseDetail = {
   instructors: CourseInstructor[];
   reviews: CourseReview[];
   ratingBreakdown: Array<{ label: string; value: string; percent: number }>;
+  isAuthenticated?: boolean;
+  isEnrolled?: boolean;
+  isInCart?: boolean;
+  isWishlisted?: boolean;
+  cartItemId?: string;
 };
 
 export const courseDetail: CourseDetail = {

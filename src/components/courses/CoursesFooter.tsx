@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { courseFooterGroups } from "@/data/courses";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 
 export function CoursesFooter() {
   return (
@@ -8,9 +9,7 @@ export function CoursesFooter() {
       <div className="relative mx-auto max-w-[1320px]">
         <div className="grid gap-10 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
           <div>
-            <Link href="/" className="font-logo text-[27px] font-semibold text-black">
-              LM <span className="font-general font-semibold">Lumina</span>
-            </Link>
+            <BrandLogo size="lg" />
             <div className="mt-4 max-w-[410px] text-base leading-6 text-[#282828]">
               <p><strong>Corporate Head Office:</strong> 1 Vo Van Ngan Street, Thu Duc, .</p>
               <p>Ho Chi Minh City, Vietnam</p>

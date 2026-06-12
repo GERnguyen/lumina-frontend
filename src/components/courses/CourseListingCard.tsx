@@ -13,6 +13,7 @@ const badgeTones = {
 
 export function CourseListingCard({ course }: { course: CourseListingItem }) {
   const href = course.href || (course.id ? `/courses/${course.id}` : "/courses/complete-website-responsive-design");
+  const hasRating = typeof course.ratingValue === "number" && course.ratingValue > 0;
 
   return (
     <Link href={href} className="group flex flex-col gap-3.5 border border-[#E9EAF0] bg-white pb-3.5 transition hover:-translate-y-0.5 hover:border-[#D8D6FF] hover:shadow-[0_16px_36px_rgba(29,32,38,0.08)]">
@@ -41,9 +42,22 @@ export function CourseListingCard({ course }: { course: CourseListingItem }) {
       </div>
       <div className="h-px bg-[#E9EAF0]" />
       <div className="flex flex-wrap items-center justify-between gap-3 px-[18px]">
-        <span className="flex items-center gap-1.5 text-sm font-medium text-[#4E5566]">
-          <Star className="size-5 fill-[#FD8E1F] text-[#FD8E1F]" />
-          {course.rating}
+        <span className="flex items-center gap-2 text-sm font-medium text-[#4E5566]">
+          <span className="flex items-center gap-0.5" aria-label={hasRating ? `${course.rating} star rating` : "No rating yet"}>
+            {Array.from({ length: 5 }).map((_, index) => {
+              const filled = hasRating && index < Math.round(course.ratingValue || 0);
+              return (
+                <Star
+                  key={index}
+                  className={cn(
+                    "size-4",
+                    filled ? "fill-[#FD8E1F] text-[#FD8E1F]" : "fill-[#E9EAF0] text-[#C6CAD1]",
+                  )}
+                />
+              );
+            })}
+          </span>
+          <span className={hasRating ? "text-[#4E5566]" : "text-[#8C94A3]"}>{course.rating}</span>
         </span>
         <span className="flex items-center gap-1.5 text-sm text-[#8C94A3]">
           <User className="size-5 text-[#7872FD]" />

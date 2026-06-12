@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { LandingPage } from "@/components/landing/LandingPage";
+import { StudentHomePage } from "@/components/home/StudentHomePage";
+import { getServerAccessToken } from "@/lib/server-auth";
+import { getStudentHomeData } from "@/services/home-service";
 
 export const metadata: Metadata = {
   title: "Lumina - Career-focused online learning",
@@ -18,6 +21,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Home() {
-  return <LandingPage />;
+export default async function Home() {
+  const token = await getServerAccessToken();
+  if (!token) {
+    return <LandingPage />;
+  }
+
+  const data = await getStudentHomeData();
+
+  return <StudentHomePage data={data} />;
 }

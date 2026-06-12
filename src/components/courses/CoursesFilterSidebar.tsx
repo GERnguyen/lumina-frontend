@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { Code2, ChevronDown, Star } from "lucide-react";
-import type { ReactNode } from "react";
-import type { CourseCatalogFilters, CourseCategoryFilter } from "@/types";
+import { Code2, Star } from "lucide-react";
+import type { CourseCatalogFilters, CourseCategoryFilter } from "@/services/course-catalog-service";
 import { cn } from "@/lib/utils";
+import { CollapsibleFilterPanel } from "./CollapsibleFilterPanel";
 
 type CoursesFilterSidebarProps = {
   categories: CourseCategoryFilter[];
@@ -13,23 +13,22 @@ type CoursesFilterSidebarProps = {
 export function CoursesFilterSidebar({ categories, filters, queryString }: CoursesFilterSidebarProps) {
   return (
     <aside className="hidden w-[312px] shrink-0 flex-col gap-6 rounded-[18px] lg:flex">
-      <FilterPanel title="Category">
+      <CollapsibleFilterPanel title="Category">
         <div className="space-y-4">
-          <FilterLink href={queryString({ categoryId: undefined, page: 1 })} active={!filters.categoryId} label="All categories" count="All" />
+          <FilterLink href={queryString({ categoryId: undefined, page: 1 })} active={!filters.categoryId} label="All categories" />
           {categories.map((category) => (
             <FilterLink
               key={category.id}
-              href={queryString({ categoryId: category.isMock ? undefined : category.id, page: 1 })}
+              href={queryString({ categoryId: category.id, page: 1 })}
               active={filters.categoryId === category.id}
               label={category.label}
               count={category.count}
-              muted={category.isMock}
             />
           ))}
         </div>
-      </FilterPanel>
+      </CollapsibleFilterPanel>
 
-      <FilterPanel title="Rating">
+      <CollapsibleFilterPanel title="Rating">
         <div className="space-y-3">
           {[5, 4, 3, 2, 1].map((rating) => (
             <Link key={rating} href={queryString({ rating, page: 1 })} className="flex items-center justify-between gap-3">
@@ -48,17 +47,17 @@ export function CoursesFilterSidebar({ categories, filters, queryString }: Cours
             </Link>
           ) : null}
         </div>
-      </FilterPanel>
+      </CollapsibleFilterPanel>
 
-      <FilterPanel title="Price">
+      <CollapsibleFilterPanel title="Price">
         <form action="/courses" className="space-y-4">
           {filters.categoryId ? <input type="hidden" name="categoryId" value={filters.categoryId} /> : null}
           {filters.query ? <input type="hidden" name="query" value={filters.query} /> : null}
           {filters.rating ? <input type="hidden" name="rating" value={filters.rating} /> : null}
           {filters.sort ? <input type="hidden" name="sort" value={filters.sort} /> : null}
           <div className="flex gap-3">
-            <input name="priceFrom" defaultValue={filters.priceFrom ?? ""} className="h-9 w-full rounded-[8px] border-[#E9EAF0] text-sm" placeholder="$ min" />
-            <input name="priceTo" defaultValue={filters.priceTo ?? ""} className="h-9 w-full rounded-[8px] border-[#E9EAF0] text-sm" placeholder="$ max" />
+            <input name="priceFrom" defaultValue={filters.priceFrom ?? ""} className="h-9 w-full rounded-[8px] border-[#E9EAF0] text-sm" placeholder="Min VND" />
+            <input name="priceTo" defaultValue={filters.priceTo ?? ""} className="h-9 w-full rounded-[8px] border-[#E9EAF0] text-sm" placeholder="Max VND" />
           </div>
           <button type="submit" className="h-10 w-full rounded-[18px] bg-[#7872FD] text-sm font-semibold text-white">
             Apply price
@@ -69,20 +68,8 @@ export function CoursesFilterSidebar({ categories, filters, queryString }: Cours
             </Link>
           ) : null}
         </form>
-      </FilterPanel>
+      </CollapsibleFilterPanel>
     </aside>
-  );
-}
-
-function FilterPanel({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="border border-[#E9EAF0] bg-white">
-      <button className="flex w-full items-center justify-between border-b border-[#E9EAF0] p-5 text-left text-lg font-medium uppercase text-[#1D2026]">
-        {title}
-        <ChevronDown className="size-6 rotate-180" />
-      </button>
-      <div className="p-4">{children}</div>
-    </section>
   );
 }
 
@@ -91,21 +78,19 @@ function FilterLink({
   active,
   label,
   count,
-  muted,
 }: {
   href: string;
   active: boolean;
   label: string;
-  count: string;
-  muted?: boolean;
+  count?: string;
 }) {
   return (
-    <Link href={href} className={cn("flex w-full items-center justify-between gap-3 transition hover:text-[#7872FD]", muted && "opacity-55")}>
+    <Link href={href} className="flex w-full items-center justify-between gap-3 transition hover:text-[#7872FD]">
       <span className="flex min-w-0 items-center gap-3">
         <Code2 className={cn("size-5 shrink-0", active ? "text-[#7872FD]" : "text-[#8C94A3]")} />
         <span className={cn("truncate text-sm", active ? "font-medium text-[#1D2026]" : "text-[#4E5566]")}>{label}</span>
       </span>
-      <span className="shrink-0 text-xs text-[#8C94A3]">{count}</span>
+      {count ? <span className="shrink-0 text-xs text-[#8C94A3]">{count}</span> : null}
     </Link>
   );
 }

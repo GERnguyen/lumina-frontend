@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { UserProfileDashboardPage } from "@/components/user-profile/UserProfileDashboardPage";
-import { getUserProfileDashboard } from "@/components/user-profile/profile-helpers";
+import { getUserProfileDashboard } from "@/services/user-profile-service";
 
 export const metadata: Metadata = {
   title: "Dashboard - Lumina",

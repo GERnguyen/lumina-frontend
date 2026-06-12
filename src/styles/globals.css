@@ -75,7 +75,7 @@
   --color-danger: #eb5757;
 
   /* Fonts */
-  --font-sans: var(--font-manrope), ui-sans-serif, system-ui;
+  --font-sans: "General Sans", ui-sans-serif, system-ui;
   --font-logo: "Fortusnova", serif;
   --font-general: "General Sans", sans-serif;
 

@@ -1,13 +1,6 @@
-import { Manrope } from "next/font/google";
 import type { Metadata } from "next";
 import "@/styles/globals.css";
 import { AppProviders } from "@/components/providers/AppProviders";
-
-const manrope = Manrope({
-  subsets: ["latin", "vietnamese"],
-  display: "swap",
-  variable: "--font-manrope",
-});
 
 export const metadata: Metadata = {
   title: {
@@ -26,7 +19,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="vi" className={manrope.variable} suppressHydrationWarning>
+    <html lang="vi" suppressHydrationWarning>
       <body className="font-sans antialiased" suppressHydrationWarning>
         <AppProviders>{children}</AppProviders>
       </body>

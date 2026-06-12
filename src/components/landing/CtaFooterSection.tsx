@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Mail } from "lucide-react";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 import { LandingButton } from "@/components/ui/LandingButton";
 
 const quickLinks = ["Pricing", "Jobs", "Employeer", "Careers", "Contact Us"];
@@ -34,9 +35,7 @@ export function CtaFooterSection() {
       <footer className="-mt-[116px] bg-[#FAFAFA] px-0 pb-12 pt-[316px]">
         <div className="mx-auto grid max-w-[1240px] gap-10 lg:grid-cols-[1.45fr_0.55fr_0.65fr_0.7fr]">
           <div>
-            <Link href="/" className="font-logo text-[27px] font-semibold text-black">
-              LM <span className="font-general font-semibold">Lumina</span>
-            </Link>
+            <BrandLogo size="lg" />
             <div className="mt-5 max-w-[430px] space-y-1 text-base leading-6 text-[#282828]">
               <p><strong>Corporate Head Office:</strong> 1 Vo Van Ngan Street, Thu Duc, .</p>
               <p>Ho Chi Minh City, Vietnam</p>
