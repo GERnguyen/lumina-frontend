@@ -2,10 +2,8 @@ import type { Metadata } from "next";
 import { WatchCoursePage } from "@/components/watch-course/WatchCoursePage";
 import type {
   CourseCurriculumResponse,
-  CourseResponse,
   LessonResponse,
   VideoLessonResponse,
-  CourseProgressResponse,
   LearningItemProgressResponse,
 } from "@/types";
 import { CourseService, VideoLessonService } from "@/services/courseService";

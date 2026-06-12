@@ -43,6 +43,12 @@ type CourseListPayload = {
   data?: EnrollmentCourseResponse[];
 };
 
+type SpringCourseListPayload = {
+  data?: {
+    content?: EnrollmentCourseResponse[];
+  };
+};
+
 type OrdersPayload = {
   data?: OrderDetailResponse[];
   meta?: PaginatedMetadata;
@@ -84,13 +90,15 @@ function apiUrl(path: string, params?: Record<string, string | number | undefine
 }
 
 function courseIdsUrl(courseIds: string[]) {
-  const url = apiUrl("/api/v1/courses/ids");
-  courseIds.forEach((courseId) => url.searchParams.append("ids", courseId));
-  return url;
+  return apiUrl("/api/v1/courses/ids", { ids: courseIds.join(",") });
 }
 
 function profileAvatar(user?: UserDto, fallbackName = "Lumina Learner") {
-  if (user?.avatarUrl) return user.avatarUrl;
+  const avatar = user?.avatarUrl?.trim();
+  if (avatar) {
+    if (/^(https?:|data:|blob:)/.test(avatar) || avatar.startsWith("/")) return avatar;
+    return new URL(avatar, API_BASE_URL).toString();
+  }
 
   const name = user?.name || fallbackName;
   const params = new URLSearchParams({
@@ -101,6 +109,15 @@ function profileAvatar(user?: UserDto, fallbackName = "Lumina Learner") {
   });
 
   return `https://ui-avatars.com/api/?${params.toString()}`;
+}
+
+function normalizeCourseList(payload?: CourseListPayload | SpringCourseListPayload | EnrollmentCourseResponse[]) {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray((payload as CourseListPayload).data)) return (payload as CourseListPayload).data || [];
+
+  const pageData = (payload as SpringCourseListPayload).data;
+  return Array.isArray(pageData?.content) ? pageData.content : [];
 }
 
 async function fetchJson<T>(url: URL): Promise<T | undefined> {
@@ -444,10 +461,11 @@ export async function getUserProfileWishlist(): Promise<UserProfileWishlistResul
 
   const wishlistItems = wishlistPayload?.data || [];
   const courseIds = wishlistItems.map((item) => item.courseId).filter(Boolean) as string[];
-  const coursesPayload = courseIds.length ? await fetchJson<CourseListPayload>(courseIdsUrl(courseIds)) : undefined;
+  const coursesPayload = courseIds.length ? await fetchJson<CourseListPayload | SpringCourseListPayload | EnrollmentCourseResponse[]>(courseIdsUrl(courseIds)) : undefined;
   const user = userPayload?.data;
+  const courses = normalizeCourseList(coursesPayload);
   const hydratedItems = wishlistItems.map((item, index) =>
-    mapWishlistCourse(item, coursesPayload?.data?.find((course) => course.id === item.courseId), index),
+    mapWishlistCourse(item, courses.find((course) => course.id === item.courseId), index),
   );
 
   return {
@@ -458,9 +476,9 @@ export async function getUserProfileWishlist(): Promise<UserProfileWishlistResul
         avatar: profileAvatar(user, mockUserProfileDashboard.user.name),
       },
       tabs: getProfileTabs("Wishlist"),
-      items: hydratedItems.length ? hydratedItems : mockProfileWishlist,
+      items: hydratedItems,
     },
-    isFallback: !userPayload?.data || !wishlistPayload?.data || !coursesPayload?.data,
+    isFallback: !userPayload?.data || !wishlistPayload?.data || (courseIds.length > 0 && !coursesPayload),
   };
 }
 
@@ -483,9 +501,9 @@ export async function getUserProfilePurchaseHistory(): Promise<UserProfilePurcha
 
   const orders = ordersPayload?.data || [];
   const courseIds = Array.from(new Set(orders.flatMap((order) => order.items?.map((item) => item.courseId).filter(Boolean) || []))) as string[];
-  const coursesPayload = courseIds.length ? await fetchJson<CourseListPayload>(courseIdsUrl(courseIds)) : undefined;
+  const coursesPayload = courseIds.length ? await fetchJson<CourseListPayload | SpringCourseListPayload | EnrollmentCourseResponse[]>(courseIdsUrl(courseIds)) : undefined;
   const user = userPayload?.data;
-  const mappedPurchases = orders.map((order, index) => mapPurchaseHistory(order, index, coursesPayload?.data || []));
+  const mappedPurchases = orders.map((order, index) => mapPurchaseHistory(order, index, normalizeCourseList(coursesPayload)));
 
   return {
     purchaseHistoryPage: {
@@ -497,6 +515,6 @@ export async function getUserProfilePurchaseHistory(): Promise<UserProfilePurcha
       tabs: getProfileTabs("Purchase History"),
       purchases: mappedPurchases.length ? mappedPurchases : mockProfilePurchaseHistory,
     },
-    isFallback: !userPayload?.data || !ordersPayload?.data || (courseIds.length > 0 && !coursesPayload?.data),
+    isFallback: !userPayload?.data || !ordersPayload?.data || (courseIds.length > 0 && !coursesPayload),
   };
 }

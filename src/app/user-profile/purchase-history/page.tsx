@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { UserProfilePurchaseHistoryPage } from "@/components/user-profile/UserProfilePurchaseHistoryPage";
-import { getUserProfilePurchaseHistory } from "@/components/user-profile/profile-helpers";
+import { getUserProfilePurchaseHistory } from "@/services/user-profile-service";
 
 export const metadata: Metadata = {
   title: "Purchase History - Lumina",

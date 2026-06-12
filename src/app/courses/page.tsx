@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import type { CourseCatalogFilters } from "@/types";
 import { CoursesPage } from "@/components/courses/CoursesPage";
+import type { CourseCatalogFilters } from "@/services/course-catalog-service";
 
 export const metadata: Metadata = {
   title: "Courses",

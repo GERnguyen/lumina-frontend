@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { UserProfileCoursesPage } from "@/components/user-profile/UserProfileCoursesPage";
 import type { ProfileCourseFilter } from "@/data/user-profile";
-import { getUserProfileCourses } from "@/components/user-profile/profile-helpers";
+import { getUserProfileCourses } from "@/services/user-profile-service";
 
 type UserProfileCoursesRouteProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;

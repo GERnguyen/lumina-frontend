@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { UserProfileWishlistPage } from "@/components/user-profile/UserProfileWishlistPage";
-import { getUserProfileWishlist } from "@/components/user-profile/profile-helpers";
+import { getUserProfileWishlist } from "@/services/user-profile-service";
 
 export const metadata: Metadata = {
   title: "Wishlist - Lumina",

@@ -46,6 +46,14 @@ type CourseListPayload = {
   meta?: PaginatedMetadata;
 };
 
+type SpringPagePayload = {
+  content?: CourseResponse[];
+  number?: number;
+  size?: number;
+  totalElements?: number;
+  totalPages?: number;
+};
+
 type CategoryListPayload = {
   data?: CategoryResponse[];
 };
@@ -81,7 +89,7 @@ function money(value?: number) {
   if (value === 0) return "Free";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency: "VND",
     maximumFractionDigits: 0,
   }).format(value);
 }
@@ -115,6 +123,39 @@ function emptyCourses(filters: CourseCatalogFilters): CourseCatalogResult {
   };
 }
 
+function normalizeCoursePayload(payload?: CourseListPayload | { data?: SpringPagePayload } | SpringPagePayload) {
+  if (!payload) return undefined;
+
+  if (Array.isArray((payload as CourseListPayload).data)) {
+    return {
+      courses: (payload as CourseListPayload).data || [],
+      meta: (payload as CourseListPayload).meta,
+    };
+  }
+
+  const pageData = ((payload as { data?: SpringPagePayload }).data || payload) as SpringPagePayload;
+  if (!Array.isArray(pageData.content)) return undefined;
+
+  return {
+    courses: pageData.content,
+    meta: {
+      page: typeof pageData.number === "number" ? pageData.number + 1 : undefined,
+      limit: pageData.size,
+      totalElements: pageData.totalElements,
+      totalPages: pageData.totalPages,
+    },
+  };
+}
+
+function normalizeCategoryPayload(payload?: CategoryListPayload | { data?: { content?: CategoryResponse[] } } | CategoryResponse[]) {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray((payload as CategoryListPayload).data)) return (payload as CategoryListPayload).data || [];
+
+  const pageData = (payload as { data?: { content?: CategoryResponse[] } }).data;
+  return Array.isArray(pageData?.content) ? pageData.content : [];
+}
+
 export function mapCourseResponseToCatalogItem(course: CourseResponse, index: number): CourseCatalogItem {
   const image = course.images?.[0]?.imageUrl || courseListingItems[index % courseListingItems.length]?.image || "/courses/course-01.png";
   const category = course.category?.name || "Software Dev";
@@ -146,7 +187,7 @@ export async function getCourseCatalog(filters: CourseCatalogFilters): Promise<C
     size: filters.size || 9,
   };
 
-  const payload = await fetchJson<CourseListPayload>(
+  const payload = await fetchJson<CourseListPayload | { data?: SpringPagePayload } | SpringPagePayload>(
     apiUrl("/api/v1/courses", {
       page: normalized.page,
       size: normalized.size,
@@ -158,15 +199,16 @@ export async function getCourseCatalog(filters: CourseCatalogFilters): Promise<C
       categoryId: normalized.categoryId,
     }),
   );
+  const normalizedPayload = normalizeCoursePayload(payload);
 
-  if (!payload?.data) return emptyCourses(normalized);
+  if (!normalizedPayload) return emptyCourses(normalized);
 
   return {
-    courses: payload.data.map(mapCourseResponseToCatalogItem),
-    meta: payload.meta || {
+    courses: normalizedPayload.courses.map(mapCourseResponseToCatalogItem),
+    meta: normalizedPayload.meta || {
       page: normalized.page,
       limit: normalized.size,
-      totalElements: payload.data.length,
+      totalElements: normalizedPayload.courses.length,
       totalPages: 1,
     },
     isFallback: false,
@@ -174,11 +216,11 @@ export async function getCourseCatalog(filters: CourseCatalogFilters): Promise<C
 }
 
 export async function getCourseCategories(): Promise<CourseCategoryFilter[]> {
-  const payload = await fetchJson<CategoryListPayload>(apiUrl("/api/v1/categories"));
-  const categories = payload?.data?.map((category) => ({
+  const payload = await fetchJson<CategoryListPayload | { data?: { content?: CategoryResponse[] } } | CategoryResponse[]>(apiUrl("/api/v1/categories"));
+  const categories = normalizeCategoryPayload(payload).map((category) => ({
     id: category.id || "",
     label: category.name || "Untitled",
   })).filter((category) => category.id && category.label);
 
-  return categories || [];
+  return categories;
 }
