@@ -106,6 +106,17 @@ export type UserProfilePurchaseHistoryData = {
   purchases: ProfilePurchaseHistoryItem[];
 };
 
+export type UserProfileSettingsData = {
+  user: UserProfileDashboardData["user"] & {
+    id?: string;
+    email: string;
+    fullName: string;
+    username: string;
+    bio: string;
+  };
+  tabs: ProfileTab[];
+};
+
 export const profileTabs: ProfileTab[] = [
   { label: "Dashboard", href: "/user-profile", active: true },
   { label: "Courses", href: "/user-profile/courses" },

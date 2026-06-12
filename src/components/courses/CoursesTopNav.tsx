@@ -3,6 +3,7 @@ import { Bell, Heart, Search, ShoppingCart } from "lucide-react";
 import type { UserDto } from "@/api/generated/user";
 import { CoursesUserMenu } from "@/components/courses/CoursesUserMenu";
 import { TopNavLinks } from "@/components/courses/TopNavLinks";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 import { API_BASE_URL } from "@/lib/api-base";
 import { authHeaders } from "@/lib/server-auth";
 import { getNavCounts } from "@/services/nav-count-service";
@@ -40,10 +41,7 @@ export async function CoursesTopNav() {
       <div className="border-b border-[#E9EAF0] bg-white px-6 py-6 lg:px-8">
         <div className="mx-auto flex max-w-[1920px] items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-6 2xl:gap-[50px]">
-            <Link href="/" className="inline-flex w-[150px] shrink-0 items-center gap-2 whitespace-nowrap text-black 2xl:w-[187px]">
-              <span className="font-logo text-[23px] font-semibold leading-none">LM</span>
-              <span className="font-general text-[23px] font-semibold leading-none">Lumina</span>
-            </Link>
+            <BrandLogo className="w-[150px] shrink-0 2xl:w-[187px]" />
 
             <div className="hidden min-w-0 items-center gap-4 lg:flex">
               <form action="/courses" className="flex h-12 w-[min(34vw,424px)] min-w-[280px] items-center gap-3 rounded-[18px] border border-[#E9EAF0] px-4 transition focus-within:border-[#7872FD]">
