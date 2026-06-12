@@ -5,17 +5,15 @@ import {
   Clock,
   Copy,
   FileDown,
-  Gift,
   Globe,
-  Heart,
   Languages,
   RotateCcw,
   Share2,
-  ShoppingCart,
   Smartphone,
   Users,
 } from "lucide-react";
 import type { CourseDetail } from "@/data/course-detail";
+import { CoursePurchaseActions } from "./CoursePurchaseActions";
 
 const factIcons = [Clock, BarChart3, Users, Globe, Languages];
 const includeIcons = [Clock, RotateCcw, FileDown, Award, Smartphone, Languages, CheckCircle2];
@@ -61,26 +59,14 @@ export function CoursePurchaseCard({ course }: { course: CourseDetail }) {
         </ul>
       </div>
 
-      <div className="space-y-3 p-6">
-        <button type="button" className="flex h-12 w-full items-center justify-center gap-2 rounded-[18px] bg-[#7872FD] text-sm font-semibold text-white transition hover:bg-[#6C66F3]">
-          <ShoppingCart className="size-4" />
-          Add To Cart
-        </button>
-        <button type="button" className="flex h-12 w-full items-center justify-center rounded-[18px] bg-[#EBEBFF] text-sm font-semibold text-[#7872FD] transition hover:bg-[#DEDDFF]">
-          Buy Now
-        </button>
-        <div className="grid grid-cols-2 gap-3">
-          <button type="button" className="flex h-10 items-center justify-center gap-2 rounded-[18px] border border-[#E9EAF0] text-xs font-semibold text-[#4E5566]">
-            <Heart className="size-4" />
-            Add To Wishlist
-          </button>
-          <button type="button" className="flex h-10 items-center justify-center gap-2 rounded-[18px] border border-[#E9EAF0] text-xs font-semibold text-[#4E5566]">
-            <Gift className="size-4" />
-            Gift Course
-          </button>
-        </div>
-        <p className="text-center text-xs text-[#8C94A3]">Note: all course have 30-days money-back guarantee</p>
-      </div>
+      <CoursePurchaseActions
+        courseId={course.id}
+        isAuthenticated={course.isAuthenticated}
+        isEnrolled={course.isEnrolled}
+        isInCart={course.isInCart}
+        isWishlisted={course.isWishlisted}
+        cartItemId={course.cartItemId}
+      />
 
       <div className="border-t border-[#E9EAF0] p-6">
         <h3 className="text-base font-semibold text-[#1D2026]">This course includes:</h3>

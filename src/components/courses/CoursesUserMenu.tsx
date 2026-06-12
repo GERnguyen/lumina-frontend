@@ -31,7 +31,7 @@ export function CoursesUserMenu({ user }: { user: UserDto }) {
       <button
         type="button"
         onClick={() => setIsOpen((value) => !value)}
-        className="flex h-12 items-center gap-3 rounded-[18px] border border-[#E9EAF0] bg-white py-1 pl-1 pr-4 text-left transition hover:border-[#7872FD] hover:shadow-[0_12px_28px_rgba(120,114,253,0.16)]"
+        className="flex h-12 items-center gap-3 rounded-full border border-[#E9EAF0] bg-white py-1 pl-1 pr-4 text-left transition hover:border-[#7872FD] hover:shadow-[0_12px_28px_rgba(120,114,253,0.16)]"
         aria-expanded={isOpen}
         aria-haspopup="menu"
       >
