@@ -20,6 +20,7 @@ export type CourseListingItem = {
   price: string;
   originalPrice?: string;
   rating: string;
+  ratingValue?: number;
   students: string;
   instructor?: string;
   duration?: string;
@@ -28,11 +29,11 @@ export type CourseListingItem = {
 };
 
 export const courseSuggestions = [
-  "user interface",
-  "user experience",
-  "web design",
-  "interface",
-  "app",
+  "React Next.js",
+  "AWS Cloud",
+  "Cybersecurity",
+  "Docker Kubernetes",
+  "Data Science",
 ];
 
 export const courseCategories: Array<{

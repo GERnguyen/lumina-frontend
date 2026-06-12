@@ -26,13 +26,25 @@ function numberParam(value: string | string[] | undefined) {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function sortParam(value: string | string[] | undefined) {
+  const raw = firstParam(value);
+
+  if (!raw || raw === "createdAt,desc") return '{"rating":"DESC"}';
+  if (raw === "rating,desc") return '{"rating":"DESC"}';
+  if (raw === "enrollmentCount,desc") return '{"enrollmentCount":"DESC"}';
+  if (raw === "price,asc") return '{"discountedPrice":"ASC"}';
+  if (raw === "price,desc") return '{"discountedPrice":"DESC"}';
+
+  return raw;
+}
+
 export default async function Page({ searchParams }: CoursesRouteProps) {
   const params = await searchParams;
   const filters: CourseCatalogFilters = {
     page: numberParam(params.page) || 1,
     size: numberParam(params.size) || 9,
     query: firstParam(params.query),
-    sort: firstParam(params.sort) || "createdAt,desc",
+    sort: sortParam(params.sort),
     rating: numberParam(params.rating),
     priceFrom: numberParam(params.priceFrom),
     priceTo: numberParam(params.priceTo),
