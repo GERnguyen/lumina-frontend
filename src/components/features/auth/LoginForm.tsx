@@ -44,7 +44,7 @@ export default function LoginForm() {
     onSuccess: async (tokens) => {
       const session = await persistAuthSession(tokens);
       setSession({ accessToken: session.accessToken });
-      router.push("/courses");
+      router.push(role === "INSTRUCTOR" ? "/instructor" : "/courses");
       router.refresh();
     },
   });

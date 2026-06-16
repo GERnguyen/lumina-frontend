@@ -8,6 +8,7 @@ import type {
   DailyGoalResponse,
   UserNotificationResponse,
 } from "@/types";
+import { StudentCourseCard } from "@/components/courses/StudentCourseCard";
 import { cn } from "@/lib/utils";
 import {
   getCourseImage,
@@ -136,14 +137,15 @@ export function RecommendationCard({ course, index = 0 }: { course: CourseRespon
   const courseHref = course.id ? `/courses/${course.id}` : "/courses";
 
   return (
-    <Link href={courseHref} className="group border border-[#E9EAF0] bg-white p-3 transition hover:-translate-y-0.5 hover:border-[#D8D6FF] hover:shadow-[0_16px_36px_rgba(29,32,38,0.08)]">
-      <div className="relative h-32 overflow-hidden bg-[#F5F7FA]">
-        <Image src={image} alt={title} fill sizes="240px" className="object-cover transition duration-300 group-hover:scale-105" />
-      </div>
-      <p className="mt-3 text-xs font-semibold uppercase text-[#7872FD]">{category}</p>
-      <h3 className="mt-1 line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-[#1D2026]">{title}</h3>
-      <p className="mt-3 text-sm font-semibold text-[#7872FD]">{priceLabel}</p>
-    </Link>
+    <StudentCourseCard
+      href={courseHref}
+      title={title}
+      image={image}
+      category={category}
+      price={priceLabel}
+      className="min-h-[340px]"
+      imageSizes="(min-width: 1280px) 240px, (min-width: 768px) 33vw, 100vw"
+    />
   );
 }
 
