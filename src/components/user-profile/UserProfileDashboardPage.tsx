@@ -1,16 +1,83 @@
-import { ArrowLeft, ArrowRight } from "lucide-react";
-import { CoursesFooter } from "@/components/courses/CoursesFooter";
-import type { UserProfileDashboardData } from "@/data/user-profile";
+"use client";
+
+import { ArrowLeft, ArrowRight, PlayCircle, CheckSquare, Trophy, Users } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { getCourseProgressByCourseIdsAction } from "@/services/actions/learning";
+import type { UserDto, CourseResponse } from "@/types";
+import { getProfileTabs, mockUserProfileDashboard } from "@/data/user-profile";
+import { getProfileAvatar } from "@/lib/format";
 import { UserProfileHero } from "./UserProfileHero";
 import { UserProfileLearningCard } from "./UserProfileLearningCard";
 import { UserProfileStatCard } from "./UserProfileStatCard";
-import { UserProfileTopNav } from "./UserProfileTopNav";
 
-export function UserProfileDashboardPage({ dashboard }: { dashboard: UserProfileDashboardData }) {
+type UserProfileDashboardPageProps = {
+  user: UserDto | undefined;
+  enrolledCourses: CourseResponse[];
+  totalEnrolled: number;
+  header: React.ReactNode;
+  footer: React.ReactNode;
+};
+
+export function UserProfileDashboardPage({
+  user,
+  enrolledCourses,
+  totalEnrolled,
+  header,
+  footer,
+}: UserProfileDashboardPageProps) {
+  const courseIds = enrolledCourses.map((c) => c.id).filter(Boolean) as string[];
+
+  // Fetch learning progress client-side using React Query
+  const { data: progressRes, isLoading } = useQuery({
+    queryKey: ["courseProgress", courseIds.join(",")],
+    queryFn: () => getCourseProgressByCourseIdsAction(courseIds.join(",")),
+    enabled: courseIds.length > 0,
+  });
+
+  const progressList = progressRes?.data || [];
+  const completedCount = progressList.filter((item) => item.isCompleted).length || 0;
+
+  const dashboardHero = {
+    user: {
+      name: user?.name || "Lumina Learner",
+      headline: user?.role === "INSTRUCTOR" ? "Instructor on Lumina" : user?.bio || "Lifelong learner on Lumina",
+      avatar: getProfileAvatar(user),
+    },
+    tabs: getProfileTabs("Dashboard"),
+  };
+
+  const stats = [
+    { label: "Enrolled Courses", value: String(totalEnrolled), icon: PlayCircle, tone: "purple" as const },
+    { label: "Active Courses", value: isLoading ? "..." : String(Math.max(0, enrolledCourses.length - completedCount)), icon: CheckSquare, tone: "purple" as const },
+    { label: "Completed Courses", value: isLoading ? "..." : String(completedCount), icon: Trophy, tone: "green" as const },
+    { label: "Course Instructors", value: user?.role === "INSTRUCTOR" ? "1" : "0", icon: Users, tone: "orange" as const },
+  ];
+
+  const learningCourses = enrolledCourses.map((course, index) => {
+    const progressItem = progressList.find((item) => item.courseId === course.id);
+    const progress = progressItem?.totalItems
+      ? Math.round(((progressItem.completedItems || 0) / progressItem.totalItems) * 100)
+      : undefined;
+
+    return {
+      id: course.id || `course-${index}`,
+      title: course.title || "Untitled course",
+      lesson: "Continue your learning",
+      image: course.images?.[0]?.imageUrl || `/courses/course-0${(index % 8) + 1}.png`,
+      progress,
+      href: `/courses/${course.id}/watch`,
+      featured: index === 3,
+    };
+  });
+
+  const resolvedLearningCourses = learningCourses.length
+    ? learningCourses
+    : mockUserProfileDashboard.learningCourses;
+
   return (
     <main className="min-h-screen bg-white">
-      <UserProfileTopNav avatar={dashboard.user.avatar} />
-      <UserProfileHero dashboard={dashboard} />
+      {header}
+      <UserProfileHero dashboard={dashboardHero} />
 
       <section className="px-6 py-10 lg:px-8">
         <div className="mx-auto max-w-[1320px]">
@@ -19,13 +86,15 @@ export function UserProfileDashboardPage({ dashboard }: { dashboard: UserProfile
           </div>
 
           <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-            {dashboard.stats.map((stat) => (
+            {stats.map((stat) => (
               <UserProfileStatCard key={stat.label} stat={stat} />
             ))}
           </div>
 
           <div className="mt-11 flex items-center justify-between gap-4">
-            <h2 className="text-2xl font-semibold tracking-normal text-[#1D2026]">Let’s start learning, {dashboard.user.name.split(" ")[0]}</h2>
+            <h2 className="text-2xl font-semibold tracking-normal text-[#1D2026]">
+              Let’s start learning, {dashboardHero.user.name.split(" ")[0]}
+            </h2>
             <div className="flex gap-2">
               <button type="button" aria-label="Previous course" className="flex size-10 items-center justify-center bg-[#EBEBFF] text-[#564FFD] transition hover:bg-[#DEDDFF]">
                 <ArrowLeft className="size-5" />
@@ -37,14 +106,14 @@ export function UserProfileDashboardPage({ dashboard }: { dashboard: UserProfile
           </div>
 
           <div className="mt-5 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-            {dashboard.learningCourses.map((course) => (
+            {resolvedLearningCourses.map((course) => (
               <UserProfileLearningCard key={course.id} course={course} />
             ))}
           </div>
         </div>
       </section>
 
-      <CoursesFooter />
+      {footer}
     </main>
   );
 }

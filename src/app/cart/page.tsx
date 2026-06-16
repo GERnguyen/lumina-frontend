@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { CartPage } from "@/components/cart/CartPage";
-import { getCartPageData } from "@/services/cart-service";
+import { CartApi } from "@/services/api/cart-api";
+import { getServerAccessToken } from "@/lib/server-auth";
+
+import type { CartItemResponse } from "@/types";
 
 export const metadata: Metadata = {
   title: "Shopping Cart",
@@ -11,6 +14,14 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-  const cart = await getCartPageData();
-  return <CartPage cart={cart} />;
+  const token = await getServerAccessToken();
+  const isAuthenticated = Boolean(token);
+
+  let items: CartItemResponse[] = [];
+  if (isAuthenticated) {
+    const res = await CartApi.getCart().catch(() => ({ data: [] }));
+    items = res.data || [];
+  }
+
+  return <CartPage items={items} isAuthenticated={isAuthenticated} />;
 }

@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import { Eye, EyeOff, Loader2, Upload } from "lucide-react";
 import type { UserProfileSettingsData } from "@/data/user-profile";
+import { updateProfileAction, changePasswordAction } from "@/services/actions/profile";
 
 type ApiMessage = {
   message?: string;
@@ -95,21 +96,15 @@ export function UserProfileSettingsForm({ settings }: { settings: UserProfileSet
     setPendingAction("profile");
 
     try {
-      const response = await fetch("/api/profile/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: settings.user.id,
-          name: fullName,
-          username,
-          bio,
-        }),
+      if (!settings.user.id) throw new Error("User ID is missing.");
+      const res = await updateProfileAction(settings.user.id, {
+        name: fullName,
+        bio,
       });
-      const payload = (await response.json()) as ApiMessage;
-      if (!response.ok) throw new Error(payload.message || "Could not save profile.");
-      setProfileMessage(payload.message || "Profile updated successfully.");
-    } catch (error) {
-      setProfileMessage(error instanceof Error ? error.message : "Could not save profile.");
+      if (!res.success) throw new Error(res.error);
+      setProfileMessage("Profile updated successfully.");
+    } catch (error: any) {
+      setProfileMessage(error?.message || "Could not save profile.");
     } finally {
       setPendingAction(undefined);
     }
@@ -126,23 +121,18 @@ export function UserProfileSettingsForm({ settings }: { settings: UserProfileSet
     setPendingAction("password");
 
     try {
-      const response = await fetch("/api/profile/password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          currentPassword,
-          newPassword,
-        }),
+      const res = await changePasswordAction({
+        email,
+        oldPassword: currentPassword,
+        newPassword,
       });
-      const payload = (await response.json()) as ApiMessage;
-      if (!response.ok) throw new Error(payload.message || "Could not change password.");
-      setPasswordMessage(payload.message || "Password changed successfully.");
+      if (!res.success) throw new Error(res.error);
+      setPasswordMessage("Password changed successfully.");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } catch (error) {
-      setPasswordMessage(error instanceof Error ? error.message : "Could not change password.");
+    } catch (error: any) {
+      setPasswordMessage(error?.message || "Could not change password.");
     } finally {
       setPendingAction(undefined);
     }

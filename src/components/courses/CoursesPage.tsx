@@ -1,14 +1,21 @@
-import {
-  getCourseCatalog,
-  getCourseCategories,
-  type CourseCatalogFilters,
-} from "@/services/course-catalog-service";
+import { CourseApi, CategoryApi } from "@/services/api/course-api";
 import { CourseListingCard } from "./CourseListingCard";
 import { CoursesActionBar } from "./CoursesActionBar";
 import { CoursesFilterSidebar } from "./CoursesFilterSidebar";
 import { CoursesFooter } from "./CoursesFooter";
 import { CoursesPagination } from "./CoursesPagination";
 import { CoursesTopNav } from "./CoursesTopNav";
+
+export type CourseCatalogFilters = {
+  page?: number;
+  size?: number;
+  query?: string;
+  sort?: string;
+  rating?: number;
+  priceFrom?: number;
+  priceTo?: number;
+  categoryId?: string;
+};
 
 type CoursesPageProps = {
   filters: CourseCatalogFilters;
@@ -34,13 +41,20 @@ function queryStringFromFilters(filters: CourseCatalogFilters) {
 }
 
 export async function CoursesPage({ filters }: CoursesPageProps) {
-  const [catalog, categories] = await Promise.all([
-    getCourseCatalog(filters),
-    getCourseCategories(),
+  const [catalogRes, categoriesRes] = await Promise.all([
+    CourseApi.getAllCourses(filters),
+    CategoryApi.getAllCategories(),
   ]);
-  const currentPage = catalog.meta.page || filters.page || 1;
-  const totalPages = Math.max(1, catalog.meta.totalPages || 1);
-  const totalElements = catalog.meta.totalElements || catalog.courses.length;
+
+  const courses = catalogRes.data || [];
+  const categories = (categoriesRes.data || []).map((cat) => ({
+    id: cat.id || "",
+    label: cat.name || "Untitled",
+  })).filter((cat) => cat.id && cat.label);
+
+  const currentPage = catalogRes.meta?.page || filters.page || 1;
+  const totalPages = Math.max(1, catalogRes.meta?.totalPages || 1);
+  const totalElements = catalogRes.meta?.totalElements || courses.length;
   const queryString = queryStringFromFilters(filters);
 
   return (
@@ -51,10 +65,10 @@ export async function CoursesPage({ filters }: CoursesPageProps) {
         <div className="flex gap-6">
           <CoursesFilterSidebar categories={categories} filters={filters} queryString={queryString} />
           <div className="flex flex-1 flex-col gap-10">
-            {catalog.courses.length > 0 ? (
+            {courses.length > 0 ? (
               <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                {catalog.courses.map((course, index) => (
-                  <CourseListingCard key={`${course.id || course.title}-${index}`} course={course} />
+                {courses.map((course, index) => (
+                  <CourseListingCard key={`${course.id || course.title}-${index}`} course={course} index={index} />
                 ))}
               </div>
             ) : (

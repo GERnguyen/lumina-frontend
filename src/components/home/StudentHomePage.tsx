@@ -1,43 +1,117 @@
+"use client";
+
 import { BookOpenCheck, CalendarDays, Sparkles } from "lucide-react";
-import { CoursesFooter } from "@/components/courses/CoursesFooter";
-import { CoursesTopNav } from "@/components/courses/CoursesTopNav";
-import type { StudentHomeData } from "@/services/home-service";
+import { useQuery } from "@tanstack/react-query";
+import { getCourseProgressByCourseIdsAction } from "@/services/actions/learning";
+import type {
+  UserDto,
+  UserStreakResponse,
+  CourseResponse,
+  CourseProgressResponse,
+  DailyGoalResponse,
+  UserNotificationResponse,
+} from "@/types";
 import {
   ContinueCourseCard,
   EmptyHomeState,
   HomeSectionHeader,
   MiniGoalList,
   RecommendationCard,
+  HomeStats,
 } from "./HomePrimitives";
 import { GoalCalendar } from "./HomeVariantTools";
 
 type StudentHomePageProps = {
-  data: StudentHomeData;
+  user?: UserDto;
+  streak?: UserStreakResponse;
+  enrolledCourses: CourseResponse[];
+  recommendations: CourseResponse[];
+  goals: DailyGoalResponse[];
+  monthGoals: DailyGoalResponse[];
+  notifications: UserNotificationResponse[];
+  unreadNotificationsCount: number;
+  header: React.ReactNode;
+  footer: React.ReactNode;
 };
 
-export function StudentHomePage({ data }: StudentHomePageProps) {
+export function StudentHomePage({
+  user,
+  streak,
+  enrolledCourses,
+  recommendations,
+  goals,
+  monthGoals,
+  notifications,
+  unreadNotificationsCount,
+  header,
+  footer,
+}: StudentHomePageProps) {
+  const welcomeName = user?.name ? user.name.split(" ")[0] : "Learner";
+
+  const courseIds = enrolledCourses.map((c) => c.id).filter(Boolean) as string[];
+
+  // Fetch course progress client-side using React Query
+  const { data: progressRes, isLoading } = useQuery({
+    queryKey: ["courseProgress", courseIds.join(",")],
+    queryFn: () => getCourseProgressByCourseIdsAction(courseIds.join(",")),
+    enabled: courseIds.length > 0,
+  });
+
+  const courseProgresses = progressRes?.data || [];
+
   return (
     <main className="min-h-screen bg-white">
-      <CoursesTopNav />
+      {header}
       <section className="mx-auto flex max-w-[1320px] flex-col gap-8 px-5 py-8 sm:px-8">
         <div>
           <p className="text-sm font-semibold uppercase text-[#7872FD]">Student home</p>
           <h1 className="mt-2 text-3xl font-semibold leading-tight text-[#1D2026] sm:text-4xl">
-            Welcome back, {data.user.name.split(" ")[0] || "Learner"}.
+            Welcome back, {welcomeName}.
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-7 text-[#6E7485]">
             Continue learning, keep your goals visible, and discover the next course that fits your IT path.
           </p>
         </div>
 
-        <RoadmapStudio data={data} />
+        <HomeStats
+          stats={{
+            activeCourses: enrolledCourses.length - courseProgresses.filter((p) => p.isCompleted).length,
+            completedCourses: courseProgresses.filter((p) => p.isCompleted).length,
+            currentStreak: streak?.currentStreak || 0,
+            unreadNotifications: unreadNotificationsCount,
+          }}
+          isLoading={isLoading}
+        />
+
+        <RoadmapStudio
+          goals={goals}
+          monthGoals={monthGoals}
+          enrolledCourses={enrolledCourses}
+          courseProgresses={courseProgresses}
+          recommendations={recommendations}
+          isLoading={isLoading}
+        />
       </section>
-      <CoursesFooter />
+      {footer}
     </main>
   );
 }
 
-function RoadmapStudio({ data }: { data: StudentHomeData }) {
+function RoadmapStudio({
+  goals,
+  monthGoals,
+  enrolledCourses,
+  courseProgresses,
+  recommendations,
+  isLoading = false,
+}: {
+  goals: DailyGoalResponse[];
+  monthGoals: DailyGoalResponse[];
+  enrolledCourses: CourseResponse[];
+  courseProgresses: CourseProgressResponse[];
+  recommendations: CourseResponse[];
+  isLoading?: boolean;
+}) {
   const steps = [
     { title: "Choose your focus", copy: "Pick a course from your active queue or start a new IT track.", icon: BookOpenCheck },
     { title: "Set today's target", copy: "Use daily goals to define the next measurable learning block.", icon: CalendarDays },
@@ -54,7 +128,7 @@ function RoadmapStudio({ data }: { data: StudentHomeData }) {
             This layout emphasizes goals, checkpoints, and your next learning sequence.
           </p>
           <div className="mt-6">
-            <MiniGoalList goals={data.goals} />
+            <MiniGoalList goals={goals} />
           </div>
         </div>
         <div className="grid gap-4">
@@ -80,8 +154,20 @@ function RoadmapStudio({ data }: { data: StudentHomeData }) {
         <section>
           <HomeSectionHeader title="Next courses in your path" action="/user-profile/courses" />
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {data.continueCourses.length ? (
-              data.continueCourses.slice(0, 4).map((course) => <ContinueCourseCard key={course.id} course={course} compact />)
+            {enrolledCourses.length ? (
+              enrolledCourses.slice(0, 4).map((course, index) => {
+                const progress = courseProgresses.find((p) => p.courseId === course.id);
+                return (
+                  <ContinueCourseCard
+                    key={course.id || index}
+                    course={course}
+                    progress={progress}
+                    index={index}
+                    compact
+                    isLoading={isLoading}
+                  />
+                );
+              })
             ) : (
               <EmptyHomeState
                 title="No path yet"
@@ -92,13 +178,15 @@ function RoadmapStudio({ data }: { data: StudentHomeData }) {
             )}
           </div>
         </section>
-        <GoalCalendar goals={data.monthGoals} />
+        <GoalCalendar goals={monthGoals} />
       </div>
 
       <section>
         <HomeSectionHeader title="Recommended next" action="/courses" />
         <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {data.recommendations.slice(0, 4).map((course) => <RecommendationCard key={course.id} course={course} />)}
+          {recommendations.slice(0, 4).map((course, index) => (
+            <RecommendationCard key={course.id || index} course={course} index={index} />
+          ))}
         </div>
       </section>
     </div>

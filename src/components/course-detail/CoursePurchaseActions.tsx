@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Heart, Loader2, ShoppingCart } from "lucide-react";
+import { addToCartAction, removeFromCartAction } from "@/services/actions/cart";
+import { addToWishlistAction, removeFromWishlistAction } from "@/services/actions/wishlist";
+import { createOrderAction } from "@/services/actions/checkout";
 
 type CoursePurchaseActionsProps = {
   courseId: string;
@@ -65,20 +68,22 @@ export function CoursePurchaseActions({
     setPendingAction("cart");
 
     try {
-      const response = await fetch(isInCart && cartItemId ? `/api/course-actions/cart?itemId=${cartItemId}` : "/api/course-actions/cart", {
-        method: isInCart && cartItemId ? "DELETE" : "POST",
-        headers: isInCart && cartItemId ? undefined : { "Content-Type": "application/json" },
-        body: isInCart && cartItemId ? undefined : JSON.stringify({ courseId }),
-      });
-
-      if (!response.ok) throw new Error("Cart action failed");
-
-      setIsInCart(!isInCart);
-      if (isInCart) setCartItemId(undefined);
-      setMessage(isInCart ? "Removed from cart." : "Added to cart.");
+      if (isInCart && cartItemId) {
+        const res = await removeFromCartAction(cartItemId);
+        if (!res.success) throw new Error(res.error);
+        setIsInCart(false);
+        setCartItemId(undefined);
+        setMessage("Removed from cart.");
+      } else {
+        const res = await addToCartAction(courseId);
+        if (!res.success) throw new Error(res.error);
+        setIsInCart(true);
+        if (res.data?.id) setCartItemId(String(res.data.id));
+        setMessage("Added to cart.");
+      }
       router.refresh();
-    } catch {
-      setMessage("Could not update cart. Please try again.");
+    } catch (error: any) {
+      setMessage(error?.message || "Could not update cart. Please try again.");
     } finally {
       setPendingAction(undefined);
     }
@@ -89,19 +94,20 @@ export function CoursePurchaseActions({
     setPendingAction("wishlist");
 
     try {
-      const response = await fetch(isWishlisted ? `/api/course-actions/wishlist?courseId=${courseId}` : "/api/course-actions/wishlist", {
-        method: isWishlisted ? "DELETE" : "POST",
-        headers: isWishlisted ? undefined : { "Content-Type": "application/json" },
-        body: isWishlisted ? undefined : JSON.stringify({ courseId }),
-      });
-
-      if (!response.ok) throw new Error("Wishlist action failed");
-
-      setIsWishlisted(!isWishlisted);
-      setMessage(isWishlisted ? "Removed from wishlist." : "Added to wishlist.");
+      if (isWishlisted) {
+        const res = await removeFromWishlistAction(courseId);
+        if (!res.success) throw new Error(res.error);
+        setIsWishlisted(false);
+        setMessage("Removed from wishlist.");
+      } else {
+        const res = await addToWishlistAction(courseId);
+        if (!res.success) throw new Error(res.error);
+        setIsWishlisted(true);
+        setMessage("Added to wishlist.");
+      }
       router.refresh();
-    } catch {
-      setMessage("Could not update wishlist. Please try again.");
+    } catch (error: any) {
+      setMessage(error?.message || "Could not update wishlist. Please try again.");
     } finally {
       setPendingAction(undefined);
     }
@@ -112,24 +118,18 @@ export function CoursePurchaseActions({
     setPendingAction("checkout");
 
     try {
-      const response = await fetch("/api/course-actions/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courseId, paymentMethod: "VN_PAY" }),
-      });
+      const res = await createOrderAction({ courseId, paymentMethod: "VN_PAY" });
+      if (!res.success) throw new Error(res.error);
 
-      const payload = (await response.json()) as { paymentUrl?: string; message?: string };
-      if (!response.ok) throw new Error(payload.message || "Checkout failed");
-
-      if (payload.paymentUrl) {
-        window.location.href = payload.paymentUrl;
+      if (res.paymentUrl) {
+        window.location.href = res.paymentUrl;
         return;
       }
 
       setMessage("Order created. Payment URL is not available yet.");
       router.refresh();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not start checkout.");
+    } catch (error: any) {
+      setMessage(error?.message || "Could not start checkout.");
     } finally {
       setPendingAction(undefined);
     }

@@ -3,25 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2 } from "lucide-react";
-
-type VoucherPayload = {
-  data?: {
-    code?: string;
-    discountAmount?: number;
-    minPurchaseAmount?: number;
-    maxDiscountAmount?: number;
-  };
-  message?: string;
-};
-
-function money(value: number) {
-  if (!value) return "Free";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "VND",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
+import { money } from "@/lib/format";
+import { verifyVoucherAction } from "@/services/actions/checkout";
 
 export function CartSummary({
   subtotal,
@@ -50,11 +33,10 @@ export function CartSummary({
     setPendingAction("coupon");
 
     try {
-      const response = await fetch(`/api/course-actions/voucher?code=${encodeURIComponent(code)}`);
-      const payload = (await response.json()) as VoucherPayload;
-      if (!response.ok || !payload.data) throw new Error(payload.message || "Invalid coupon code.");
+      const res = await verifyVoucherAction(code);
+      if (!res.success || !res.data) throw new Error(res.error || "Invalid coupon code.");
 
-      const voucher = payload.data;
+      const voucher = res.data;
       if (voucher.minPurchaseAmount && subtotal < voucher.minPurchaseAmount) {
         throw new Error(`This coupon requires at least ${money(voucher.minPurchaseAmount)}.`);
       }
@@ -63,10 +45,10 @@ export function CartSummary({
       setDiscount(nextDiscount);
       setAppliedCode(voucher.code || code);
       setMessage("Coupon applied.");
-    } catch (error) {
+    } catch (error: any) {
       setDiscount(0);
       setAppliedCode("");
-      setMessage(error instanceof Error ? error.message : "Could not apply coupon.");
+      setMessage(error?.message || "Could not apply coupon.");
     } finally {
       setPendingAction(undefined);
     }

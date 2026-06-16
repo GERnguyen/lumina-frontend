@@ -1,4 +1,3 @@
-import type { CourseDetail } from "@/data/course-detail";
 import { CoursesFooter } from "@/components/courses/CoursesFooter";
 import { CoursesTopNav } from "@/components/courses/CoursesTopNav";
 import { CourseCurriculum } from "./CourseCurriculum";
@@ -9,12 +8,40 @@ import { CourseInstructorSection } from "./CourseInstructorSection";
 import { CourseOverview } from "./CourseOverview";
 import { CoursePurchaseCard } from "./CoursePurchaseCard";
 import { CourseReviews } from "./CourseReviews";
+import type {
+  CourseResponse,
+  CourseCurriculumResponse,
+  ReviewResponse,
+  ReviewStatisticsResponse,
+} from "@/types";
 
-export function CourseDetailPage({ course }: { course: CourseDetail }) {
+type CourseDetailPageProps = {
+  course: CourseResponse;
+  curriculum?: CourseCurriculumResponse;
+  reviews: ReviewResponse[];
+  reviewStats?: ReviewStatisticsResponse;
+  isEnrolled: boolean;
+  isInCart: boolean;
+  isWishlisted: boolean;
+  cartItemId?: string;
+  isAuthenticated: boolean;
+};
+
+export function CourseDetailPage({
+  course,
+  curriculum,
+  reviews,
+  reviewStats,
+  isEnrolled,
+  isInCart,
+  isWishlisted,
+  cartItemId,
+  isAuthenticated,
+}: CourseDetailPageProps) {
   return (
     <main className="min-h-screen bg-white">
       <CoursesTopNav />
-      <CourseDetailHeader course={course} />
+      <CourseDetailHeader course={course} reviewsCount={reviewStats?.reviewCount || 0} />
 
       <section className="px-6 pb-16 lg:px-8">
         <div className="mx-auto grid max-w-[1320px] gap-10 lg:grid-cols-[minmax(0,872px)_424px] lg:items-start">
@@ -22,12 +49,19 @@ export function CourseDetailPage({ course }: { course: CourseDetail }) {
             <CourseHeroMedia course={course} />
             <CourseDetailTabs />
             <CourseOverview course={course} />
-            <CourseCurriculum course={course} />
+            <CourseCurriculum curriculum={curriculum} duration={course.duration} />
             <CourseInstructorSection course={course} />
-            <CourseReviews course={course} />
+            <CourseReviews reviews={reviews} reviewStats={reviewStats} />
           </div>
 
-          <CoursePurchaseCard course={course} />
+          <CoursePurchaseCard
+            course={course}
+            isEnrolled={isEnrolled}
+            isInCart={isInCart}
+            isWishlisted={isWishlisted}
+            cartItemId={cartItemId}
+            isAuthenticated={isAuthenticated}
+          />
         </div>
       </section>
 

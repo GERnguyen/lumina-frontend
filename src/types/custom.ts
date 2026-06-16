@@ -15,7 +15,7 @@ export type CourseCatalogFilters = {
 export type CourseCategoryFilter = {
   id: string;
   label: string;
-  count: string;
+  count?: string;
   isMock?: boolean;
 };
 

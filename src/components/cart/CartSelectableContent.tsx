@@ -4,24 +4,38 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Star } from "lucide-react";
-import type { CartPageData } from "@/services/cart-service";
+import type { CartItemResponse } from "@/types";
+import { getCourseImage, getCourseRating, getCourseInstructorName, money } from "@/lib/format";
 import { CartActions } from "./CartActions";
 import { CartSummary } from "./CartSummary";
 
-export function CartSelectableContent({ cart }: { cart: CartPageData }) {
-  const [selectedItemIds, setSelectedItemIds] = useState(() => cart.items.map((item) => item.id));
-  const selectedItems = useMemo(
-    () => cart.items.filter((item) => selectedItemIds.includes(item.id)),
-    [cart.items, selectedItemIds],
+export function CartSelectableContent({ items }: { items: CartItemResponse[] }) {
+  const validItems = useMemo(() => {
+    return items.filter((item) => item.id && item.course?.id);
+  }, [items]);
+
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>(() =>
+    validItems.map((item) => item.id!)
   );
+
+  const selectedItems = useMemo(
+    () => validItems.filter((item) => selectedItemIds.includes(item.id!)),
+    [validItems, selectedItemIds],
+  );
+
   const selectedSubtotal = useMemo(
-    () => selectedItems.reduce((sum, item) => sum + item.price, 0),
+    () =>
+      selectedItems.reduce((sum, item) => {
+        const price = item.course?.discountedPrice ?? item.course?.price ?? 0;
+        return sum + price;
+      }, 0),
     [selectedItems],
   );
-  const allSelected = cart.items.length > 0 && selectedItemIds.length === cart.items.length;
+
+  const allSelected = validItems.length > 0 && selectedItemIds.length === validItems.length;
 
   function toggleAll() {
-    setSelectedItemIds(allSelected ? [] : cart.items.map((item) => item.id));
+    setSelectedItemIds(allSelected ? [] : validItems.map((item) => item.id!));
   }
 
   function toggleItem(itemId: string) {
@@ -48,49 +62,62 @@ export function CartSelectableContent({ cart }: { cart: CartPageData }) {
           <span>Action</span>
         </div>
 
-        {cart.items.length ? (
+        {validItems.length ? (
           <div className="divide-y divide-[#E9EAF0] px-4 lg:px-6">
-            {cart.items.map((item) => {
-              const isSelected = selectedItemIds.includes(item.id);
+            {validItems.map((item) => {
+              const itemId = item.id!;
+              const course = item.course!;
+              const courseId = course.id!;
+              const isSelected = selectedItemIds.includes(itemId);
+              
+              const price = course.discountedPrice ?? course.price ?? 0;
+              const originalPrice = course.discountedPrice && course.price && course.discountedPrice < course.price ? course.price : undefined;
+              const priceLabel = money(price);
+              const originalPriceLabel = originalPrice ? money(originalPrice) : undefined;
+              const title = course.title || "Untitled course";
+              const rating = getCourseRating(course.rating);
+              const reviewLabel = course.enrollmentCount ? `(${new Intl.NumberFormat("en-US").format(course.enrollmentCount)} learners)` : "";
+              const instructor = getCourseInstructorName(course);
+              const image = getCourseImage(course);
 
               return (
-                <article key={item.id} className="grid gap-5 py-5 lg:grid-cols-[32px_1fr_180px_180px] lg:items-center">
+                <article key={itemId} className="grid gap-5 py-5 lg:grid-cols-[32px_1fr_180px_180px] lg:items-center">
                   <label className="flex items-start pt-1 lg:items-center lg:pt-0">
                     <input
                       type="checkbox"
                       checked={isSelected}
-                      onChange={() => toggleItem(item.id)}
-                      aria-label={`Select ${item.title}`}
+                      onChange={() => toggleItem(itemId)}
+                      aria-label={`Select ${title}`}
                       className="size-5 rounded-none border-[#DADDE6] text-[#564FFD] focus:ring-[#564FFD]"
                     />
                   </label>
                   <div className="flex gap-5">
-                    <Link href={`/courses/${item.courseId}`} className="relative h-[100px] w-[134px] shrink-0 overflow-hidden bg-[#F5F7FA] sm:h-[120px] sm:w-[160px]">
-                      <Image src={item.image} alt={item.title} fill sizes="160px" className="object-cover transition hover:scale-105" />
+                    <Link href={`/courses/${courseId}`} className="relative h-[100px] w-[134px] shrink-0 overflow-hidden bg-[#F5F7FA] sm:h-[120px] sm:w-[160px]">
+                      <Image src={image} alt={title} fill sizes="160px" className="object-cover transition hover:scale-105" />
                     </Link>
                     <div className="flex min-w-0 flex-col justify-between">
                       <div>
                         <div className="flex items-center gap-1.5 text-sm tracking-[-0.14px]">
                           <Star className="size-5 fill-[#FD8E1F] text-[#FD8E1F]" />
-                          <span className="font-medium text-[#1D2026]">{item.rating}</span>
-                          {item.reviewLabel ? <span className="text-[#8C94A3]">{item.reviewLabel}</span> : null}
+                          <span className="font-medium text-[#1D2026]">{rating}</span>
+                          {reviewLabel ? <span className="text-[#8C94A3]">{reviewLabel}</span> : null}
                         </div>
-                        <Link href={`/courses/${item.courseId}`} className="mt-2 line-clamp-2 block max-w-[360px] text-base font-medium leading-[22px] text-[#1D2026] transition hover:text-[#564FFD]">
-                          {item.title}
+                        <Link href={`/courses/${courseId}`} className="mt-2 line-clamp-2 block max-w-[360px] text-base font-medium leading-[22px] text-[#1D2026] transition hover:text-[#564FFD]">
+                          {title}
                         </Link>
                       </div>
                       <p className="mt-3 text-sm tracking-[-0.14px] text-[#A1A5B3]">
-                        Course by: <span className="text-[#4E5566]">{item.instructor}</span>
+                        Course by: <span className="text-[#4E5566]">{instructor}</span>
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 lg:block">
-                    <span className="text-xl font-medium leading-[26px] text-[#564FFD]">{item.priceLabel}</span>
-                    {item.originalPriceLabel ? <span className="text-lg leading-6 tracking-[-0.27px] text-[#8C94A3] line-through lg:ml-1">{item.originalPriceLabel}</span> : null}
+                    <span className="text-xl font-medium leading-[26px] text-[#564FFD]">{priceLabel}</span>
+                    {originalPriceLabel ? <span className="text-lg leading-6 tracking-[-0.27px] text-[#8C94A3] line-through lg:ml-1">{originalPriceLabel}</span> : null}
                   </div>
 
-                  <CartActions itemId={item.id} courseId={item.courseId} />
+                  <CartActions itemId={itemId} courseId={courseId} />
                 </article>
               );
             })}

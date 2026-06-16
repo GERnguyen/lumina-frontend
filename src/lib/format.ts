@@ -1,20 +1,21 @@
+import { API_BASE_URL } from "./api-base";
+
 export function money(value?: number): string {
   if (typeof value !== "number" || value === 0) return "Free";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency: "VND",
     maximumFractionDigits: 0,
   }).format(value);
 }
 
 export function moneyWithCurrency(value?: number): string {
   if (typeof value !== "number" || value === 0) return "Free";
-  return `${new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)} USD`;
+    currency: "VND",
+    maximumFractionDigits: 0,
+  }).format(value);
 }
 
 export function compactNumber(value?: number): string {
@@ -53,4 +54,78 @@ export function splitDescription(description?: string): string[] {
     .split(/\n{2,}|(?<=\.)\s+(?=[A-Z])/)
     .map((paragraph) => paragraph.trim())
     .filter(Boolean);
+}
+
+export function getCourseImage(course: any, index: number = 0): string {
+  const image = course?.images?.find((img: any) => img.imageUrl)?.imageUrl || 
+                course?.images?.[0]?.imageUrl || 
+                `/courses/course-0${(index % 8) + 1}.png`;
+  return image;
+}
+
+export function getCourseCategory(course: any): string {
+  return course?.category?.name || "Software Dev";
+}
+
+export function getCourseRating(rating?: number): string {
+  return typeof rating === "number" && rating > 0 ? rating.toFixed(1) : "No reviews yet";
+}
+
+export function getCourseInstructorName(course: any): string {
+  return course?.instructor?.name || "Lumina Instructor";
+}
+
+export function getProfileAvatar(user?: any, fallbackName = "Lumina Learner"): string {
+  const avatar = user?.avatarUrl?.trim();
+  if (avatar) {
+    if (/^(https?:|data:|blob:)/.test(avatar) || avatar.startsWith("/")) return avatar;
+    return new URL(avatar, API_BASE_URL).toString();
+  }
+
+  const name = user?.name || fallbackName;
+  const params = new URLSearchParams({
+    name,
+    background: "EBEBFF",
+    color: "564FFD",
+    bold: "true",
+  });
+
+  return `https://ui-avatars.com/api/?${params.toString()}`;
+}
+
+export function formatPurchaseDate(value?: string): string {
+  if (!value) return "Recent purchase";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("en-US", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+export function paymentMethodLabel(method?: string): string {
+  if (method === "VN_PAY") return "VNPay";
+  if (method === "MOMO") return "MoMo";
+  return "Credit Card";
+}
+
+export function maskedPaymentAccount(paymentInfo?: string): string {
+  if (!paymentInfo) return "Payment details unavailable";
+  const trimmed = paymentInfo.trim();
+  const digits = trimmed.replace(/\D/g, "");
+
+  if (digits.length >= 4) {
+    return `**** **** **** ${digits.slice(-4)}`;
+  }
+
+  return trimmed;
+}
+
+export function getCourseProgressPercentage(progress?: any): number {
+  if (!progress?.totalItems) return 0;
+  return Math.round(((progress.completedItems || 0) / progress.totalItems) * 100);
 }

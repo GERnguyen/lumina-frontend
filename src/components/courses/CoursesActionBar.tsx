@@ -1,6 +1,6 @@
 import { SlidersHorizontal } from "lucide-react";
 import { courseSuggestions } from "@/data/courses";
-import type { CourseCatalogFilters } from "@/services/course-catalog-service";
+import type { CourseCatalogFilters } from "@/types";
 import { CourseSuggestionLinks } from "./CourseSuggestionLinks";
 import { CoursesSearchForm } from "./CoursesSearchForm";
 import { CoursesSortForm } from "./CoursesSortForm";

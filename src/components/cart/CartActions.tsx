@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Loader2, XCircle } from "lucide-react";
+import { removeFromCartAction } from "@/services/actions/cart";
+import { addToWishlistAction } from "@/services/actions/wishlist";
 
 type CartActionsProps = {
   itemId: string;
@@ -19,11 +21,11 @@ export function CartActions({ itemId, courseId }: CartActionsProps) {
     setPendingAction("remove");
 
     try {
-      const response = await fetch(`/api/course-actions/cart?itemId=${itemId}`, { method: "DELETE" });
-      if (!response.ok) throw new Error("Could not remove this course.");
+      const res = await removeFromCartAction(itemId);
+      if (!res.success) throw new Error(res.error);
       router.refresh();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not remove this course.");
+    } catch (error: any) {
+      setMessage(error?.message || "Could not remove this course.");
     } finally {
       setPendingAction(undefined);
     }
@@ -34,19 +36,15 @@ export function CartActions({ itemId, courseId }: CartActionsProps) {
     setPendingAction("wishlist");
 
     try {
-      const wishlistResponse = await fetch("/api/course-actions/wishlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courseId }),
-      });
-      if (!wishlistResponse.ok) throw new Error("Could not move this course to wishlist.");
+      const wishlistRes = await addToWishlistAction(courseId);
+      if (!wishlistRes.success) throw new Error(wishlistRes.error);
 
-      const removeResponse = await fetch(`/api/course-actions/cart?itemId=${itemId}`, { method: "DELETE" });
-      if (!removeResponse.ok) throw new Error("Saved to wishlist, but could not remove from cart.");
+      const removeRes = await removeFromCartAction(itemId);
+      if (!removeRes.success) throw new Error("Saved to wishlist, but could not remove from cart.");
 
       router.refresh();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not move this course.");
+    } catch (error: any) {
+      setMessage(error?.message || "Could not move this course.");
     } finally {
       setPendingAction(undefined);
     }

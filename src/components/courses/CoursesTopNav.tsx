@@ -6,7 +6,7 @@ import { TopNavLinks } from "@/components/courses/TopNavLinks";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { API_BASE_URL } from "@/lib/api-base";
 import { authHeaders } from "@/lib/server-auth";
-import { getNavCounts } from "@/services/nav-count-service";
+import { getNavCounts } from "@/services/api/nav-api";
 
 type UserPayload = {
   data?: UserDto;

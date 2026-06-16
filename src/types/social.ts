@@ -149,6 +149,7 @@ export interface ReportStatisticsOverviewResponse {
   reportsByTime?: StatisticsByTimeResponse[];
   topReportedRefs?: TopReportedRefResponse[];
 }
+
 export interface TopReportedRefResponse {
   refId?: string;
   type?: "REVIEW" | "QUESTION" | "ANSWER";

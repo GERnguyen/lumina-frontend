@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
       args:
         - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-    image: ${DOCKERHUB_USERNAME:-lumina}/cinx-fe:latest
+    image: ${DOCKERHUB_USERNAME}/cinx-fe:latest
     container_name: cinx-fe
     restart: always
     ports:

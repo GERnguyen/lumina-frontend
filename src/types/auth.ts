@@ -49,14 +49,14 @@ export interface TokenResponseDto {
 export interface AuthRequestDto {
   email: string;
   password: string;
-  role?: "USER" | "INSTRUCTOR" | "ADMIN";
+  role: "USER" | "INSTRUCTOR" | "ADMIN";
 }
 
 export interface OAuthRequest {
   code: string;
   codeVerifier: string;
-  device?: "WEB" | "MOBILE";
-  role?: "USER" | "INSTRUCTOR" | "ADMIN";
+  role: "USER" | "INSTRUCTOR" | "ADMIN";
+  redirectUri: string;
 }
 
 export interface ChangePasswordRequest {

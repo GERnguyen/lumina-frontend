@@ -1,10 +1,24 @@
 import Link from "next/link";
 import { CoursesFooter } from "@/components/courses/CoursesFooter";
 import { CoursesTopNav } from "@/components/courses/CoursesTopNav";
-import type { CheckoutPageData } from "@/services/checkout-service";
+import type { CartItemResponse, VoucherResponse } from "@/types";
 import { CheckoutContent } from "./CheckoutContent";
 
-export function CheckoutPage({ checkout }: { checkout: CheckoutPageData }) {
+type CheckoutPageProps = {
+  items: CartItemResponse[];
+  isAuthenticated: boolean;
+  voucher?: VoucherResponse;
+  voucherError?: string;
+  voucherCode?: string;
+};
+
+export function CheckoutPage({
+  items,
+  isAuthenticated,
+  voucher,
+  voucherError,
+  voucherCode,
+}: CheckoutPageProps) {
   return (
     <main className="min-h-screen bg-white">
       <CoursesTopNav />
@@ -19,7 +33,7 @@ export function CheckoutPage({ checkout }: { checkout: CheckoutPageData }) {
           </p>
         </div>
 
-        {!checkout.authenticated ? (
+        {!isAuthenticated ? (
           <div className="mt-8 border border-[#E9EAF0] bg-[#F8F8FF] p-8 text-center">
             <h2 className="text-xl font-semibold text-[#1D2026]">Sign in to checkout</h2>
             <p className="mt-2 text-sm text-[#6E7485]">Your cart and payment options will appear after you sign in.</p>
@@ -27,8 +41,13 @@ export function CheckoutPage({ checkout }: { checkout: CheckoutPageData }) {
               Sign In
             </Link>
           </div>
-        ) : checkout.items.length ? (
-          <CheckoutContent checkout={checkout} />
+        ) : items.length ? (
+          <CheckoutContent
+            items={items}
+            voucher={voucher}
+            voucherError={voucherError}
+            voucherCode={voucherCode}
+          />
         ) : (
           <div className="mt-8 border border-[#E9EAF0] bg-white p-10 text-center">
             <h2 className="text-xl font-semibold text-[#1D2026]">Your cart is empty</h2>

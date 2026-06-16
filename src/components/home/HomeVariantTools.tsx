@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
-import type { HomeGoal } from "@/services/home-service";
+import type { DailyGoalResponse } from "@/types";
 import { cn } from "@/lib/utils";
+import { setDailyGoalAction, editDailyGoalAction, getDailyGoalsInMonthAction } from "@/services/actions/learning";
 
 const months = [
   "January",
@@ -20,19 +21,10 @@ const months = [
   "December",
 ];
 
-type DailyGoalApi = {
-  id?: string;
-  goalType?: HomeGoal["type"];
-  targetValue?: number;
-  currentValue?: number;
-  goalDate?: string;
-  isCompleted?: boolean;
-};
+type GoalType = NonNullable<DailyGoalResponse["goalType"]>;
 
-type GoalType = NonNullable<HomeGoal["type"]>;
-
-function goalLabel(type?: HomeGoal["type"]) {
-  const labels: Record<NonNullable<HomeGoal["type"]>, string> = {
+function goalLabel(type?: DailyGoalResponse["goalType"]) {
+  const labels: Record<NonNullable<DailyGoalResponse["goalType"]>, string> = {
     XP: "Earn XP",
     LEARNING_ITEMS_COMPLETED: "Complete learning items",
     VIDEOS_COMPLETED: "Finish videos",
@@ -44,24 +36,12 @@ function goalLabel(type?: HomeGoal["type"]) {
   return type ? labels[type] : "Learning goal";
 }
 
-function mapApiGoal(goal: DailyGoalApi): HomeGoal {
-  return {
-    id: goal.id,
-    type: goal.goalType || "XP",
-    label: goalLabel(goal.goalType),
-    targetValue: goal.targetValue || 0,
-    currentValue: goal.currentValue || 0,
-    goalDate: goal.goalDate,
-    isCompleted: Boolean(goal.isCompleted),
-  };
-}
-
-export function GoalCalendar({ goals }: { goals: HomeGoal[] }) {
+export function GoalCalendar({ goals }: { goals: DailyGoalResponse[] }) {
   const today = useMemo(() => new Date(), []);
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [selectedDay, setSelectedDay] = useState(today.getDate());
-  const [visibleGoals, setVisibleGoals] = useState(goals);
+  const [visibleGoals, setVisibleGoals] = useState<DailyGoalResponse[]>(goals);
   const [loadedMonthKey, setLoadedMonthKey] = useState(`${today.getFullYear()}-${today.getMonth() + 1}`);
   const selectedMonthKey = `${year}-${month}`;
   const isLoading = loadedMonthKey !== selectedMonthKey;
@@ -74,35 +54,29 @@ export function GoalCalendar({ goals }: { goals: HomeGoal[] }) {
   const selectedGoal = visibleGoals.find((goal) => goal.goalDate === selectedDate);
 
   useEffect(() => {
-    const controller = new AbortController();
+    let active = true;
 
-    fetch(`/api/learning/daily-goals?year=${year}&month=${month}`, {
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) return [];
-        const payload = (await response.json()) as { data?: DailyGoalApi[] };
-        return (payload.data || []).map(mapApiGoal);
-      })
-      .then((nextGoals) => {
-        setVisibleGoals(nextGoals);
-        setLoadedMonthKey(`${year}-${month}`);
-      })
-      .catch((error: Error) => {
-        if (error.name !== "AbortError") {
+    getDailyGoalsInMonthAction(year, month)
+      .then((res: any) => {
+        if (!active) return;
+        if (res.success) {
+          setVisibleGoals(res.data || []);
+        } else {
           setVisibleGoals([]);
-          setLoadedMonthKey(`${year}-${month}`);
         }
+        setLoadedMonthKey(`${year}-${month}`);
       });
 
-    return () => controller.abort();
+    return () => {
+      active = false;
+    };
   }, [month, year]);
 
-  function handleSaved(goal: HomeGoal) {
+  function handleSaved(goal: DailyGoalResponse) {
     setVisibleGoals((current) => {
-      const exists = current.some((item) => item.goalDate === goal.goalDate && item.type === goal.type);
+      const exists = current.some((item) => item.goalDate === goal.goalDate && item.goalType === goal.goalType);
       if (exists) {
-        return current.map((item) => (item.goalDate === goal.goalDate && item.type === goal.type ? goal : item));
+        return current.map((item) => (item.goalDate === goal.goalDate && item.goalType === goal.goalType ? goal : item));
       }
       return [...current, goal];
     });
@@ -215,10 +189,10 @@ function CalendarGoalForm({
   onSaved,
 }: {
   date: string;
-  existingGoal?: HomeGoal;
-  onSaved: (goal: HomeGoal) => void;
+  existingGoal?: DailyGoalResponse;
+  onSaved: (goal: DailyGoalResponse) => void;
 }) {
-  const [goalType, setGoalType] = useState(existingGoal?.type || "XP");
+  const [goalType, setGoalType] = useState<GoalType>((existingGoal?.goalType as GoalType) || "XP");
   const [targetValue, setTargetValue] = useState(String(existingGoal?.targetValue || 30));
   const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -226,27 +200,22 @@ function CalendarGoalForm({
   function submitGoal() {
     setMessage("");
     startTransition(async () => {
-      const response = await fetch("/api/learning/daily-goals", {
-        method: existingGoal ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          goalType,
-          targetValue: Number(targetValue),
-          goalDate: date,
-        }),
-      });
+      const payload = {
+        goalType,
+        targetValue: Number(targetValue),
+        goalDate: date,
+      };
 
-      if (!response.ok) {
-        setMessage("Could not save this goal. Please try again.");
+      const res = existingGoal
+        ? await editDailyGoalAction(payload)
+        : await setDailyGoalAction(payload);
+
+      if (!res.success || !res.data) {
+        setMessage(res.error || "Could not save this goal. Please try again.");
         return;
       }
 
-      const payload = (await response.json()) as { data?: DailyGoalApi };
-      if (payload.data) {
-        onSaved(mapApiGoal(payload.data));
-      }
+      onSaved(res.data);
       setMessage("Goal saved.");
     });
   }

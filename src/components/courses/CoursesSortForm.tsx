@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { ChevronDown } from "lucide-react";
-import type { CourseCatalogFilters } from "@/services/course-catalog-service";
+import type { CourseCatalogFilters } from "@/types";
 
 const sortOptions = [
   { label: "Highest rating", value: '{"rating":"DESC"}' },

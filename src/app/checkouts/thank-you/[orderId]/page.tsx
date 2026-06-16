@@ -3,7 +3,8 @@ import Link from "next/link";
 import { CheckCircle2, Clock3 } from "lucide-react";
 import { CoursesFooter } from "@/components/courses/CoursesFooter";
 import { CoursesTopNav } from "@/components/courses/CoursesTopNav";
-import { getOrderThankYouData } from "@/services/order-service";
+import { OrderApi } from "@/services/api/enrollment-api";
+import { money, paymentMethodLabel } from "@/lib/format";
 
 type ThankYouPageProps = {
   params: Promise<{ orderId: string }>;
@@ -16,8 +17,12 @@ export const metadata: Metadata = {
 
 export default async function Page({ params }: ThankYouPageProps) {
   const { orderId } = await params;
-  const order = await getOrderThankYouData(orderId);
+  const orderRes = await OrderApi.getOrderById(orderId).catch(() => ({ data: undefined }));
+  const order = orderRes.data;
+
   const isPaid = order?.status === "PAID";
+  const total = Math.max(0, (order?.totalPrice || 0) - (order?.discounted || 0));
+  const totalLabel = money(total);
 
   return (
     <main className="min-h-screen bg-white">
@@ -47,11 +52,11 @@ export default async function Page({ params }: ThankYouPageProps) {
             </div>
             <div>
               <p className="text-[#8C94A3]">Payment Method</p>
-              <p className="mt-1 font-medium text-[#1D2026]">{order?.paymentMethod || "Payment provider"}</p>
+              <p className="mt-1 font-medium text-[#1D2026]">{paymentMethodLabel(order?.paymentMethod)}</p>
             </div>
             <div>
               <p className="text-[#8C94A3]">Total</p>
-              <p className="mt-1 font-medium text-[#1D2026]">{order?.totalLabel || "Waiting for order details"}</p>
+              <p className="mt-1 font-medium text-[#1D2026]">{totalLabel}</p>
             </div>
           </div>
         </div>
