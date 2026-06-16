@@ -5,10 +5,25 @@ import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { FormEvent, useState } from "react";
 import { Button, Input, Password, Radio } from "@/components/ui";
-import { login, type LoginRequest } from "@/services/auth-service";
+import { AuthService } from "@/services";
+import type { AuthRequestDto, TokenResponseDto } from "@/types";
 import { useAuthStore } from "@/stores/auth-store";
 import { getErrorMessage } from "@/lib/errors";
 import { persistAuthSession } from "@/lib/auth-session";
+
+type LoginRequest = AuthRequestDto & {
+  role: "USER" | "INSTRUCTOR" | "ADMIN";
+};
+
+async function login(requestBody: LoginRequest): Promise<TokenResponseDto> {
+  const response = await AuthService.login({ body: requestBody });
+
+  if (!response.data?.accessToken || !response.data.refreshToken) {
+    throw new Error(response.message || "Login failed");
+  }
+
+  return response.data;
+}
 
 type LoginRole = Extract<LoginRequest["role"], "USER" | "INSTRUCTOR">;
 

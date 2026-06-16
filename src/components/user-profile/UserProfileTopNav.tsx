@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Bell, Heart, Search, ShoppingCart } from "lucide-react";
 import { TopNavLinks } from "@/components/courses/TopNavLinks";
 import { BrandLogo } from "@/components/ui/BrandLogo";
-import { getNavCounts } from "@/services/nav-count-service";
+import { getNavCounts } from "@/services/api/nav-api";
 
 export async function UserProfileTopNav({ avatar }: { avatar: string }) {
   const counts = await getNavCounts();

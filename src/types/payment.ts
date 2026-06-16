@@ -16,8 +16,8 @@ export interface PaymentResponse {
 }
 
 export interface PaymentRequest {
-  orderId?: string;
-  paymentMethod?: "VN_PAY" | "MOMO";
+  orderId: string;
+  paymentMethod: "VN_PAY" | "MOMO";
 }
 
 export interface VNPayIPNResponse {

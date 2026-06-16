@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Search, X } from "lucide-react";
-import type { CourseCatalogFilters } from "@/services/course-catalog-service";
+import type { CourseCatalogFilters } from "@/types";
 
 type CoursesSearchFormProps = {
   filters: CourseCatalogFilters;

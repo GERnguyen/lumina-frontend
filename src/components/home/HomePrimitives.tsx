@@ -2,8 +2,20 @@ import Image from "next/image";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { ArrowRight, BookOpen, Bell, Flame, Trophy } from "lucide-react";
-import type { HomeCourse, HomeGoal, HomeNotification, HomeRecommendation, StudentHomeData } from "@/services/home-service";
+import type {
+  CourseResponse,
+  CourseProgressResponse,
+  DailyGoalResponse,
+  UserNotificationResponse,
+} from "@/types";
 import { cn } from "@/lib/utils";
+import {
+  getCourseImage,
+  getCourseCategory,
+  getCourseInstructorName,
+  getCourseProgressPercentage,
+  money,
+} from "@/lib/format";
 
 export function HomeSectionHeader({ title, action }: { title: string; action?: string }) {
   return (
@@ -37,45 +49,100 @@ export function HomeStatCard({ icon: Icon, label, value, tone = "purple" }: { ic
   );
 }
 
-export function HomeStats({ data }: { data: StudentHomeData }) {
+export function HomeStats({
+  stats,
+  isLoading = false,
+}: {
+  stats: {
+    activeCourses: number;
+    completedCourses: number;
+    currentStreak: number;
+    unreadNotifications: number;
+  };
+  isLoading?: boolean;
+}) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <HomeStatCard icon={BookOpen} label="Active courses" value={data.stats.activeCourses} />
-      <HomeStatCard icon={Trophy} label="Completed courses" value={data.stats.completedCourses} tone="green" />
-      <HomeStatCard icon={Flame} label="Day streak" value={data.stats.currentStreak} tone="orange" />
-      <HomeStatCard icon={Bell} label="Unread updates" value={data.stats.unreadNotifications} tone="blue" />
+      <HomeStatCard
+        icon={BookOpen}
+        label="Active courses"
+        value={isLoading ? "..." : stats.activeCourses}
+      />
+      <HomeStatCard
+        icon={Trophy}
+        label="Completed courses"
+        value={isLoading ? "..." : stats.completedCourses}
+        tone="green"
+      />
+      <HomeStatCard icon={Flame} label="Day streak" value={stats.currentStreak} tone="orange" />
+      <HomeStatCard icon={Bell} label="Unread updates" value={stats.unreadNotifications} tone="blue" />
     </div>
   );
 }
 
-export function ContinueCourseCard({ course, compact = false }: { course: HomeCourse; compact?: boolean }) {
+export function ContinueCourseCard({
+  course,
+  progress,
+  index = 0,
+  compact = false,
+  isLoading = false,
+}: {
+  course: CourseResponse;
+  progress?: CourseProgressResponse;
+  index?: number;
+  compact?: boolean;
+  isLoading?: boolean;
+}) {
+  const image = getCourseImage(course, index);
+  const category = getCourseCategory(course);
+  const title = course.title || "Untitled Course";
+  const instructor = getCourseInstructorName(course);
+  const percentage = getCourseProgressPercentage(progress);
+  const watchHref = course.id ? `/courses/${course.id}/watch` : "/courses";
+
   return (
-    <Link href={course.href} className="group flex gap-4 border border-[#E9EAF0] bg-white p-3 transition hover:-translate-y-0.5 hover:border-[#D8D6FF] hover:shadow-[0_16px_36px_rgba(29,32,38,0.08)]">
+    <Link href={watchHref} className="group flex gap-4 border border-[#E9EAF0] bg-white p-3 transition hover:-translate-y-0.5 hover:border-[#D8D6FF] hover:shadow-[0_16px_36px_rgba(29,32,38,0.08)]">
       <div className={cn("relative shrink-0 overflow-hidden bg-[#F5F7FA]", compact ? "size-20" : "h-24 w-32")}>
-        <Image src={course.image} alt={course.title} fill sizes="128px" className="object-cover transition duration-300 group-hover:scale-105" />
+        <Image src={image} alt={title} fill sizes="128px" className="object-cover transition duration-300 group-hover:scale-105" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold uppercase text-[#7872FD]">{course.category}</p>
-        <h3 className="mt-1 line-clamp-2 text-sm font-semibold leading-5 text-[#1D2026]">{course.title}</h3>
-        <p className="mt-1 text-xs text-[#6E7485]">By {course.instructor}</p>
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#E9EAF0]">
-          <div className="h-full rounded-full bg-[#7872FD]" style={{ width: `${course.progress}%` }} />
-        </div>
-        <p className="mt-1 text-xs text-[#6E7485]">{course.progress}% complete</p>
+        <p className="text-xs font-semibold uppercase text-[#7872FD]">{category}</p>
+        <h3 className="mt-1 line-clamp-2 text-sm font-semibold leading-5 text-[#1D2026]">{title}</h3>
+        <p className="mt-1 text-xs text-[#6E7485]">By {instructor}</p>
+        {isLoading ? (
+          <div className="mt-3 animate-pulse space-y-2">
+            <div className="h-1.5 rounded-full bg-[#E2E8F0]" />
+            <div className="h-3 w-16 bg-[#E2E8F0] rounded" />
+          </div>
+        ) : (
+          <>
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#E9EAF0]">
+              <div className="h-full rounded-full bg-[#7872FD]" style={{ width: `${percentage}%` }} />
+            </div>
+            <p className="mt-1 text-xs text-[#6E7485]">{percentage}% complete</p>
+          </>
+        )}
       </div>
     </Link>
   );
 }
 
-export function RecommendationCard({ course }: { course: HomeRecommendation }) {
+export function RecommendationCard({ course, index = 0 }: { course: CourseResponse; index?: number }) {
+  const image = getCourseImage(course, index);
+  const category = getCourseCategory(course);
+  const title = course.title || "Untitled Course";
+  const price = course.discountedPrice ?? course.price;
+  const priceLabel = money(price);
+  const courseHref = course.id ? `/courses/${course.id}` : "/courses";
+
   return (
-    <Link href={course.href} className="group border border-[#E9EAF0] bg-white p-3 transition hover:-translate-y-0.5 hover:border-[#D8D6FF] hover:shadow-[0_16px_36px_rgba(29,32,38,0.08)]">
+    <Link href={courseHref} className="group border border-[#E9EAF0] bg-white p-3 transition hover:-translate-y-0.5 hover:border-[#D8D6FF] hover:shadow-[0_16px_36px_rgba(29,32,38,0.08)]">
       <div className="relative h-32 overflow-hidden bg-[#F5F7FA]">
-        <Image src={course.image} alt={course.title} fill sizes="240px" className="object-cover transition duration-300 group-hover:scale-105" />
+        <Image src={image} alt={title} fill sizes="240px" className="object-cover transition duration-300 group-hover:scale-105" />
       </div>
-      <p className="mt-3 text-xs font-semibold uppercase text-[#7872FD]">{course.category}</p>
-      <h3 className="mt-1 line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-[#1D2026]">{course.title}</h3>
-      <p className="mt-3 text-sm font-semibold text-[#7872FD]">{course.price}</p>
+      <p className="mt-3 text-xs font-semibold uppercase text-[#7872FD]">{category}</p>
+      <h3 className="mt-1 line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-[#1D2026]">{title}</h3>
+      <p className="mt-3 text-sm font-semibold text-[#7872FD]">{priceLabel}</p>
     </Link>
   );
 }
@@ -92,7 +159,7 @@ export function EmptyHomeState({ title, copy, href, action }: { title: string; c
   );
 }
 
-export function NotificationList({ notifications }: { notifications: HomeNotification[] }) {
+export function NotificationList({ notifications }: { notifications: UserNotificationResponse[] }) {
   if (!notifications.length) {
     return <EmptyHomeState title="No notifications yet" copy="Course updates, reminders, and account messages will appear here." href="/courses" action="Explore courses" />;
   }
@@ -114,7 +181,7 @@ export function NotificationList({ notifications }: { notifications: HomeNotific
   );
 }
 
-export function MiniGoalList({ goals }: { goals: HomeGoal[] }) {
+export function MiniGoalList({ goals }: { goals: DailyGoalResponse[] }) {
   if (!goals.length) {
     return <p className="text-sm leading-6 text-[#6E7485]">No goal set for today. Add one to keep your study rhythm visible.</p>;
   }
@@ -122,12 +189,23 @@ export function MiniGoalList({ goals }: { goals: HomeGoal[] }) {
   return (
     <div className="space-y-3">
       {goals.map((goal) => {
-        const progress = goal.targetValue > 0 ? Math.min(100, Math.round((goal.currentValue / goal.targetValue) * 100)) : 0;
+        const targetValue = goal.targetValue || 0;
+        const currentValue = goal.currentValue || 0;
+        const progress = targetValue > 0 ? Math.min(100, Math.round((currentValue / targetValue) * 100)) : 0;
+        
+        let label = "Learning goal";
+        if (goal.goalType === "XP") label = "Earn XP";
+        else if (goal.goalType === "LEARNING_ITEMS_COMPLETED") label = "Complete learning items";
+        else if (goal.goalType === "VIDEOS_COMPLETED") label = "Finish videos";
+        else if (goal.goalType === "QUIZZES_PASSED") label = "Pass quizzes";
+        else if (goal.goalType === "ASSIGNMENTS_SUBMITTED") label = "Submit assignments";
+        else if (goal.goalType === "SPECIFIC_LESSON_COMPLETED") label = "Complete a specific lesson";
+
         return (
-          <div key={`${goal.type}-${goal.id || goal.goalDate}`} className="border border-[#E9EAF0] bg-white p-4">
+          <div key={`${goal.goalType}-${goal.id || goal.goalDate}`} className="border border-[#E9EAF0] bg-white p-4">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-[#1D2026]">{goal.label}</p>
-              <p className="text-xs text-[#6E7485]">{goal.currentValue}/{goal.targetValue}</p>
+              <p className="text-sm font-semibold text-[#1D2026]">{label}</p>
+              <p className="text-xs text-[#6E7485]">{currentValue}/{targetValue}</p>
             </div>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#E9EAF0]">
               <div className={cn("h-full rounded-full", goal.isCompleted ? "bg-[#23BD33]" : "bg-[#7872FD]")} style={{ width: `${progress}%` }} />

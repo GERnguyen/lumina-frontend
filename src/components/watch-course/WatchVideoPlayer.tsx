@@ -6,8 +6,14 @@ import { AlertCircle, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { WatchCourseData } from "@/data/watch-course";
 import { API_BASE_URL } from "@/lib/api-base";
+import { markItemAsCompleteAction } from "@/services/actions/learning";
 
-export function WatchVideoPlayer({ course }: { course: WatchCourseData }) {
+type WatchVideoPlayerProps = {
+  course: WatchCourseData;
+  onLessonComplete?: (lessonId: string) => void;
+};
+
+export function WatchVideoPlayer({ course, onLessonComplete }: WatchVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastTrackedSecond = useRef(0);
   const [error, setError] = useState<string>();
@@ -64,6 +70,22 @@ export function WatchVideoPlayer({ course }: { course: WatchCourseData }) {
     }).catch(() => undefined);
   }
 
+  async function handleEnded() {
+    if (!course.lessonId) return;
+
+    // Trigger instant client state update
+    if (onLessonComplete) {
+      onLessonComplete(course.lessonId);
+    }
+
+    // Persist to database in background
+    try {
+      await markItemAsCompleteAction(course.lessonId);
+    } catch (err) {
+      console.error("Failed to mark lesson as complete:", err);
+    }
+  }
+
   return (
     <div className="relative aspect-[1528/690] overflow-hidden bg-[#1D2026]">
       {course.videoUrl ? (
@@ -75,6 +97,7 @@ export function WatchVideoPlayer({ course }: { course: WatchCourseData }) {
           preload="metadata"
           poster={course.poster}
           onTimeUpdate={trackProgress}
+          onEnded={handleEnded}
         >
           {course.subtitles?.map((track) => (
             <track key={`${track.srcLang}-${track.src}`} kind="subtitles" src={track.src} srcLang={track.srcLang} label={track.label} default={track.default} />

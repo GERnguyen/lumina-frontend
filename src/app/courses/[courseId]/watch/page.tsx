@@ -1,18 +1,22 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import { WatchCoursePage } from "@/components/watch-course/WatchCoursePage";
+import { CoursesTopNav } from "@/components/courses/CoursesTopNav";
+import { CoursesFooter } from "@/components/courses/CoursesFooter";
 import type {
   CourseCurriculumResponse,
   LessonResponse,
   VideoLessonResponse,
   LearningItemProgressResponse,
 } from "@/types";
-import { CourseService, VideoLessonService } from "@/services/courseService";
-import { LearningProgressService } from "@/services/learningService";
+import { CourseApi, VideoLessonApi } from "@/services/api/course-api";
+import { LearningProgressApi } from "@/services/api/learning-api";
 import type { WatchCourseData, WatchLecture, WatchSection } from "@/data/watch-course";
 import { formatDuration, splitDescription } from "@/lib/format";
 
 type WatchCourseRouteProps = {
   params: Promise<{ courseId: string }>;
+  searchParams: Promise<{ lessonId?: string }>;
 };
 
 type WatchCourseResult = {
@@ -80,6 +84,7 @@ function mapSections(curriculum: CourseCurriculumResponse | undefined, currentLe
   });
 }
 
+// Map database subtitles response structure to what the Watch player expects
 function mapSubtitles(video?: VideoLessonResponse): WatchCourseData["subtitles"] {
   return video?.subtitles
     ?.filter((track) => track.fileUrl && track.status === "READY")
@@ -91,12 +96,12 @@ function mapSubtitles(video?: VideoLessonResponse): WatchCourseData["subtitles"]
     }));
 }
 
-async function getWatchCourse(courseId: string): Promise<WatchCourseResult> {
+const getWatchCourse = cache(async (courseId: string, lessonId?: string): Promise<WatchCourseResult> => {
   const [coursePayload, curriculumPayload, progressPayload, itemProgressPayload] = await Promise.all([
-    CourseService.getCourseById({ id: courseId }),
-    CourseService.getPublishedCurriculum({ id: courseId }),
-    LearningProgressService.getMyCourseProgress({ courseId }),
-    LearningProgressService.getLearningItemProgressByCourseId({ courseId }),
+    CourseApi.getReadableCourseById(courseId),
+    CourseApi.getReadableCurriculum(courseId),
+    LearningProgressApi.getMyCourseProgress(courseId),
+    LearningProgressApi.getLearningItemProgressByCourseId(courseId),
   ]);
 
   if (!coursePayload?.data) {
@@ -104,9 +109,13 @@ async function getWatchCourse(courseId: string): Promise<WatchCourseResult> {
   }
 
   const curriculum = curriculumPayload?.data;
-  const currentLesson = pickCurrentLesson(curriculum);
+  const lessons = flattenLessons(curriculum);
+  const currentLesson = lessonId
+    ? lessons.find((l) => l.id === lessonId) || pickCurrentLesson(curriculum)
+    : pickCurrentLesson(curriculum);
+
   const videoPayload = currentLesson?.id
-    ? await VideoLessonService.getVideoByLessonId({ courseId, lessonId: currentLesson.id })
+    ? await VideoLessonApi.getVideoByLessonId(courseId, currentLesson.id)
     : undefined;
   const totalLessons = countLessons(curriculum);
   const progress = progressPayload?.data;
@@ -155,17 +164,18 @@ async function getWatchCourse(courseId: string): Promise<WatchCourseResult> {
       comments: [],
     },
   };
-}
+});
 
-export async function generateMetadata({ params }: WatchCourseRouteProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: WatchCourseRouteProps): Promise<Metadata> {
   const { courseId } = await params;
+  const { lessonId } = await searchParams;
   try {
-    const { course } = await getWatchCourse(courseId);
+    const { course } = await getWatchCourse(courseId, lessonId);
     return {
       title: `${course.currentLesson} - Watch Course`,
       description: `Watch ${course.currentLesson} from ${course.courseTitle}.`,
       alternates: {
-        canonical: `/courses/${courseId}/watch`,
+        canonical: `/courses/${courseId}/watch${lessonId ? `?lessonId=${lessonId}` : ""}`,
       },
     };
   } catch {
@@ -176,9 +186,16 @@ export async function generateMetadata({ params }: WatchCourseRouteProps): Promi
   }
 }
 
-export default async function Page({ params }: WatchCourseRouteProps) {
+export default async function Page({ params, searchParams }: WatchCourseRouteProps) {
   const { courseId } = await params;
-  const { course } = await getWatchCourse(courseId);
+  const { lessonId } = await searchParams;
+  const { course } = await getWatchCourse(courseId, lessonId);
 
-  return <WatchCoursePage course={course} />;
+  return (
+    <WatchCoursePage
+      course={course}
+      header={<CoursesTopNav />}
+      footer={<CoursesFooter />}
+    />
+  );
 }

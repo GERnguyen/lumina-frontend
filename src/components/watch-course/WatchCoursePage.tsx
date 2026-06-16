@@ -1,5 +1,6 @@
-import { CoursesFooter } from "@/components/courses/CoursesFooter";
-import { CoursesTopNav } from "@/components/courses/CoursesTopNav";
+"use client";
+
+import { useState } from "react";
 import type { WatchCourseData } from "@/data/watch-course";
 import { WatchComments } from "./WatchComments";
 import { WatchCourseContents } from "./WatchCourseContents";
@@ -8,15 +9,47 @@ import { WatchLessonContent } from "./WatchLessonContent";
 import { WatchLessonTabs } from "./WatchLessonTabs";
 import { WatchVideoPlayer } from "./WatchVideoPlayer";
 
-export function WatchCoursePage({ course }: { course: WatchCourseData }) {
+type WatchCoursePageProps = {
+  course: WatchCourseData;
+  header: React.ReactNode;
+  footer: React.ReactNode;
+};
+
+export function WatchCoursePage({ course, header, footer }: WatchCoursePageProps) {
+  // Track completed lessons dynamically on the client
+  const [completedLessonIds, setCompletedLessonIds] = useState<Set<string>>(() => {
+    const ids = new Set<string>();
+    course.sections.forEach((section) => {
+      section.lessons.forEach((lesson) => {
+        if (lesson.status === "done" && lesson.id) {
+          ids.add(lesson.id);
+        }
+      });
+    });
+    return ids;
+  });
+
+  const totalLessons = course.sections.reduce((acc, sec) => acc + sec.lessons.length, 0);
+  const progressPercent = totalLessons ? Math.round((completedLessonIds.size / totalLessons) * 100) : 0;
+  const progressText = `${progressPercent}% Completed`;
+
+  const handleLessonComplete = (lessonId: string) => {
+    setCompletedLessonIds((prev) => {
+      if (prev.has(lessonId)) return prev;
+      const next = new Set(prev);
+      next.add(lessonId);
+      return next;
+    });
+  };
+
   return (
     <main className="min-h-screen bg-white">
-      <CoursesTopNav />
+      {header}
       <WatchCourseHeader course={course} />
 
       <section className="px-6 py-16 lg:px-8">
         <div className="mx-auto max-w-[1528px]">
-          <WatchVideoPlayer course={course} />
+          <WatchVideoPlayer course={course} onLessonComplete={handleLessonComplete} />
           <div className="mt-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <h1 className="text-[32px] font-semibold leading-10 text-[#1D2026]">{course.currentLesson}</h1>
@@ -39,12 +72,17 @@ export function WatchCoursePage({ course }: { course: WatchCourseData }) {
               <WatchLessonContent course={course} />
               <WatchComments course={course} />
             </div>
-            <WatchCourseContents course={course} />
+            <WatchCourseContents
+              course={course}
+              completedLessonIds={completedLessonIds}
+              progressPercent={progressPercent}
+              progressText={progressText}
+            />
           </div>
         </div>
       </section>
 
-      <CoursesFooter />
+      {footer}
     </main>
   );
 }
