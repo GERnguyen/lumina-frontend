@@ -1,11 +1,10 @@
+"use client";
+
 import {
   InstructorCourseOverviewPanel,
-  InstructorProfileViewsPanel,
-  InstructorRatingPanel,
   InstructorRevenuePanel,
 } from "@/components/instructor/InstructorCharts";
 import {
-  InstructorActivityPanel,
   InstructorFooter,
   InstructorProfileBanner,
   InstructorTopCoursesPanel,
@@ -37,16 +36,13 @@ export function InstructorDashboardPage({ data }: InstructorDashboardPageProps) 
 
             <InstructorProfileBanner data={data} />
 
-            <section className="grid gap-6 xl:grid-cols-4">
-              <InstructorActivityPanel activities={data.activities} />
+            <section className="grid gap-6 xl:grid-cols-3">
               <InstructorRevenuePanel series={data.revenueSeries} />
-              <InstructorProfileViewsPanel profileViews={data.profileViews} />
+              <InstructorTopCoursesPanel courses={data.topCourses} />
             </section>
 
-            <section className="grid gap-6 xl:grid-cols-4">
-              <InstructorRatingPanel rating={data.rating} />
+            <section className="grid gap-6">
               <InstructorCourseOverviewPanel series={data.courseSeries} />
-              <InstructorTopCoursesPanel courses={data.topCourses} />
             </section>
 
             <InstructorFooter />

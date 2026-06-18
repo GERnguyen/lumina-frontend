@@ -32,22 +32,8 @@ export type InstructorDashboardData = {
     totalSteps: number;
     percent: number;
   };
-  activities: Array<{
-    id: string;
-    type: "comment" | "rating" | "purchase" | "course";
-    title: string;
-    time: string;
-  }>;
   revenueSeries: Array<{ label: string; value: number }>;
   courseSeries: Array<{ label: string; created: number; enrollments: number }>;
-  rating: {
-    average: number;
-    breakdown: Array<{ stars: number; percent: number }>;
-  };
-  profileViews: {
-    value: string;
-    bars: number[];
-  };
   topCourses: Array<{
     id: string;
     title: string;
@@ -157,24 +143,6 @@ function normalizeCourseSeries(
   }));
 }
 
-function ratingBreakdown(average?: number) {
-  if (!average) {
-    return [
-      { stars: 5, percent: 0 },
-      { stars: 4, percent: 0 },
-      { stars: 3, percent: 0 },
-      { stars: 2, percent: 0 },
-      { stars: 1, percent: 0 },
-    ];
-  }
-
-  const rounded = Math.max(1, Math.min(5, Math.round(average)));
-  return [5, 4, 3, 2, 1].map((stars) => ({
-    stars,
-    percent: stars === rounded ? 68 : Math.max(0, 16 - Math.abs(stars - rounded) * 7),
-  }));
-}
-
 function profileCompletion(user?: UserDto) {
   const checks = [
     Boolean(user?.name),
@@ -188,38 +156,6 @@ function profileCompletion(user?: UserDto) {
     totalSteps: checks.length,
     percent: Math.round((completedSteps / checks.length) * 100),
   };
-}
-
-function mockActivities(courses: CourseResponse[]) {
-  const first = courses[0]?.title || "your latest course";
-  const second = courses[1]?.title || "a course draft";
-
-  return [
-    {
-      id: "course-created",
-      type: "course" as const,
-      title: `You updated "${first}".`,
-      time: "Today",
-    },
-    {
-      id: "course-progress",
-      type: "rating" as const,
-      title: `Review your publishing progress for "${second}".`,
-      time: "This week",
-    },
-    {
-      id: "course-sales",
-      type: "purchase" as const,
-      title: "Course sales will appear here after learners purchase your courses.",
-      time: "Live",
-    },
-    {
-      id: "course-comments",
-      type: "comment" as const,
-      title: "Learner questions and comments will be listed here.",
-      time: "Live",
-    },
-  ];
 }
 
 export async function getInstructorDashboardData(): Promise<InstructorDashboardData> {
@@ -242,7 +178,6 @@ export async function getInstructorDashboardData(): Promise<InstructorDashboardD
   const totalCourses = courseStats?.currentCourseCount || coursesPayload?.meta?.totalElements || courses.length;
   const enrollments = courseStats?.currentEnrollmentSnapshot || instructorStats?.enrollmentsInRange || 0;
   const totalRevenue = instructorStats?.totalNetRevenue || instructorStats?.totalGrossRevenue || 0;
-  const avgRating = courseStats?.averageRating || 0;
   const sold = courses.reduce((sum, course) => sum + (course.enrollmentCount || 0), 0);
 
   return {
@@ -254,27 +189,14 @@ export async function getInstructorDashboardData(): Promise<InstructorDashboardD
       isVerified: user?.isInstructorVerified,
     },
     stats: [
-      { label: "Enrolled Courses", value: compact(enrollments), tone: "orange", icon: "play" },
       { label: "Active Courses", value: compact(publishedCount), tone: "purple", icon: "check" },
-      { label: "Course Instructors", value: "1", tone: "orange", icon: "users" },
-      { label: "Completed Courses", value: compact(Math.max(0, publishedCount - 1)), tone: "green", icon: "trophy" },
+      { label: "Total Courses", value: compact(totalCourses), tone: "green", icon: "notepad" },
       { label: "Students", value: compact(instructorStats?.distinctLearnersInRange || sold), tone: "red", icon: "student" },
-      { label: "Online Courses", value: compact(totalCourses), tone: "green", icon: "notepad" },
       { label: "Total Earning", value: money(totalRevenue), tone: "gray", icon: "card" },
-      { label: "Course Sold", value: compact(sold), tone: "purple", icon: "stack" },
     ],
     profile: profileCompletion(user),
-    activities: mockActivities(courses),
     revenueSeries: normalizeRevenueSeries(instructorStats),
     courseSeries: normalizeCourseSeries(courseStats, instructorStats),
-    rating: {
-      average: avgRating,
-      breakdown: ratingBreakdown(avgRating),
-    },
-    profileViews: {
-      value: money(totalRevenue),
-      bars: [42, 76, 95, 30, 82, 24, 45, 20, 38, 58],
-    },
     topCourses: courses.slice(0, 5).map((course) => ({
       id: course.id || course.title || "course",
       title: course.title || "Untitled Course",

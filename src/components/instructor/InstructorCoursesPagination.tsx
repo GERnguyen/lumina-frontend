@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import type { InstructorCoursesFilters } from "@/services/instructor-courses-service";

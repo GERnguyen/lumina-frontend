@@ -1,8 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import {
   BarChart3,
   CreditCard,
-  MessageCircle,
   PlusCircle,
   Settings,
   SquareStack,
@@ -15,12 +16,11 @@ const navItems = [
   { key: "create-course", label: "Create New Course", href: "/instructor/courses/new", icon: PlusCircle },
   { key: "courses", label: "My Courses", href: "/instructor/courses", icon: SquareStack },
   { key: "earning", label: "Earning", href: "/instructor/earning", icon: CreditCard },
-  { key: "messages", label: "Message", href: "/instructor/messages", icon: MessageCircle, badge: 3 },
   { key: "settings", label: "Settings", href: "/instructor/settings", icon: Settings },
 ];
 
 type InstructorSidebarProps = {
-  activeItem?: "dashboard" | "create-course" | "courses" | "earning" | "messages" | "settings";
+  activeItem?: "dashboard" | "create-course" | "courses" | "earning" | "settings";
 };
 
 export function InstructorSidebar({ activeItem = "dashboard" }: InstructorSidebarProps) {
@@ -44,11 +44,6 @@ export function InstructorSidebar({ activeItem = "dashboard" }: InstructorSideba
             >
               <Icon className="size-5" />
               <span className="min-w-0 flex-1 truncate">{item.label}</span>
-              {item.badge ? (
-                <span className="flex min-w-6 items-center justify-center rounded-full bg-[#564FFD] px-2 py-1 text-xs text-white">
-                  {item.badge}
-                </span>
-              ) : null}
             </Link>
           );
         })}

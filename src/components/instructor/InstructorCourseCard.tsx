@@ -93,7 +93,7 @@ export function InstructorCourseCard({ course }: InstructorCourseCardProps) {
               <div className="absolute bottom-[calc(100%+8px)] right-0 z-20 w-[168px] overflow-hidden rounded-[4px] bg-white py-1 shadow-[0_10px_30px_rgba(29,32,38,0.18)] ring-1 ring-black/5">
                 <Link
                   href={`/instructor/courses/${course.id}`}
-                  className="flex h-9 items-center gap-2 px-3 text-xs font-medium text-white bg-[#564FFD] transition hover:bg-[#453FCA]"
+                  className="flex h-9 items-center gap-2 px-3 text-xs text-[#4E5566] transition hover:bg-[#F5F7FA] hover:text-[#564FFD]"
                 >
                   <BookOpen className="size-4" />
                   View Details

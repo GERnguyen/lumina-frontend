@@ -1,4 +1,5 @@
-import { Star } from "lucide-react";
+"use client";
+
 import type { InstructorDashboardData } from "@/services/instructor-dashboard-service";
 
 type SeriesPoint = {
@@ -60,32 +61,12 @@ export function InstructorRevenuePanel({ series }: { series: SeriesPoint[] }) {
   );
 }
 
-export function InstructorProfileViewsPanel({ profileViews }: { profileViews: InstructorDashboardData["profileViews"] }) {
-  return (
-    <Panel title="Profile View" action="Today" className="min-h-[310px]">
-      <div className="flex h-[256px] items-end gap-2 px-5 pb-6 pt-5">
-        {profileViews.bars.map((bar, index) => (
-          <div key={`${bar}-${index}`} className="flex min-w-0 flex-1 flex-col justify-end gap-2">
-            <div className="relative h-[176px] bg-[#EAF7EE]">
-              <div className="absolute inset-x-0 bottom-0 bg-[#23BD33]" style={{ height: `${Math.max(8, Math.min(100, bar))}%` }} />
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="border-t border-[#F0F1F5] px-5 py-4">
-        <strong className="block text-lg font-semibold text-[#1D2026]">{profileViews.value}</strong>
-        <span className="text-xs text-[#8C94A3]">Revenue-linked profile activity.</span>
-      </div>
-    </Panel>
-  );
-}
-
 export function InstructorCourseOverviewPanel({ series }: { series: InstructorDashboardData["courseSeries"] }) {
   const createdPath = pathFromSeries(series.map((item) => item.created), 680, 260, 28);
   const enrollmentPath = pathFromSeries(series.map((item) => item.enrollments), 680, 260, 28);
 
   return (
-    <Panel title="Course Overview" action="This week" className="min-h-[360px] xl:col-span-2">
+    <Panel title="Course Overview" action="This week" className="min-h-[360px]">
       <div className="p-5">
         <svg viewBox="0 0 680 260" className="h-[260px] w-full overflow-visible">
           {[0, 1, 2, 3, 4].map((line) => (
@@ -102,52 +83,6 @@ export function InstructorCourseOverviewPanel({ series }: { series: InstructorDa
         <div className="mt-2 flex gap-5 text-sm text-[#6E7485]">
           <span className="inline-flex items-center gap-2"><i className="size-2 rounded-full bg-[#FF6636]" />Created courses</span>
           <span className="inline-flex items-center gap-2"><i className="size-2 rounded-full bg-[#564FFD]" />Enrollments</span>
-        </div>
-      </div>
-    </Panel>
-  );
-}
-
-function Stars({ count }: { count: number }) {
-  return (
-    <span className="inline-flex">
-      {Array.from({ length: 5 }, (_, index) => (
-        <Star key={index} className={`size-4 ${index < count ? "fill-[#FD8E1F] text-[#FD8E1F]" : "fill-[#E9EAF0] text-[#C6CAD1]"}`} />
-      ))}
-    </span>
-  );
-}
-
-export function InstructorRatingPanel({ rating }: { rating: InstructorDashboardData["rating"] }) {
-  return (
-    <Panel title="Overall Course Rating" action="This week" className="min-h-[360px]">
-      <div className="p-5">
-        <div className="flex gap-5">
-          <div className="flex h-[136px] w-[150px] shrink-0 flex-col items-center justify-center bg-[#EBEBFF]">
-            <strong className="text-4xl font-semibold text-[#1D2026]">{rating.average ? rating.average.toFixed(1) : "0.0"}</strong>
-            <Stars count={Math.round(rating.average)} />
-            <span className="mt-1 text-xs font-medium text-[#1D2026]">Overall Rating</span>
-          </div>
-          <div className="flex min-w-0 flex-1 items-center">
-            <svg viewBox="0 0 260 120" className="h-[120px] w-full">
-              <path d="M0 82 C 30 28, 54 104, 82 56 S 142 42, 170 70 S 222 18, 260 54" fill="none" stroke="#564FFD" strokeWidth="3" />
-            </svg>
-          </div>
-        </div>
-
-        <div className="mt-6 space-y-3">
-          {rating.breakdown.map((row) => (
-            <div key={row.stars} className="flex items-center gap-3">
-              <div className="flex w-[92px] items-center gap-1 text-sm text-[#4E5566]">
-                <Stars count={row.stars} />
-              </div>
-              <span className="w-12 text-sm text-[#4E5566]">{row.stars} Star</span>
-              <div className="h-2 flex-1 bg-[#E9EAF0]">
-                <div className="h-full bg-[#564FFD]" style={{ width: `${row.percent}%` }} />
-              </div>
-              <span className="w-10 text-right text-sm font-medium text-[#1D2026]">{row.percent ? `${row.percent}%` : "0%"}</span>
-            </div>
-          ))}
         </div>
       </div>
     </Panel>

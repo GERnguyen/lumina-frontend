@@ -1,8 +1,5 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { InstructorDashboardPage } from "@/components/instructor/InstructorDashboardPage";
-import { getServerAccessToken } from "@/lib/server-auth";
-import { getInstructorDashboardData } from "@/services/instructor-dashboard-service";
+import { InstructorDashboardClientPage } from "@/components/instructor/InstructorClientShell";
 
 export const metadata: Metadata = {
   title: "Instructor Dashboard - Lumina",
@@ -12,14 +9,6 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function InstructorPage() {
-  const token = await getServerAccessToken();
-  if (!token) redirect("/login");
-
-  const data = await getInstructorDashboardData();
-  if (data.user.role && data.user.role !== "INSTRUCTOR") {
-    redirect("/courses");
-  }
-
-  return <InstructorDashboardPage data={data} />;
+export default function InstructorPage() {
+  return <InstructorDashboardClientPage />;
 }

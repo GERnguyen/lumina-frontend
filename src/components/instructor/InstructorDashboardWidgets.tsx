@@ -1,14 +1,9 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowDown, MessageCircle, Pencil, ShoppingBag, Star, UploadCloud } from "lucide-react";
+import { Pencil } from "lucide-react";
 import type { InstructorDashboardData } from "@/services/instructor-dashboard-service";
-
-const activityIcons = {
-  comment: MessageCircle,
-  rating: Star,
-  purchase: ShoppingBag,
-  course: UploadCloud,
-};
 
 export function InstructorProfileBanner({ data }: { data: InstructorDashboardData }) {
   return (
@@ -18,7 +13,7 @@ export function InstructorProfileBanner({ data }: { data: InstructorDashboardDat
           <Image src={data.user.avatar} alt={data.user.name} fill sizes="72px" className="object-cover" />
         </div>
         <div className="min-w-0">
-          <h2 className="truncate text-lg font-semibold">{data.user.name}</h2>
+          <h2 className="truncate text-lg font-semibold text-[#F5F7FF]">{data.user.name}</h2>
           <p className="mt-1 truncate text-xs text-white/65">{data.user.email || "Lumina instructor"}</p>
         </div>
       </div>
@@ -37,36 +32,6 @@ export function InstructorProfileBanner({ data }: { data: InstructorDashboardDat
         <Link href="/instructor/settings" className="inline-flex h-12 items-center justify-center rounded-[18px] bg-[#564FFD] px-6 text-sm font-semibold text-white transition hover:bg-[#453FCA]">
           Edit Biography
         </Link>
-        <button type="button" aria-label="Download profile report" className="flex size-12 items-center justify-center bg-white/10 text-white transition hover:bg-white/15">
-          <ArrowDown className="size-5" />
-        </button>
-      </div>
-    </section>
-  );
-}
-
-export function InstructorActivityPanel({ activities }: { activities: InstructorDashboardData["activities"] }) {
-  return (
-    <section className="overflow-hidden rounded-[18px] bg-white">
-      <div className="flex h-[54px] items-center justify-between border-b border-[#E9EAF0] px-5">
-        <h2 className="text-base font-medium text-[#1D2026]">Recent Activity</h2>
-        <span className="text-sm tracking-[-0.14px] text-[#6E7485]">Today</span>
-      </div>
-      <div className="space-y-5 p-5">
-        {activities.map((activity) => {
-          const Icon = activityIcons[activity.type];
-          return (
-            <article key={activity.id} className="flex gap-3">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#564FFD] text-white">
-                <Icon className="size-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm leading-5 text-[#4E5566]">{activity.title}</p>
-                <span className="mt-1 block text-xs text-[#8C94A3]">{activity.time}</span>
-              </div>
-            </article>
-          );
-        })}
       </div>
     </section>
   );

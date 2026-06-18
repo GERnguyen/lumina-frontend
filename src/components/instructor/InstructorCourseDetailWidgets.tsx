@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -13,7 +15,6 @@ import {
   Users,
 } from "lucide-react";
 import type { InstructorCourseDetailData } from "@/services/instructor-course-detail-service";
-import { money } from "@/services/instructor-course-detail-service";
 import { cn } from "@/lib/utils";
 
 type Course = InstructorCourseDetailData["course"];
@@ -43,6 +44,14 @@ function formatDate(value?: string) {
     day: "2-digit",
     year: "numeric",
   });
+}
+
+function money(value?: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "VND",
+    maximumFractionDigits: 0,
+  }).format(value || 0);
 }
 
 function Stars({ value, size = "md" }: { value: number; size?: "sm" | "md" }) {

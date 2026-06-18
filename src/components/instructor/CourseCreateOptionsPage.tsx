@@ -1,0 +1,2040 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  BadgeCheck,
+  BookOpen,
+  Bold,
+  CheckCircle2,
+  ChevronDown,
+  ClipboardCheck,
+  FileQuestion,
+  FileText,
+  GripVertical,
+  ImageIcon,
+  Italic,
+  Layers,
+  Link,
+  ListChecks,
+  Lock,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PlayCircle,
+  Plus,
+  Save,
+  Sparkles,
+  Trash2,
+  UploadCloud,
+  Video,
+} from "lucide-react";
+import { InstructorFooter } from "@/components/instructor/InstructorDashboardWidgets";
+import { InstructorSidebar } from "@/components/instructor/InstructorSidebar";
+import { InstructorTopbar } from "@/components/instructor/InstructorTopbar";
+import { getErrorMessage } from "@/lib/errors";
+import { cn } from "@/lib/utils";
+import {
+  ArticleLessonService,
+  AssignmentLessonService,
+  CourseImageService,
+  CourseService,
+  LessonService,
+  QuizLessonService,
+  SectionService,
+  VideoLessonService,
+} from "@/services/courseService";
+
+type LessonType = "VIDEO" | "ARTICLE" | "QUIZ" | "ASSIGNMENT";
+type StepId = "basics" | "pricing" | "curriculum" | "content" | "media" | "review";
+
+type Lesson = {
+  id: string;
+  serverId?: string;
+  title: string;
+  type: LessonType;
+  duration: number;
+  preview?: boolean;
+  locked?: boolean;
+  content?: LessonContent;
+};
+
+type Section = {
+  id: string;
+  serverId?: string;
+  title: string;
+  description: string;
+  duration: number;
+  lessons: Lesson[];
+};
+
+type CourseImage = {
+  id: string;
+  fileKey: string;
+  file?: File;
+  name: string;
+  size: string;
+  url: string;
+  isCover: boolean;
+  uploaded?: boolean;
+};
+
+type CourseBasics = {
+  title: string;
+  categoryId: string;
+  categoryName: string;
+  description: string;
+  price: string;
+  discountedPrice: string;
+  durationLabel: string;
+  isInSubscription: boolean;
+  hasCertificate: boolean;
+  certificateTitle: string;
+};
+
+type LessonContent = {
+  videoFileName?: string;
+  videoFileSize?: string;
+  videoDescription?: string;
+  articleHtml?: string;
+  quizQuestions?: QuizQuestion[];
+  passingScore?: number;
+  assignmentInstructions?: string;
+  assignmentDueDays?: number;
+  assignmentAttachment?: string;
+};
+
+type QuizQuestion = {
+  id: string;
+  prompt: string;
+  options: string[];
+  answerIndex: number;
+};
+
+const shellUser = {
+  name: "Lumina Instructor",
+  email: "instructor@lumina.dev",
+  avatar: "https://ui-avatars.com/api/?name=Lumina%20Instructor&background=EBEBFF&color=564FFD&bold=true",
+  role: "INSTRUCTOR" as const,
+};
+
+const steps: Array<{
+  id: StepId;
+  label: string;
+  description: string;
+  icon: typeof BookOpen;
+}> = [
+  { id: "basics", label: "Basics", description: "Course identity", icon: BookOpen },
+  { id: "pricing", label: "Pricing", description: "Price and access", icon: BadgeCheck },
+  { id: "curriculum", label: "Curriculum", description: "Sections and lessons", icon: Layers },
+  { id: "content", label: "Lesson Content", description: "Learning materials", icon: PlayCircle },
+  { id: "media", label: "Media", description: "Images and cover", icon: ImageIcon },
+  { id: "review", label: "Review", description: "Final checklist", icon: ListChecks },
+];
+
+const lessonTypeMeta: Record<LessonType, { label: string; icon: typeof Video; tone: string; description: string }> = {
+  VIDEO: {
+    label: "Video",
+    icon: Video,
+    tone: "bg-[#EBEBFF] text-[#564FFD]",
+    description: "Upload a lecture video",
+  },
+  ARTICLE: {
+    label: "Article",
+    icon: FileText,
+    tone: "bg-[#E6F0FF] text-[#0066FF]",
+    description: "Write a rich text lesson",
+  },
+  QUIZ: {
+    label: "Quiz",
+    icon: FileQuestion,
+    tone: "bg-[#FFF2E5] text-[#FD8E1F]",
+    description: "Create graded questions",
+  },
+  ASSIGNMENT: {
+    label: "Assignment",
+    icon: ClipboardCheck,
+    tone: "bg-[#E1F7E3] text-[#23BD33]",
+    description: "Collect learner submissions",
+  },
+};
+
+const initialSections: Section[] = [
+  {
+    id: "section-1",
+    title: "Foundations",
+    description: "Set up the project, explain prerequisites, and align expectations.",
+    duration: 24,
+    lessons: [
+      { id: "lesson-1", title: "Course welcome and setup", type: "VIDEO", duration: 8, preview: true },
+      { id: "lesson-2", title: "Development environment checklist", type: "ARTICLE", duration: 6 },
+      { id: "lesson-3", title: "Readiness quiz", type: "QUIZ", duration: 10 },
+    ],
+  },
+  {
+    id: "section-2",
+    title: "Core Project",
+    description: "Guide learners through the implementation milestones.",
+    duration: 63,
+    lessons: [
+      { id: "lesson-4", title: "Integration walkthrough", type: "VIDEO", duration: 18, locked: true },
+      { id: "lesson-5", title: "Build the feature slice", type: "ASSIGNMENT", duration: 45 },
+    ],
+  },
+  {
+    id: "section-3",
+    title: "Production Polish",
+    description: "Review deployment, edge cases, and final submission expectations.",
+    duration: 28,
+    lessons: [
+      { id: "lesson-6", title: "Performance and UX review", type: "VIDEO", duration: 16 },
+      { id: "lesson-7", title: "Final knowledge check", type: "QUIZ", duration: 12 },
+    ],
+  },
+];
+
+const defaultCourseBasics: CourseBasics = {
+  title: "Full-stack React Course",
+  categoryId: "2fc96189-324b-4664-98b1-6c05decd3213",
+  categoryName: "Software Development",
+  description: "Build a production-ready React application with authenticated features, structured UI, and deployable workflows.",
+  price: "799000",
+  discountedPrice: "599000",
+  durationLabel: "9h 40m",
+  isInSubscription: false,
+  hasCertificate: true,
+  certificateTitle: "Full-stack React Completion Certificate",
+};
+
+function moveItem<T>(items: T[], from: number, to: number) {
+  const next = [...items];
+  const [item] = next.splice(from, 1);
+  next.splice(to, 0, item);
+  return next;
+}
+
+function minutesLabel(minutes: number) {
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins ? `${hours}h ${mins}m` : `${hours}h`;
+}
+
+function TextField({ label, value, helper, wide }: { label: string; value: string; helper?: string; wide?: boolean }) {
+  return (
+    <label className={cn("block", wide && "md:col-span-2")}>
+      <span className="text-sm font-medium text-[#4E5566]">{label}</span>
+      <input
+        value={value}
+        readOnly
+        className="mt-2 h-12 w-full rounded-[14px] border border-[#E9EAF0] bg-white px-4 text-sm text-[#1D2026] transition focus:border-[#564FFD] focus:ring-0"
+      />
+      {helper ? <span className="mt-2 block text-xs leading-5 text-[#8C94A3]">{helper}</span> : null}
+    </label>
+  );
+}
+
+function EditableField({
+  label,
+  value,
+  onChange,
+  helper,
+  multiline,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  helper?: string;
+  multiline?: boolean;
+}) {
+  return (
+    <label className="block">
+      <span className="text-sm font-medium text-[#4E5566]">{label}</span>
+      {multiline ? (
+        <textarea
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          rows={4}
+          className="mt-2 w-full resize-none rounded-[14px] border border-[#E9EAF0] bg-white px-4 py-3 text-sm leading-6 text-[#1D2026] transition focus:border-[#564FFD] focus:ring-0"
+        />
+      ) : (
+        <input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="mt-2 h-12 w-full rounded-[14px] border border-[#E9EAF0] bg-white px-4 text-sm text-[#1D2026] transition focus:border-[#564FFD] focus:ring-0"
+        />
+      )}
+      {helper ? <span className="mt-2 block text-xs leading-5 text-[#8C94A3]">{helper}</span> : null}
+    </label>
+  );
+}
+
+function ToggleRow({ title, copy, active = true }: { title: string; copy: string; active?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-[16px] border border-[#E9EAF0] bg-white p-4">
+      <div>
+        <p className="text-sm font-semibold text-[#1D2026]">{title}</p>
+        <p className="mt-1 text-xs leading-5 text-[#8C94A3]">{copy}</p>
+      </div>
+      <span className={cn("relative h-7 w-12 shrink-0 rounded-full transition", active ? "bg-[#564FFD]" : "bg-[#CED1D9]")}>
+        <span className={cn("absolute top-1 size-5 rounded-full bg-white transition", active ? "left-6" : "left-1")} />
+      </span>
+    </div>
+  );
+}
+
+function WizardRail({ activeStep, setActiveStep }: { activeStep: StepId; setActiveStep: (step: StepId) => void }) {
+  const activeIndex = steps.findIndex((step) => step.id === activeStep);
+
+  return (
+    <nav className="rounded-[18px] bg-white p-4">
+      <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-center">
+        <div className="flex min-w-[220px] items-center gap-3">
+        <span className="flex size-11 items-center justify-center rounded-[16px] bg-[#EBEBFF] text-[#564FFD]">
+          <Sparkles className="size-5" />
+        </span>
+        <div>
+          <h2 className="font-semibold text-[#1D2026]">Course setup</h2>
+          <p className="text-xs text-[#8C94A3]">Build a publish-ready course</p>
+        </div>
+      </div>
+
+        <div className="grid flex-1 gap-3 md:grid-cols-3 2xl:grid-cols-6">
+        {steps.map((step, index) => {
+          const Icon = step.icon;
+          const isActive = step.id === activeStep;
+          const isDone = index < activeIndex;
+
+          return (
+            <button
+              key={step.id}
+              type="button"
+              onClick={() => setActiveStep(step.id)}
+              className={cn(
+                  "flex min-h-[76px] w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left transition",
+                isActive ? "bg-[#564FFD] text-white shadow-[0_12px_26px_rgba(86,79,253,0.22)]" : "bg-[#F8F8FF] text-[#6E7485] hover:bg-[#EBEBFF] hover:text-[#1D2026]",
+              )}
+            >
+              <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-full", isActive ? "bg-white/15" : isDone ? "bg-[#E1F7E3] text-[#23BD33]" : "bg-white text-[#564FFD]")}>
+                {isDone ? <CheckCircle2 className="size-4" /> : <Icon className="size-4" />}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold">{step.label}</span>
+                <span className={cn("mt-0.5 block truncate text-xs", isActive ? "text-white/70" : "text-[#8C94A3]")}>{step.description}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      </div>
+    </nav>
+  );
+}
+
+function DraggableCurriculum({
+  sections,
+  setSections,
+  selectedSectionId,
+  setSelectedSectionId,
+  selectedLessonId,
+  setSelectedLessonId,
+}: {
+  sections: Section[];
+  setSections: (sections: Section[]) => void;
+  selectedSectionId?: string;
+  setSelectedSectionId: (sectionId: string) => void;
+  selectedLessonId?: string;
+  setSelectedLessonId: (lessonId: string) => void;
+}) {
+  const [dragged, setDragged] = useState<{ sectionIndex: number; lessonIndex?: number } | undefined>();
+
+  function moveSection(targetIndex: number) {
+    if (!dragged || dragged.lessonIndex !== undefined || dragged.sectionIndex === targetIndex) return;
+    setSections(moveItem(sections, dragged.sectionIndex, targetIndex));
+    setDragged(undefined);
+  }
+
+  function moveLesson(targetSectionIndex: number, targetLessonIndex: number) {
+    if (!dragged || dragged.lessonIndex === undefined) return;
+    const next = sections.map((section) => ({ ...section, lessons: [...section.lessons] }));
+    const [lesson] = next[dragged.sectionIndex].lessons.splice(dragged.lessonIndex, 1);
+    next[targetSectionIndex].lessons.splice(targetLessonIndex, 0, lesson);
+    setSections(next);
+    setDragged(undefined);
+  }
+
+  function deleteLesson(sectionId: string, lessonId: string) {
+    const section = sections.find((item) => item.id === sectionId);
+    if (!section) return;
+
+    const lessonIndex = section.lessons.findIndex((item) => item.id === lessonId);
+    const deletedLesson = section.lessons[lessonIndex];
+    const nextSections = sections.map((item) =>
+      item.id === sectionId
+        ? {
+            ...item,
+            duration: Math.max(0, item.duration - (deletedLesson?.duration || 0)),
+            lessons: item.lessons.filter((lesson) => lesson.id !== lessonId),
+          }
+        : item,
+    );
+
+    if (selectedLessonId === lessonId) {
+      const nextSection = nextSections.find((item) => item.id === sectionId);
+      const nextLesson =
+        nextSection?.lessons[Math.min(lessonIndex, Math.max(0, nextSection.lessons.length - 1))] ||
+        nextSections.flatMap((item) => item.lessons)[0];
+
+      setSelectedLessonId(nextLesson?.id || "");
+      if (nextLesson) {
+        const nextLessonSection = nextSections.find((item) => item.lessons.some((lesson) => lesson.id === nextLesson.id));
+        setSelectedSectionId(nextLessonSection?.id || sectionId);
+      }
+    }
+
+    setSections(nextSections);
+  }
+
+  function deleteSection(sectionId: string) {
+    const sectionIndex = sections.findIndex((item) => item.id === sectionId);
+    if (sectionIndex < 0) return;
+
+    const nextSections = sections.filter((item) => item.id !== sectionId);
+    const nextSelectedSection = nextSections[Math.max(0, sectionIndex - 1)] || nextSections[0];
+    const selectedLessonWasInside = sections[sectionIndex]?.lessons.some((lesson) => lesson.id === selectedLessonId);
+    const nextSelectedLesson =
+      nextSelectedSection?.lessons[0] ||
+      nextSections.flatMap((item) => item.lessons)[0];
+
+    if (selectedSectionId === sectionId) {
+      setSelectedSectionId(nextSelectedSection?.id || "");
+    }
+
+    if (selectedLessonWasInside) {
+      setSelectedLessonId(nextSelectedLesson?.id || "");
+      if (nextSelectedLesson) {
+        const nextLessonSection = nextSections.find((item) => item.lessons.some((lesson) => lesson.id === nextSelectedLesson.id));
+        setSelectedSectionId(nextLessonSection?.id || nextSelectedSection?.id || "");
+      }
+    }
+
+    setSections(nextSections);
+  }
+
+  return (
+    <div className="space-y-4">
+      {sections.map((section, sectionIndex) => (
+        <section
+          key={section.id}
+          draggable
+          onDragStart={() => setDragged({ sectionIndex })}
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={() => moveSection(sectionIndex)}
+          className={cn(
+            "rounded-[18px] border bg-white transition hover:border-[#D8D6FF]",
+            selectedSectionId === section.id ? "border-[#564FFD] shadow-[0_16px_34px_rgba(86,79,253,0.10)]" : "border-[#E9EAF0]",
+          )}
+        >
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => setSelectedSectionId(section.id)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setSelectedSectionId(section.id);
+              }
+            }}
+            className="flex w-full items-start gap-3 border-b border-[#E9EAF0] p-4 text-left"
+          >
+            <span aria-label="Drag section" className="mt-1 text-[#8C94A3]">
+              <GripVertical className="size-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-base font-semibold text-[#1D2026]">{section.title}</h3>
+                <span className="rounded-full bg-[#F5F7FA] px-2 py-0.5 text-xs text-[#6E7485]">
+                  {section.lessons.length} lessons
+                </span>
+                <span className="rounded-full bg-[#EBEBFF] px-2 py-0.5 text-xs text-[#564FFD]">
+                  {minutesLabel(section.duration)}
+                </span>
+              </div>
+              <p className="mt-1 text-sm leading-6 text-[#6E7485]">{section.description}</p>
+            </div>
+            <span className="flex size-9 items-center justify-center rounded-[12px] bg-[#F5F7FA] text-[#4E5566]">
+              <ChevronDown className="size-4" />
+            </span>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                deleteSection(section.id);
+              }}
+              onDragStart={(event) => event.stopPropagation()}
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-[12px] text-[#A1A5B3] transition hover:bg-[#FFF5F0] hover:text-[#E34444]"
+              aria-label={`Delete ${section.title}`}
+            >
+              <Trash2 className="size-4" />
+            </button>
+          </div>
+
+          <div className="space-y-2 p-3">
+            {section.lessons.map((lesson, lessonIndex) => {
+              const meta = lessonTypeMeta[lesson.type];
+              const Icon = meta.icon;
+              const isSelected = selectedLessonId === lesson.id;
+
+              return (
+                <article
+                  key={lesson.id}
+                  draggable
+                  onClick={() => {
+                    setSelectedSectionId(section.id);
+                    setSelectedLessonId(lesson.id);
+                  }}
+                  onDragStart={(event) => {
+                    event.stopPropagation();
+                    setDragged({ sectionIndex, lessonIndex });
+                  }}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => {
+                    event.stopPropagation();
+                    moveLesson(sectionIndex, lessonIndex);
+                  }}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-3 rounded-[14px] border px-3 py-3 transition",
+                    isSelected ? "border-[#564FFD] bg-[#F8F8FF]" : "border-transparent bg-[#F8F8FF] hover:border-[#D8D6FF] hover:bg-white",
+                  )}
+                >
+                  <GripVertical className="size-4 shrink-0 text-[#A1A5B3]" />
+                  <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-[12px]", meta.tone)}>
+                    <Icon className="size-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-[#1D2026]">{lesson.title}</p>
+                    <p className="mt-0.5 text-xs text-[#8C94A3]">{meta.label} · {minutesLabel(lesson.duration)}</p>
+                  </div>
+                  {lesson.locked ? <Lock className="size-4 text-[#8C94A3]" /> : null}
+                  {lesson.preview ? (
+                    <span className="rounded-full bg-[#E1F7E3] px-2 py-1 text-xs font-medium text-[#23BD33]">Preview</span>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      deleteLesson(section.id, lesson.id);
+                    }}
+                    onDragStart={(event) => event.stopPropagation()}
+                    className="inline-flex size-9 shrink-0 items-center justify-center rounded-[12px] text-[#A1A5B3] transition hover:bg-[#FFF5F0] hover:text-[#E34444]"
+                    aria-label={`Delete ${lesson.title}`}
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function BasicsStep({ basics, setBasics }: { basics: CourseBasics; setBasics: (basics: CourseBasics) => void }) {
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      <EditableField label="Course title" value={basics.title} onChange={(title) => setBasics({ ...basics, title })} helper="Make it specific and easy to search." />
+      <EditableField label="Category" value={basics.categoryName} onChange={(categoryName) => setBasics({ ...basics, categoryName })} helper="Currently mapped to Software Development." />
+      <EditableField label="Estimated duration" value={basics.durationLabel} onChange={(durationLabel) => setBasics({ ...basics, durationLabel })} helper="This preview is recalculated from lessons when saving." />
+      <div className="md:col-span-2">
+        <EditableField
+          label="Course description"
+          value={basics.description}
+          onChange={(description) => setBasics({ ...basics, description })}
+          multiline
+        />
+      </div>
+    </div>
+  );
+}
+
+function PricingStep({ basics, setBasics }: { basics: CourseBasics; setBasics: (basics: CourseBasics) => void }) {
+  const price = Number(basics.price) || 0;
+  const discountedPrice = Number(basics.discountedPrice) || price;
+  const discountRate = price > 0 ? Math.max(0, Math.round(((price - discountedPrice) / price) * 100)) : 0;
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid gap-4 md:grid-cols-2">
+        <EditableField label="Base price" value={basics.price} onChange={(value) => setBasics({ ...basics, price: value })} helper="The original listed price." />
+        <EditableField label="Discounted price" value={basics.discountedPrice} onChange={(value) => setBasics({ ...basics, discountedPrice: value })} helper="The current price learners will see." />
+        <button type="button" className="text-left" onClick={() => setBasics({ ...basics, isInSubscription: !basics.isInSubscription })}>
+          <ToggleRow title="Included in subscription" copy="Allow learners with a subscription to access this course." active={basics.isInSubscription} />
+        </button>
+        <button type="button" className="text-left" onClick={() => setBasics({ ...basics, hasCertificate: !basics.hasCertificate })}>
+          <ToggleRow title="Certificate enabled" copy="Give learners a certificate after completion." active={basics.hasCertificate} />
+        </button>
+        <EditableField label="Certificate title" value={basics.certificateTitle} onChange={(certificateTitle) => setBasics({ ...basics, certificateTitle })} />
+      </div>
+
+      <aside className="rounded-[18px] bg-[#111033] p-5 text-white">
+        <p className="text-sm text-white/65">Pricing preview</p>
+        <strong className="mt-2 block text-3xl">{new Intl.NumberFormat("en-US").format(discountedPrice)} VND</strong>
+        <p className="mt-2 text-sm text-white/65">{discountRate}% discount from base price.</p>
+        <div className="mt-6 space-y-3">
+          {["Learner sees discounted price", "Course revenue appears in Earning", "Enrollment is created after paid order"].map((item) => (
+            <div key={item} className="flex items-center gap-2 text-sm text-white/75">
+              <CheckCircle2 className="size-4 text-[#23BD33]" />
+              {item}
+            </div>
+          ))}
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function CurriculumStep({
+  sections,
+  setSections,
+  selectedSectionId,
+  setSelectedSectionId,
+  selectedLessonId,
+  setSelectedLessonId,
+}: {
+  sections: Section[];
+  setSections: (sections: Section[]) => void;
+  selectedSectionId?: string;
+  setSelectedSectionId: (sectionId: string) => void;
+  selectedLessonId?: string;
+  setSelectedLessonId: (lessonId: string) => void;
+}) {
+  const selectedSection = sections.find((section) => section.id === selectedSectionId) || sections[0];
+
+  function patchSelectedSection(patch: Partial<Section>) {
+    if (!selectedSection) return;
+    setSections(sections.map((section) => (section.id === selectedSection.id ? { ...section, ...patch } : section)));
+  }
+
+  function addSection() {
+    const id = `section-${Date.now()}`;
+    const nextSection: Section = {
+      id,
+      title: `New section ${sections.length + 1}`,
+      description: "Describe what learners will complete in this section.",
+      duration: 0,
+      lessons: [],
+    };
+    setSections([...sections, nextSection]);
+    setSelectedSectionId(id);
+  }
+
+  function deleteSelectedSection() {
+    if (!selectedSection) return;
+
+    const sectionIndex = sections.findIndex((section) => section.id === selectedSection.id);
+    const nextSections = sections.filter((section) => section.id !== selectedSection.id);
+    const nextSelectedSection = nextSections[Math.max(0, sectionIndex - 1)] || nextSections[0];
+    const nextSelectedLesson = nextSelectedSection?.lessons[0] || nextSections.flatMap((section) => section.lessons)[0];
+
+    setSections(nextSections);
+    setSelectedSectionId(nextSelectedSection?.id || "");
+    setSelectedLessonId(nextSelectedLesson?.id || "");
+  }
+
+  function addLesson(type: LessonType) {
+    if (!selectedSection) return;
+    const id = `lesson-${Date.now()}`;
+    const lesson: Lesson = {
+      id,
+      title: `New ${lessonTypeMeta[type].label.toLowerCase()} lesson`,
+      type,
+      duration: type === "ASSIGNMENT" ? 45 : 10,
+      preview: false,
+    };
+    setSections(
+      sections.map((section) =>
+        section.id === selectedSection.id
+          ? {
+              ...section,
+              duration: section.duration + lesson.duration,
+              lessons: [...section.lessons, lesson],
+            }
+          : section,
+      ),
+    );
+    setSelectedLessonId(id);
+  }
+
+  return (
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <DraggableCurriculum
+        sections={sections}
+        setSections={setSections}
+        selectedSectionId={selectedSection?.id}
+        setSelectedSectionId={setSelectedSectionId}
+        selectedLessonId={selectedLessonId}
+        setSelectedLessonId={setSelectedLessonId}
+      />
+
+      <aside className="space-y-4">
+        <button type="button" onClick={addSection} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-[18px] bg-[#564FFD] text-sm font-semibold text-white">
+          <Plus className="size-4" />
+          Add section
+        </button>
+
+        {selectedSection ? (
+          <div className="rounded-[18px] bg-white p-5">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="font-semibold text-[#1D2026]">Edit selected section</h3>
+              <button
+                type="button"
+                onClick={deleteSelectedSection}
+                className="inline-flex size-10 items-center justify-center rounded-[14px] border border-[#FFE0D4] bg-[#FFF5F0] text-[#E34444] transition hover:border-[#E34444] hover:bg-[#FFEAE3]"
+                aria-label="Delete selected section"
+              >
+                <Trash2 className="size-4" />
+              </button>
+            </div>
+            <div className="mt-4 space-y-4">
+              <EditableField
+                label="Section title"
+                value={selectedSection.title}
+                onChange={(title) => patchSelectedSection({ title })}
+                helper="Keep section titles short and outcome-focused."
+              />
+              <EditableField
+                label="Description"
+                value={selectedSection.description}
+                onChange={(description) => patchSelectedSection({ description })}
+                helper="Optional section context for learners"
+                multiline
+              />
+              <EditableField
+                label="Duration minutes"
+                value={String(selectedSection.duration)}
+                onChange={(duration) => patchSelectedSection({ duration: Number(duration) || 0 })}
+              />
+            </div>
+          </div>
+        ) : null}
+
+        <div className="rounded-[18px] bg-white p-5">
+          <h3 className="font-semibold text-[#1D2026]">Add lesson to section</h3>
+          <p className="mt-1 text-sm leading-6 text-[#6E7485]">Choose a lesson type. The next step will expose its content editor.</p>
+          <div className="mt-4 grid gap-3">
+            {(Object.keys(lessonTypeMeta) as LessonType[]).map((type) => {
+              const meta = lessonTypeMeta[type];
+              const Icon = meta.icon;
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => addLesson(type)}
+                  className="flex items-center gap-3 rounded-[14px] border border-[#E9EAF0] bg-white p-3 text-left transition hover:border-[#D8D6FF] hover:bg-[#F8F8FF]"
+                >
+                  <span className={cn("flex size-10 items-center justify-center rounded-[14px]", meta.tone)}>
+                    <Icon className="size-5" />
+                  </span>
+                  <span>
+                    <span className="block text-sm font-semibold text-[#1D2026]">{meta.label}</span>
+                    <span className="text-xs text-[#8C94A3]">{meta.description}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="rounded-[18px] bg-white p-5">
+          <h3 className="font-semibold text-[#1D2026]">Organize the flow</h3>
+          <p className="mt-2 text-sm leading-6 text-[#6E7485]">
+            Drag sections and lessons into the order learners should follow.
+          </p>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+const defaultQuizQuestions: QuizQuestion[] = [
+  {
+    id: "question-1",
+    prompt: "What is the main outcome learners should achieve in this lesson?",
+    options: ["Understand the concept", "Skip the practice", "Disable validation", "Ignore the learning goal"],
+    answerIndex: 0,
+  },
+];
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function draftFileKey(scope: string, name: string) {
+  const cleanName = name.trim().toLowerCase().replace(/[^a-z0-9.]+/g, "-").replace(/^-+|-+$/g, "") || "file";
+  return `draft/${scope}/${Date.now()}-${cleanName}`;
+}
+
+function parseSizeLabel(size: string | undefined) {
+  if (!size) return 0;
+  const value = Number.parseFloat(size);
+  if (Number.isNaN(value)) return 0;
+  if (size.toLowerCase().includes("mb")) return Math.round(value * 1024 * 1024);
+  return Math.round(value * 1024);
+}
+
+function getApiData<T>(response: { data?: T }, fallbackMessage: string): T {
+  if (!response.data) throw new Error(fallbackMessage);
+  return response.data;
+}
+
+function createCourseDraftPayload(sections: Section[], basics: CourseBasics) {
+  return {
+    title: basics.title,
+    description: basics.description,
+    categoryId: basics.categoryId,
+    price: Number(basics.price) || 0,
+    discountedPrice: Number(basics.discountedPrice) || undefined,
+    isInSubscription: basics.isInSubscription,
+    duration: sections.reduce((sum, section) => sum + section.duration, 0),
+    hasCertificate: basics.hasCertificate,
+    certificateTitle: basics.hasCertificate ? basics.certificateTitle : undefined,
+  };
+}
+
+function createArticleFilePayload(lesson: Lesson) {
+  const html = lesson.content?.articleHtml || "<p>Lesson content</p>";
+  const size = new Blob([html]).size;
+  return {
+    fileKey: draftFileKey("articles", `${lesson.id}.html`),
+    fileName: `${lesson.title || "article"}.html`,
+    fileType: "text/html",
+    fileSize: size,
+  };
+}
+
+function createAssignmentAttachment(lesson: Lesson) {
+  const attachmentName = lesson.content?.assignmentAttachment;
+  if (!attachmentName) return [];
+
+  return [
+    {
+      fileKey: draftFileKey("assignments", attachmentName),
+      fileName: attachmentName,
+      fileType: "application/octet-stream",
+      fileSize: 0,
+    },
+  ];
+}
+
+async function uploadFileWithPresignedUrl(file: File) {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch("/api/uploads/presigned", {
+      method: "POST",
+      body: formData,
+    });
+
+    const payload = (await response.json().catch(() => ({}))) as { fileKey?: string; message?: string };
+
+    if (!response.ok || !payload.fileKey) {
+      throw new Error(payload.message || "Could not upload file.");
+    }
+
+    return payload.fileKey;
+  } catch (error) {
+    throw new Error(`Could not upload "${file.name}". ${getErrorMessage(error, "Please check upload settings.")}`);
+  }
+}
+
+function getLessonContent(lesson: Lesson): LessonContent {
+  return {
+    videoDescription: "Introduce the lesson goals, prerequisites, and what learners should build.",
+    articleHtml: "<h2>Lesson overview</h2><p>Write the concept explanation, examples, and practical steps here.</p>",
+    quizQuestions: defaultQuizQuestions,
+    passingScore: 70,
+    assignmentInstructions: "Describe the task, expected deliverables, acceptance criteria, and submission format.",
+    assignmentDueDays: 7,
+    ...lesson.content,
+  };
+}
+
+function LessonTypePicker({ lesson, patchLesson }: { lesson: Lesson; patchLesson: (patch: Partial<Lesson>) => void }) {
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      {(Object.keys(lessonTypeMeta) as LessonType[]).map((type) => {
+        const item = lessonTypeMeta[type];
+        const ContentIcon = item.icon;
+        const active = lesson.type === type;
+
+        return (
+          <button
+            key={type}
+            type="button"
+            onClick={() => patchLesson({ type })}
+            className={cn(
+              "rounded-[18px] border p-5 text-left transition",
+              active ? "border-[#564FFD] bg-[#F8F8FF]" : "border-[#E9EAF0] bg-white hover:border-[#D8D6FF] hover:bg-[#F8F8FF]",
+            )}
+          >
+            <ContentIcon className={cn("size-6", active ? "text-[#564FFD]" : "text-[#8C94A3]")} />
+            <p className="mt-4 text-sm font-semibold text-[#1D2026]">{item.label}</p>
+            <p className="mt-1 text-xs leading-5 text-[#6E7485]">{item.description}</p>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function VideoLessonEditor({ content, patchContent }: { content: LessonContent; patchContent: (patch: Partial<LessonContent>) => void }) {
+  return (
+    <div className="space-y-5">
+      <label className="flex min-h-[520px] cursor-pointer flex-col items-center justify-center rounded-[18px] border border-dashed border-[#C6CAD1] bg-[#FCFCFD] p-10 text-center transition hover:border-[#564FFD] hover:bg-[#F8F8FF]">
+        <input
+          type="file"
+          accept="video/*,.m3u8"
+          className="sr-only"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            patchContent({ videoFileName: file.name, videoFileSize: formatBytes(file.size) });
+          }}
+        />
+        <span className="flex size-16 items-center justify-center rounded-[22px] bg-[#EBEBFF] text-[#564FFD]">
+          <UploadCloud className="size-8" />
+        </span>
+        <h4 className="mt-5 text-lg font-semibold text-[#1D2026]">
+          {content.videoFileName || "Upload lesson video"}
+        </h4>
+        <p className="mt-2 max-w-[520px] text-sm leading-6 text-[#6E7485]">
+          Select a video for this lesson. You can replace it before publishing.
+        </p>
+        {content.videoFileSize ? <span className="mt-4 rounded-full bg-[#EBEBFF] px-3 py-1 text-xs font-medium text-[#564FFD]">{content.videoFileSize}</span> : null}
+      </label>
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <EditableField
+          label="Video description"
+          value={content.videoDescription || ""}
+          onChange={(videoDescription) => patchContent({ videoDescription })}
+          helper="Shown as a short context note below the player."
+          multiline
+        />
+        <div className="rounded-[18px] bg-[#111033] p-5 text-white">
+          <p className="text-sm text-white/65">Video tips</p>
+          <p className="mt-3 text-sm leading-6 text-white/75">Use clear audio, a steady pace, and a short recap at the end.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ArticleLessonEditor({
+  lessonId,
+  content,
+  patchContent,
+}: {
+  lessonId: string;
+  content: LessonContent;
+  patchContent: (patch: Partial<LessonContent>) => void;
+}) {
+  const editorRef = useRef<HTMLDivElement>(null);
+  const initialHtml = content.articleHtml || "";
+  const tools = [
+    { label: "Bold", icon: Bold, command: "bold" },
+    { label: "Italic", icon: Italic, command: "italic" },
+    { label: "Link", icon: Link, command: "createLink" },
+    { label: "List", icon: ListChecks, command: "insertUnorderedList" },
+  ];
+
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.innerHTML = initialHtml;
+    }
+  }, [lessonId]);
+
+  function syncEditorContent() {
+    if (!editorRef.current) return;
+    patchContent({ articleHtml: editorRef.current.innerHTML });
+  }
+
+  return (
+    <div className="overflow-hidden rounded-[18px] border border-[#E9EAF0] bg-white">
+      <div className="flex flex-wrap items-center gap-2 border-b border-[#E9EAF0] bg-[#FCFCFD] p-3">
+        {tools.map((tool) => {
+          const ToolIcon = tool.icon;
+          return (
+            <button
+              key={tool.label}
+              type="button"
+              onClick={() => {
+                if (tool.command === "createLink") {
+                  const url = window.prompt("Paste a URL");
+                  if (!url) return;
+                  document.execCommand(tool.command, false, url);
+                } else {
+                  document.execCommand(tool.command);
+                }
+                syncEditorContent();
+              }}
+              className="inline-flex h-10 items-center gap-2 rounded-[12px] border border-[#E9EAF0] bg-white px-3 text-sm font-semibold text-[#4E5566] transition hover:border-[#D8D6FF] hover:text-[#564FFD]"
+            >
+              <ToolIcon className="size-4" />
+              {tool.label}
+            </button>
+          );
+        })}
+      </div>
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        className="min-h-[620px] px-6 py-5 text-base leading-8 text-[#1D2026] outline-none prose-headings:font-semibold"
+        onInput={syncEditorContent}
+      />
+      <div className="border-t border-[#E9EAF0] bg-[#FCFCFD] px-5 py-3 text-xs leading-5 text-[#8C94A3]">
+        Use headings, lists, and links to make the lesson easy to scan.
+      </div>
+    </div>
+  );
+}
+
+function QuizLessonEditor({ content, patchContent }: { content: LessonContent; patchContent: (patch: Partial<LessonContent>) => void }) {
+  const questions = content.quizQuestions?.length ? content.quizQuestions : defaultQuizQuestions;
+
+  function patchQuestion(questionId: string, patch: Partial<QuizQuestion>) {
+    patchContent({ quizQuestions: questions.map((question) => (question.id === questionId ? { ...question, ...patch } : question)) });
+  }
+
+  function patchOption(questionId: string, optionIndex: number, value: string) {
+    patchContent({
+      quizQuestions: questions.map((question) =>
+        question.id === questionId
+          ? { ...question, options: question.options.map((option, index) => (index === optionIndex ? value : option)) }
+          : question,
+      ),
+    });
+  }
+
+  function addQuestion() {
+    patchContent({
+      quizQuestions: [
+        ...questions,
+        {
+          id: `question-${Date.now()}`,
+          prompt: "New quiz question",
+          options: ["Option A", "Option B", "Option C", "Option D"],
+          answerIndex: 0,
+        },
+      ],
+    });
+  }
+
+  function deleteQuestion(questionId: string) {
+    patchContent({ quizQuestions: questions.filter((question) => question.id !== questionId) });
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 rounded-[18px] bg-[#FCFCFD] p-4 sm:flex-row sm:items-end sm:justify-between">
+        <EditableField
+          label="Passing score"
+          value={String(content.passingScore || 70)}
+          onChange={(passingScore) => patchContent({ passingScore: Number(passingScore) || 0 })}
+          helper="Percentage required to pass this quiz."
+        />
+        <button type="button" onClick={addQuestion} className="inline-flex h-12 items-center justify-center gap-2 rounded-[16px] bg-[#564FFD] px-5 text-sm font-semibold text-white">
+          <Plus className="size-4" />
+          Add question
+        </button>
+      </div>
+
+      {questions.map((question, questionIndex) => (
+        <article key={question.id} className="rounded-[18px] border border-[#E9EAF0] bg-white p-5">
+          <div className="flex items-start justify-between gap-3">
+            <EditableField
+              label={`Question ${questionIndex + 1}`}
+              value={question.prompt}
+              onChange={(prompt) => patchQuestion(question.id, { prompt })}
+              helper="Prompt shown to learners."
+            />
+            <button
+              type="button"
+              onClick={() => deleteQuestion(question.id)}
+              className="mt-7 inline-flex size-10 shrink-0 items-center justify-center rounded-[14px] text-[#A1A5B3] transition hover:bg-[#FFF5F0] hover:text-[#E34444]"
+              aria-label={`Delete question ${questionIndex + 1}`}
+            >
+              <Trash2 className="size-4" />
+            </button>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {question.options.map((option, optionIndex) => {
+              const selected = question.answerIndex === optionIndex;
+
+              return (
+                <label
+                  key={`${question.id}-${optionIndex}`}
+                  className={cn(
+                    "group flex items-center gap-3 rounded-[14px] border bg-[#FCFCFD] p-3 transition focus-within:border-[#564FFD] focus-within:bg-white focus-within:outline-none",
+                    selected ? "border-[#564FFD] bg-[#F8F8FF]" : "border-[#E9EAF0] hover:border-[#D8D6FF]",
+                  )}
+                >
+                  <input
+                    type="radio"
+                    checked={selected}
+                    onChange={() => patchQuestion(question.id, { answerIndex: optionIndex })}
+                    tabIndex={-1}
+                    className="hidden"
+                  />
+                  <span
+                    className={cn(
+                      "flex size-6 shrink-0 items-center justify-center rounded-full border transition",
+                      selected ? "border-[#564FFD] bg-[#564FFD]" : "border-[#CED1D9] bg-white group-focus-within:border-[#564FFD]",
+                    )}
+                  >
+                    {selected ? <CheckCircle2 className="size-4 text-white" /> : null}
+                  </span>
+                  <input
+                    value={option}
+                    onFocus={() => patchQuestion(question.id, { answerIndex: optionIndex })}
+                    onChange={(event) => patchOption(question.id, optionIndex, event.target.value)}
+                    className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-medium text-[#1D2026] outline-none ring-0 transition focus:border-0 focus:outline-none focus:ring-0 focus-visible:outline-none"
+                  />
+                </label>
+              );
+            })}
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function AssignmentLessonEditor({ content, patchContent }: { content: LessonContent; patchContent: (patch: Partial<LessonContent>) => void }) {
+  return (
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <label className="block">
+        <span className="text-sm font-medium text-[#4E5566]">Assignment instructions</span>
+        <textarea
+          value={content.assignmentInstructions || ""}
+          onChange={(event) => patchContent({ assignmentInstructions: event.target.value })}
+          rows={18}
+          className="mt-2 min-h-[520px] w-full resize-none rounded-[18px] border border-[#E9EAF0] bg-white px-5 py-4 text-base leading-8 text-[#1D2026] transition focus:border-[#564FFD] focus:ring-0"
+        />
+        <span className="mt-2 block text-xs leading-5 text-[#8C94A3]">Explain deliverables, grading criteria, and submission rules.</span>
+      </label>
+      <aside className="space-y-4">
+        <EditableField
+          label="Due in days"
+          value={String(content.assignmentDueDays || 7)}
+          onChange={(assignmentDueDays) => patchContent({ assignmentDueDays: Number(assignmentDueDays) || 0 })}
+          helper="Relative deadline after enrollment."
+        />
+        <label className="block rounded-[18px] border border-dashed border-[#C6CAD1] bg-[#FCFCFD] p-5 text-center transition hover:border-[#564FFD] hover:bg-[#F8F8FF]">
+          <input
+            type="file"
+            className="sr-only"
+            onChange={(event) => patchContent({ assignmentAttachment: event.target.files?.[0]?.name || "" })}
+          />
+          <UploadCloud className="mx-auto size-8 text-[#564FFD]" />
+          <p className="mt-3 text-sm font-semibold text-[#1D2026]">{content.assignmentAttachment || "Attach rubric/template"}</p>
+          <p className="mt-1 text-xs leading-5 text-[#8C94A3]">Optional file metadata for assignment resources.</p>
+        </label>
+      </aside>
+    </div>
+  );
+}
+
+function LessonContentEditor({ lesson, patchLesson }: { lesson: Lesson; patchLesson: (patch: Partial<Lesson>) => void }) {
+  const content = getLessonContent(lesson);
+
+  function patchContent(patch: Partial<LessonContent>) {
+    patchLesson({ content: { ...content, ...patch } });
+  }
+
+  if (lesson.type === "VIDEO") return <VideoLessonEditor content={content} patchContent={patchContent} />;
+  if (lesson.type === "ARTICLE") return <ArticleLessonEditor lessonId={lesson.id} content={content} patchContent={patchContent} />;
+  if (lesson.type === "QUIZ") return <QuizLessonEditor content={content} patchContent={patchContent} />;
+  return <AssignmentLessonEditor content={content} patchContent={patchContent} />;
+}
+
+function ContentStep({
+  sections,
+  setSections,
+  selectedLessonId,
+  setSelectedLessonId,
+}: {
+  sections: Section[];
+  setSections: (sections: Section[]) => void;
+  selectedLessonId?: string;
+  setSelectedLessonId: (lessonId: string) => void;
+}) {
+  const [lessonDrawerOpen, setLessonDrawerOpen] = useState(true);
+  const selectedLesson = sections.flatMap((section) => section.lessons).find((item) => item.id === selectedLessonId) || sections[0]?.lessons[0];
+  const lesson = selectedLesson;
+  if (!lesson) {
+    return (
+      <div className="rounded-[18px] border border-dashed border-[#C6CAD1] bg-[#FCFCFD] p-10 text-center">
+        <div className="mx-auto flex size-14 items-center justify-center rounded-[18px] bg-[#EBEBFF] text-[#564FFD]">
+          <Plus className="size-7" />
+        </div>
+        <h3 className="mt-5 text-xl font-semibold text-[#1D2026]">No lessons yet</h3>
+        <p className="mx-auto mt-2 max-w-[520px] text-sm leading-6 text-[#6E7485]">
+          Go back to Curriculum, create a section, then add a lesson before configuring lesson content.
+        </p>
+      </div>
+    );
+  }
+  const meta = lessonTypeMeta[lesson.type];
+  const Icon = meta.icon;
+
+  function patchLesson(patch: Partial<Lesson>) {
+    setSections(
+      sections.map((section) => ({
+        ...section,
+        lessons: section.lessons.map((item) => (item.id === lesson.id ? { ...item, ...patch } : item)),
+      })),
+    );
+  }
+
+  return (
+    <div className={cn("grid gap-5 transition-all", lessonDrawerOpen ? "xl:grid-cols-[340px_minmax(0,1fr)]" : "xl:grid-cols-[72px_minmax(0,1fr)]")}>
+      <aside className="sticky top-6 h-fit rounded-[18px] bg-white p-4">
+        <div className="flex items-center justify-between gap-3">
+          {lessonDrawerOpen ? (
+            <div>
+              <h3 className="font-semibold text-[#1D2026]">Lessons</h3>
+              <p className="mt-1 text-sm leading-6 text-[#6E7485]">Select one lesson to edit its content.</p>
+            </div>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setLessonDrawerOpen((open) => !open)}
+            className="inline-flex size-11 shrink-0 items-center justify-center rounded-[14px] border border-[#E9EAF0] bg-white text-[#4E5566] transition hover:border-[#D8D6FF] hover:text-[#564FFD]"
+            aria-label={lessonDrawerOpen ? "Collapse lessons drawer" : "Expand lessons drawer"}
+          >
+            {lessonDrawerOpen ? <PanelLeftClose className="size-5" /> : <PanelLeftOpen className="size-5" />}
+          </button>
+        </div>
+        <div className={cn("mt-4 max-h-[calc(100vh-220px)] space-y-2 overflow-y-auto pr-1", !lessonDrawerOpen && "pr-0")}>
+          {sections.map((section) => (
+            <div key={section.id}>
+              {lessonDrawerOpen ? <p className="px-2 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-[#8C94A3]">{section.title}</p> : null}
+              {section.lessons.map((item) => {
+                const itemMeta = lessonTypeMeta[item.type];
+                const ItemIcon = itemMeta.icon;
+                const active = item.id === lesson.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setSelectedLessonId(item.id)}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-[14px] border p-3 text-left transition",
+                      active ? "border-[#564FFD] bg-[#F8F8FF]" : "border-transparent bg-white hover:border-[#D8D6FF] hover:bg-[#F8F8FF]",
+                      !lessonDrawerOpen && "justify-center px-2",
+                    )}
+                  >
+                    <span className={cn("flex size-9 items-center justify-center rounded-[12px]", itemMeta.tone)}>
+                      <ItemIcon className="size-4" />
+                    </span>
+                    {lessonDrawerOpen ? <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium text-[#1D2026]">{item.title}</span>
+                      <span className="text-xs text-[#8C94A3]">{itemMeta.label} · {minutesLabel(item.duration)}</span>
+                    </span> : null}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </aside>
+
+      <section className="space-y-6">
+        <div className="rounded-[18px] bg-white p-5">
+        <div className="flex items-center gap-3">
+          <span className={cn("flex size-12 items-center justify-center rounded-[18px]", meta.tone)}>
+            <Icon className="size-6" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-[#1D2026]">{lesson.title}</p>
+            <p className="mt-1 text-xs text-[#8C94A3]">{meta.description}</p>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <EditableField label="Lesson title" value={lesson.title} onChange={(title) => patchLesson({ title })} helper="Use a clear title learners can recognize later." />
+          <EditableField label="Duration minutes" value={String(lesson.duration)} onChange={(duration) => patchLesson({ duration: Number(duration) || 0 })} />
+          <div className="md:col-span-2">
+            <button
+              type="button"
+              onClick={() => patchLesson({ preview: !lesson.preview })}
+              className="w-full text-left"
+            >
+              <ToggleRow title="Preview lesson" copy="Let learners watch or read this lesson before enrolling." active={Boolean(lesson.preview)} />
+            </button>
+          </div>
+        </div>
+        </div>
+
+      <div className="rounded-[18px] bg-white p-6">
+        <h3 className="text-lg font-semibold text-[#1D2026]">Configure lesson content</h3>
+        <p className="mt-2 text-sm leading-6 text-[#6E7485]">
+          Choose the lesson format, then add the material learners will use.
+        </p>
+
+        <div className="mt-6">
+          <LessonTypePicker lesson={lesson} patchLesson={patchLesson} />
+        </div>
+
+        <div className="mt-6 rounded-[18px] border border-[#E9EAF0] bg-[#FCFCFD] p-4">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-[#1D2026]">{meta.label} content</p>
+              <p className="mt-1 text-xs text-[#8C94A3]">{meta.description}</p>
+            </div>
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-[#6E7485]">Draft</span>
+          </div>
+          <LessonContentEditor lesson={lesson} patchLesson={patchLesson} />
+        </div>
+      </div>
+      </section>
+    </div>
+  );
+}
+
+function MediaStep({
+  courseImages,
+  setCourseImages,
+}: {
+  courseImages: CourseImage[];
+  setCourseImages: (images: CourseImage[]) => void;
+}) {
+  function addImages(files: FileList | null) {
+    if (!files?.length) return;
+
+    const hasCover = courseImages.some((image) => image.isCover);
+    const newImages = Array.from(files)
+      .filter((file) => file.type.startsWith("image/"))
+      .map((file, index) => ({
+        id: `course-image-${Date.now()}-${index}`,
+        fileKey: draftFileKey("course-images", file.name),
+        file,
+        name: file.name,
+        size: formatBytes(file.size),
+        url: URL.createObjectURL(file),
+        isCover: !hasCover && courseImages.length === 0 && index === 0,
+      }));
+
+    setCourseImages([...courseImages, ...newImages]);
+  }
+
+  function removeImage(imageId: string) {
+    const image = courseImages.find((item) => item.id === imageId);
+    if (image?.url.startsWith("blob:")) URL.revokeObjectURL(image.url);
+
+    const nextImages = courseImages.filter((item) => item.id !== imageId);
+    if (image?.isCover && nextImages[0]) {
+      setCourseImages(nextImages.map((item, index) => ({ ...item, isCover: index === 0 })));
+      return;
+    }
+
+    setCourseImages(nextImages);
+  }
+
+  function setCover(imageId: string) {
+    setCourseImages(courseImages.map((image) => ({ ...image, isCover: image.id === imageId })));
+  }
+
+  const coverImage = courseImages.find((image) => image.isCover) || courseImages[0];
+
+  return (
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <section className="space-y-5">
+        <label className="flex min-h-[360px] cursor-pointer flex-col items-center justify-center rounded-[18px] border border-dashed border-[#C6CAD1] bg-white p-10 text-center transition hover:border-[#564FFD] hover:bg-[#F8F8FF]">
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(event) => {
+              addImages(event.target.files);
+              event.currentTarget.value = "";
+            }}
+          />
+          <div className="mx-auto flex size-16 items-center justify-center rounded-[22px] bg-[#EBEBFF] text-[#564FFD]">
+            <UploadCloud className="size-8" />
+          </div>
+          <h3 className="mt-5 text-xl font-semibold text-[#1D2026]">Upload course images</h3>
+          <p className="mx-auto mt-2 max-w-[560px] text-sm leading-6 text-[#6E7485]">
+            Select one or more images for the course gallery. The first uploaded image is used as the cover by default.
+          </p>
+          <span className="mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-[18px] bg-[#564FFD] px-6 text-sm font-semibold text-white">
+            Select images
+          </span>
+        </label>
+
+        {courseImages.length ? (
+          <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+            {courseImages.map((image) => (
+              <article key={image.id} className="overflow-hidden rounded-[18px] border border-[#E9EAF0] bg-white">
+                <div className="relative aspect-video bg-[#F5F7FA]">
+                  <img src={image.url} alt={image.name} className="h-full w-full object-cover" />
+                  {image.isCover ? (
+                    <span className="absolute left-3 top-3 rounded-full bg-[#564FFD] px-3 py-1 text-xs font-semibold text-white">Cover</span>
+                  ) : null}
+                </div>
+                <div className="space-y-4 p-4">
+                  <div>
+                    <p className="truncate text-sm font-semibold text-[#1D2026]">{image.name}</p>
+                    <p className="mt-1 text-xs text-[#8C94A3]">{image.size}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCover(image.id)}
+                      className={cn(
+                        "inline-flex h-10 flex-1 items-center justify-center rounded-[14px] border px-3 text-sm font-semibold transition",
+                        image.isCover ? "border-[#564FFD] bg-[#F8F8FF] text-[#564FFD]" : "border-[#E9EAF0] text-[#4E5566] hover:border-[#D8D6FF] hover:text-[#564FFD]",
+                      )}
+                    >
+                      Set cover
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeImage(image.id)}
+                      className="inline-flex size-10 items-center justify-center rounded-[14px] text-[#A1A5B3] transition hover:bg-[#FFF5F0] hover:text-[#E34444]"
+                      aria-label={`Remove ${image.name}`}
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : null}
+      </section>
+
+      <aside className="rounded-[18px] bg-white p-5">
+        <h3 className="font-semibold text-[#1D2026]">Media requirements</h3>
+        <div className="mt-4 space-y-3">
+          {["At least one cover image", "16:9 recommended preview", "Gallery images are optional"].map((item) => (
+            <div key={item} className="flex items-center gap-2 text-sm text-[#6E7485]">
+              <CheckCircle2 className="size-4 text-[#23BD33]" />
+              {item}
+            </div>
+          ))}
+        </div>
+        {coverImage ? (
+          <div className="mt-6 overflow-hidden rounded-[18px] border border-[#E9EAF0]">
+            <img src={coverImage.url} alt={coverImage.name} className="aspect-video w-full object-cover" />
+            <div className="p-4">
+              <p className="text-sm font-semibold text-[#1D2026]">Current cover</p>
+              <p className="mt-1 truncate text-xs text-[#8C94A3]">{coverImage.name}</p>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-6 rounded-[18px] border border-dashed border-[#C6CAD1] bg-[#FCFCFD] p-5 text-sm leading-6 text-[#6E7485]">
+            No course image selected yet.
+          </div>
+        )}
+        <div className="mt-6 rounded-[18px] bg-[#111033] p-5 text-white">
+          <p className="text-sm text-white/65">Image tips</p>
+          <p className="mt-3 text-sm leading-6 text-white/75">Use a clean 16:9 cover image that clearly represents the course outcome.</p>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function ReviewStep({ sections, courseImages }: { sections: Section[]; courseImages: CourseImage[] }) {
+  const lessonCount = sections.reduce((sum, section) => sum + section.lessons.length, 0);
+  const previewCount = sections.reduce((sum, section) => sum + section.lessons.filter((lesson) => lesson.preview).length, 0);
+  const checks = [
+    { label: "Course basics completed", done: true, detail: "Title, category, and description are ready." },
+    { label: `${sections.length} sections created`, done: sections.length > 0, detail: "The curriculum has a clear structure." },
+    { label: `${lessonCount} lessons created`, done: lessonCount > 0, detail: "Learners have materials to follow." },
+    { label: `${previewCount} preview lesson selected`, done: previewCount > 0, detail: "A preview helps learners evaluate the course." },
+    { label: `${courseImages.length} course image${courseImages.length === 1 ? "" : "s"} ready`, done: courseImages.length > 0, detail: "A cover image improves the course listing." },
+    { label: "Ready for approval", done: false, detail: "Review everything before submitting." },
+  ];
+
+  return (
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <section className="grid gap-4 md:grid-cols-2">
+        {checks.map((check) => (
+          <article key={check.label} className="rounded-[18px] border border-[#E9EAF0] bg-white p-5">
+            <div className="flex items-start gap-3">
+              <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-[14px]", check.done ? "bg-[#E1F7E3] text-[#23BD33]" : "bg-[#FFF2E5] text-[#FD8E1F]")}>
+                {check.done ? <CheckCircle2 className="size-5" /> : <ListChecks className="size-5" />}
+              </span>
+              <div>
+                <h3 className="text-sm font-semibold text-[#1D2026]">{check.label}</h3>
+                <p className="mt-1 text-xs text-[#8C94A3]">{check.detail}</p>
+              </div>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <aside className="rounded-[18px] bg-[#111033] p-5 text-white">
+        <p className="text-sm text-white/65">Approval readiness</p>
+        <strong className="mt-2 block text-3xl">74%</strong>
+        <div className="mt-4 h-2 rounded-full bg-white/15">
+          <div className="h-full w-[74%] rounded-full bg-[#23BD33]" />
+        </div>
+        <button className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-[18px] bg-[#564FFD] text-sm font-semibold text-white">
+          Submit for approval
+          <ArrowRight className="size-4" />
+        </button>
+      </aside>
+    </div>
+  );
+}
+
+function StepBody({
+  activeStep,
+  basics,
+  setBasics,
+  sections,
+  setSections,
+  courseImages,
+  setCourseImages,
+  selectedSectionId,
+  setSelectedSectionId,
+  selectedLessonId,
+  setSelectedLessonId,
+}: {
+  activeStep: StepId;
+  basics: CourseBasics;
+  setBasics: (basics: CourseBasics) => void;
+  sections: Section[];
+  setSections: (sections: Section[]) => void;
+  courseImages: CourseImage[];
+  setCourseImages: (images: CourseImage[]) => void;
+  selectedSectionId?: string;
+  setSelectedSectionId: (sectionId: string) => void;
+  selectedLessonId?: string;
+  setSelectedLessonId: (lessonId: string) => void;
+}) {
+  if (activeStep === "basics") return <BasicsStep basics={basics} setBasics={setBasics} />;
+  if (activeStep === "pricing") return <PricingStep basics={basics} setBasics={setBasics} />;
+  if (activeStep === "curriculum") {
+    return (
+      <CurriculumStep
+        sections={sections}
+        setSections={setSections}
+        selectedSectionId={selectedSectionId}
+        setSelectedSectionId={setSelectedSectionId}
+        selectedLessonId={selectedLessonId}
+        setSelectedLessonId={setSelectedLessonId}
+      />
+    );
+  }
+  if (activeStep === "content") {
+    return (
+      <ContentStep
+        sections={sections}
+        setSections={setSections}
+        selectedLessonId={selectedLessonId}
+        setSelectedLessonId={setSelectedLessonId}
+      />
+    );
+  }
+  if (activeStep === "media") return <MediaStep courseImages={courseImages} setCourseImages={setCourseImages} />;
+  return <ReviewStep sections={sections} courseImages={courseImages} />;
+}
+
+function ReadinessPanel({ sections, courseImages, activeStep }: { sections: Section[]; courseImages: CourseImage[]; activeStep: StepId }) {
+  const lessons = sections.flatMap((section) => section.lessons);
+  const activeIndex = steps.findIndex((step) => step.id === activeStep);
+  const totalDuration = sections.reduce((sum, section) => sum + section.duration, 0);
+
+  return (
+    <aside className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)_320px]">
+      <div className="rounded-[18px] bg-[#111033] p-5 text-white">
+        <p className="text-sm text-white/65">Wizard progress</p>
+        <strong className="mt-2 block text-3xl">{Math.round(((activeIndex + 1) / steps.length) * 100)}%</strong>
+        <div className="mt-4 h-2 rounded-full bg-white/15">
+          <div className="h-full rounded-full bg-[#23BD33]" style={{ width: `${((activeIndex + 1) / steps.length) * 100}%` }} />
+        </div>
+      </div>
+
+      <div className="rounded-[18px] bg-white p-5">
+        <h3 className="font-semibold text-[#1D2026]">Course snapshot</h3>
+        <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+          {[
+            ["Sections", sections.length],
+            ["Lessons", lessons.length],
+            ["Preview", lessons.filter((lesson) => lesson.preview).length],
+            ["Duration", minutesLabel(totalDuration)],
+            ["Images", courseImages.length],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-[14px] bg-[#F8F8FF] p-3">
+              <p className="text-xs text-[#8C94A3]">{label}</p>
+              <p className="mt-1 text-lg font-semibold text-[#1D2026]">{value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-[18px] bg-white p-5">
+        <h3 className="font-semibold text-[#1D2026]">Next step</h3>
+        <p className="mt-2 text-sm leading-6 text-[#6E7485]">
+          {steps[activeIndex]?.description} is the current focus for this course draft.
+        </p>
+      </div>
+    </aside>
+  );
+}
+
+type CourseCreateOptionsPageProps = {
+  mode?: "create" | "edit";
+  courseId?: string;
+};
+
+function mapCurriculumSections(sections: NonNullable<Awaited<ReturnType<typeof CourseService.getEditableDraftCurriculum>>["data"]>["sections"]): Section[] {
+  return (sections || []).map((section, sectionIndex) => ({
+    id: section.id || `section-${sectionIndex}`,
+    serverId: section.id,
+    title: section.title || `Section ${sectionIndex + 1}`,
+    description: section.description || "",
+    duration: section.duration || 0,
+    lessons: (section.lessons || []).map((lesson, lessonIndex) => ({
+      id: lesson.id || `lesson-${sectionIndex}-${lessonIndex}`,
+      serverId: lesson.id,
+      title: lesson.title || `Lesson ${lessonIndex + 1}`,
+      type: lesson.lessonType || "VIDEO",
+      duration: lesson.duration || 0,
+      preview: Boolean(lesson.isPreview),
+    })),
+  }));
+}
+
+export function CourseCreateOptionsPage({ mode = "create", courseId }: CourseCreateOptionsPageProps) {
+  const [activeStep, setActiveStep] = useState<StepId>("basics");
+  const [basics, setBasics] = useState<CourseBasics>(defaultCourseBasics);
+  const [sections, setSections] = useState(initialSections);
+  const [courseImages, setCourseImages] = useState<CourseImage[]>([]);
+  const [draftCourseId, setDraftCourseId] = useState<string | undefined>(courseId);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "submitting" | "submitted" | "error">("idle");
+  const [saveMessage, setSaveMessage] = useState("");
+  const [savedImageKeys, setSavedImageKeys] = useState<string[]>([]);
+  const courseImagesRef = useRef<CourseImage[]>([]);
+  const [selectedSectionId, setSelectedSectionId] = useState(initialSections[0].id);
+  const [selectedLessonId, setSelectedLessonId] = useState(initialSections[0].lessons[0].id);
+  const activeIndex = steps.findIndex((step) => step.id === activeStep);
+  const active = useMemo(() => steps[activeIndex] || steps[0], [activeIndex]);
+  const isEditMode = mode === "edit";
+
+  useEffect(() => {
+    if (!courseId || !isEditMode) return;
+
+    let isMounted = true;
+    const editableCourseId = courseId;
+
+    async function loadCourseDraft() {
+      setSaveState("saving");
+      setSaveMessage("Loading course draft...");
+
+      try {
+        const [courseResponse, curriculumResponse] = await Promise.all([
+          CourseService.getEditableCourseDraft({ id: editableCourseId }),
+          CourseService.getEditableDraftCurriculum({ id: editableCourseId }),
+        ]);
+        const course = courseResponse.data;
+
+        if (!isMounted) return;
+
+        if (course) {
+          setBasics({
+            title: course.title || defaultCourseBasics.title,
+            categoryId: course.category?.id || defaultCourseBasics.categoryId,
+            categoryName: course.category?.name || defaultCourseBasics.categoryName,
+            description: course.description || defaultCourseBasics.description,
+            price: String(course.price ?? 0),
+            discountedPrice: String(course.discountedPrice ?? course.price ?? 0),
+            durationLabel: minutesLabel(course.duration || 0),
+            isInSubscription: Boolean(course.isInSubscription),
+            hasCertificate: Boolean(course.hasCertificate),
+            certificateTitle: course.certificateTitle || "",
+          });
+          setCourseImages(
+            (course.images || []).map((image, index) => ({
+              id: image.id || `course-image-${index}`,
+              fileKey: image.imageUrl || "",
+              name: `Course image ${index + 1}`,
+              size: "",
+              url: image.imageUrl || "",
+              isCover: index === 0,
+              uploaded: true,
+            })),
+          );
+          setSavedImageKeys((course.images || []).map((image) => image.imageUrl || "").filter(Boolean));
+        }
+
+        const mappedSections = mapCurriculumSections(curriculumResponse.data?.sections);
+        if (mappedSections.length) {
+          setSections(mappedSections);
+          setSelectedSectionId(mappedSections[0].id);
+          setSelectedLessonId(mappedSections[0].lessons[0]?.id || "");
+        }
+
+        setDraftCourseId(editableCourseId);
+        setSaveState("idle");
+        setSaveMessage("");
+      } catch (error) {
+        if (!isMounted) return;
+        setSaveState("error");
+        setSaveMessage(error instanceof Error ? error.message : "Could not load course draft.");
+      }
+    }
+
+    void loadCourseDraft();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [courseId, isEditMode]);
+
+  useEffect(() => {
+    courseImagesRef.current = courseImages;
+  }, [courseImages]);
+
+  useEffect(() => {
+  return () => {
+      courseImagesRef.current.forEach((image) => {
+        if (image.url.startsWith("blob:")) URL.revokeObjectURL(image.url);
+      });
+    };
+  }, []);
+
+  function goNext() {
+    setActiveStep(steps[Math.min(steps.length - 1, activeIndex + 1)].id);
+  }
+
+  function goBack() {
+    setActiveStep(steps[Math.max(0, activeIndex - 1)].id);
+  }
+
+  async function saveDraft(options?: { silentSuccess?: boolean }) {
+    setSaveState((state) => (state === "submitting" ? state : "saving"));
+    setSaveMessage("");
+
+    try {
+      const courseBody = createCourseDraftPayload(sections, basics);
+      const course = draftCourseId
+        ? getApiData(await CourseService.updateCourse({ id: draftCourseId, body: courseBody }), "Could not update course draft.")
+        : getApiData(await CourseService.createCourse({ body: courseBody }), "Could not create course draft.");
+      const courseId = course.id || draftCourseId;
+
+      if (!courseId) throw new Error("Course draft was saved but no course id was returned.");
+      setDraftCourseId(courseId);
+
+      const nextSections: Section[] = [];
+
+      for (const section of sections) {
+        const savedSection = section.serverId
+          ? getApiData(
+              await SectionService.updateSection({
+                courseId,
+                sectionId: section.serverId,
+                body: {
+                  title: section.title,
+                  description: section.description,
+                  duration: section.duration,
+                },
+              }),
+              "Could not update section.",
+            )
+          : getApiData(
+              await SectionService.createSection({
+                courseId,
+                body: {
+                  title: section.title,
+                  description: section.description,
+                  duration: section.duration,
+                },
+              }),
+              "Could not create section.",
+            );
+
+        const sectionId = savedSection.id || section.serverId;
+        if (!sectionId) throw new Error(`Section "${section.title}" was saved but no section id was returned.`);
+
+        const nextLessons: Lesson[] = [];
+
+        for (const lesson of section.lessons) {
+          const savedLesson = lesson.serverId
+            ? getApiData(
+                await LessonService.updateLesson({
+                  courseId,
+                  sectionId,
+                  lessonId: lesson.serverId,
+                  body: {
+                    title: lesson.title,
+                    duration: lesson.duration,
+                    isPreview: Boolean(lesson.preview),
+                    prerequisiteIds: [],
+                  },
+                }),
+                "Could not update lesson.",
+              )
+            : getApiData(
+                await LessonService.createLesson({
+                  courseId,
+                  sectionId,
+                  body: {
+                    title: lesson.title,
+                    duration: lesson.duration,
+                    lessonType: lesson.type,
+                    isPreview: Boolean(lesson.preview),
+                    prerequisiteIds: [],
+                  },
+                }),
+                "Could not create lesson.",
+              );
+
+          const lessonId = savedLesson.id || lesson.serverId;
+          if (!lessonId) throw new Error(`Lesson "${lesson.title}" was saved but no lesson id was returned.`);
+
+          const shouldPersistLessonContent = !lesson.serverId || Boolean(lesson.content);
+          const content = shouldPersistLessonContent ? getLessonContent(lesson) : undefined;
+
+          if (content && lesson.type === "VIDEO" && content.videoFileName) {
+            await VideoLessonService.createVideoLesson({
+              courseId,
+              lessonId,
+              body: {
+                fileKey: draftFileKey("videos", content.videoFileName),
+                fileName: content.videoFileName,
+                fileType: "video/mp4",
+                fileSize: parseSizeLabel(content.videoFileSize),
+                duration: lesson.duration,
+              },
+            }).catch(() => undefined);
+          }
+
+          if (content && lesson.type === "ARTICLE") {
+            await ArticleLessonService.createArticleLesson({
+              courseId,
+              lessonId,
+              body: createArticleFilePayload(lesson),
+            }).catch(() => undefined);
+          }
+
+          if (content && lesson.type === "QUIZ") {
+            const questions = content.quizQuestions?.length ? content.quizQuestions : defaultQuizQuestions;
+            await QuizLessonService.createQuizLesson({
+              courseId,
+              lessonId,
+              body: {
+                numberOfQuestionPerQuizSession: Math.max(1, questions.length),
+                maxAttempt: 3,
+                duration: lesson.duration,
+                isReviewAllowed: true,
+                isShowAnswersOnReview: true,
+                shuffleQuestions: false,
+                shuffleOptions: false,
+                scoringMode: "HIGHEST",
+                questions: questions.map((question) => ({
+                  questionText: question.prompt,
+                  questionType: "SINGLE_CHOICE",
+                  scoringMethod: "ALL_OR_NOTHING",
+                  options: question.options.map((option, index) => ({
+                    optionText: option,
+                    isCorrect: question.answerIndex === index,
+                    optionOrder: index,
+                  })),
+                })),
+              },
+            }).catch(() => undefined);
+          }
+
+          if (content && lesson.type === "ASSIGNMENT") {
+            await AssignmentLessonService.createAssigmentLesson({
+              courseId,
+              lessonId,
+              body: {
+                description: content.assignmentInstructions || "Assignment instructions",
+                attachments: createAssignmentAttachment(lesson),
+              },
+            }).catch(() => undefined);
+          }
+
+          nextLessons.push({ ...lesson, serverId: lessonId });
+        }
+
+        nextSections.push({ ...section, serverId: sectionId, lessons: nextLessons });
+      }
+
+      if (courseImages.length) {
+        const coverFirstImages = [...courseImages].sort((left, right) => Number(right.isCover) - Number(left.isCover));
+        const uploadedImages: CourseImage[] = [];
+
+        for (const image of coverFirstImages) {
+          if (image.file && !image.uploaded) {
+            const fileKey = await uploadFileWithPresignedUrl(image.file);
+            uploadedImages.push({ ...image, fileKey, uploaded: true });
+          } else {
+            uploadedImages.push(image);
+          }
+        }
+
+        const unsyncedImages = uploadedImages.filter((image) => !savedImageKeys.includes(image.fileKey));
+
+        if (unsyncedImages.length) {
+          await CourseImageService.uploadCourseImages({
+            courseId,
+            body: { images: unsyncedImages.map((image) => ({ fileKey: image.fileKey })) },
+          });
+          setSavedImageKeys([...savedImageKeys, ...unsyncedImages.map((image) => image.fileKey)]);
+        }
+
+        setCourseImages(uploadedImages);
+      }
+
+      setSections(nextSections);
+      if (!options?.silentSuccess) {
+        setSaveState("saved");
+        setSaveMessage("Draft saved successfully.");
+      }
+      return courseId;
+    } catch (error) {
+      setSaveState("error");
+      setSaveMessage(getErrorMessage(error, "Could not save draft."));
+      throw error;
+    }
+  }
+
+  async function submitForApproval() {
+    setSaveState("submitting");
+    setSaveMessage("");
+
+    try {
+      const courseId = await saveDraft({ silentSuccess: true });
+      await CourseService.submitCourse({ id: courseId });
+      setSaveState("submitted");
+      setSaveMessage("Course submitted for approval.");
+      setActiveStep("review");
+    } catch (error) {
+      setSaveState("error");
+      setSaveMessage(getErrorMessage(error, "Could not submit course for approval."));
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F5F7FA] text-[#1D2026]">
+      <div className="flex min-h-screen">
+        <InstructorSidebar activeItem={isEditMode ? "courses" : "create-course"} />
+
+        <main className="min-w-0 flex-1">
+          <InstructorTopbar user={shellUser} title={isEditMode ? "Edit Course" : "Create New Course"} />
+
+          <div className="mx-auto flex w-full max-w-[1640px] flex-col gap-6 px-5 py-6 sm:px-8 2xl:px-10">
+            <section className="rounded-[18px] bg-white p-6">
+              <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+                <div>
+                  <p className="inline-flex items-center gap-2 text-sm font-medium text-[#564FFD]">
+                    <BadgeCheck className="size-4" />
+                    {isEditMode ? "Course editor" : "Guided course creation"}
+                  </p>
+                  <h1 className="mt-2 text-3xl font-semibold tracking-[-0.3px] text-[#1D2026]">
+                    {isEditMode ? `Edit ${basics.title}` : active.label}
+                  </h1>
+                  <p className="mt-2 max-w-[820px] text-sm leading-6 text-[#6E7485]">
+                    {isEditMode
+                      ? "Update course details, curriculum, lesson materials, and media before submitting again."
+                      : "Build the course draft, organize the curriculum, add lesson materials, upload media, and submit when it is ready."}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => void saveDraft()}
+                    disabled={saveState === "saving" || saveState === "submitting"}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-[16px] border border-[#E9EAF0] bg-white px-5 text-sm font-semibold text-[#4E5566] transition hover:border-[#D8D6FF] hover:text-[#564FFD] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Save className="size-4" />
+                    {saveState === "saving" ? "Saving..." : "Save draft"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={activeIndex === steps.length - 1 ? () => void submitForApproval() : goNext}
+                    disabled={saveState === "saving" || saveState === "submitting"}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-[16px] bg-[#564FFD] px-5 text-sm font-semibold text-white transition hover:bg-[#453FCA] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {activeIndex === steps.length - 1 ? (saveState === "submitting" ? "Submitting..." : "Submit for approval") : "Continue"}
+                    <ArrowRight className="size-4" />
+                  </button>
+                </div>
+              </div>
+              {saveMessage ? (
+                <p className={cn("mt-4 rounded-[14px] px-4 py-3 text-sm", saveState === "error" ? "bg-[#FFF5F0] text-[#E34444]" : "bg-[#E1F7E3] text-[#198C27]")}>
+                  {saveMessage}
+                </p>
+              ) : null}
+            </section>
+
+            <WizardRail activeStep={activeStep} setActiveStep={setActiveStep} />
+            <ReadinessPanel sections={sections} courseImages={courseImages} activeStep={activeStep} />
+
+            <section className="rounded-[18px] bg-white p-6">
+                <div className="mb-6 border-b border-[#E9EAF0] pb-5">
+                  <div>
+                    <p className="text-sm font-medium text-[#564FFD]">Step {activeIndex + 1} of {steps.length}</p>
+                    <h2 className="mt-1 text-2xl font-semibold text-[#1D2026]">{active.label}</h2>
+                    <p className="mt-1 text-sm text-[#8C94A3]">{active.description}</p>
+                  </div>
+                </div>
+
+                <StepBody
+                  activeStep={activeStep}
+                  basics={basics}
+                  setBasics={setBasics}
+                  sections={sections}
+                  setSections={setSections}
+                  courseImages={courseImages}
+                  setCourseImages={setCourseImages}
+                  selectedSectionId={selectedSectionId}
+                  setSelectedSectionId={setSelectedSectionId}
+                  selectedLessonId={selectedLessonId}
+                  setSelectedLessonId={setSelectedLessonId}
+                />
+
+                <div className="mt-6 flex flex-col gap-3 border-t border-[#E9EAF0] pt-5 sm:flex-row sm:items-center sm:justify-between">
+                  <button
+                    type="button"
+                    onClick={goBack}
+                    disabled={activeIndex === 0}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-[16px] border border-[#E9EAF0] px-5 text-sm font-semibold text-[#4E5566] transition hover:border-[#D8D6FF] hover:text-[#564FFD] disabled:opacity-40"
+                  >
+                    <ArrowLeft className="size-4" />
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={activeIndex === steps.length - 1 ? () => void submitForApproval() : goNext}
+                    disabled={saveState === "saving" || saveState === "submitting"}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-[16px] bg-[#564FFD] px-5 text-sm font-semibold text-white transition hover:bg-[#453FCA] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {activeIndex === steps.length - 1 ? (saveState === "submitting" ? "Submitting..." : "Submit for approval") : "Next step"}
+                    <ArrowRight className="size-4" />
+                  </button>
+                </div>
+              </section>
+
+            <InstructorFooter />
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}

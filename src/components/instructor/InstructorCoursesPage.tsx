@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { PlusCircle } from "lucide-react";
 import { InstructorCourseCard } from "@/components/instructor/InstructorCourseCard";
@@ -20,7 +22,7 @@ export function InstructorCoursesPage({ data, filters }: InstructorCoursesPagePr
         <InstructorSidebar activeItem="courses" />
 
         <main className="min-w-0 flex-1">
-          <InstructorTopbar user={data.user} title="My Courses" searchAction="/instructor/courses" />
+          <InstructorTopbar user={data.user} title="My Courses" />
 
           <div className="mx-auto flex w-full max-w-[1640px] flex-col gap-8 px-5 py-8 sm:px-8 2xl:px-40">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">

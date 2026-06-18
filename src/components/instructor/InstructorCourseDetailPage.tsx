@@ -1,3 +1,5 @@
+"use client";
+
 import { InstructorCourseOverviewChart, InstructorCourseRevenueChart } from "@/components/instructor/InstructorCourseDetailCharts";
 import {
   InstructorCourseBreadcrumb,
@@ -17,7 +19,7 @@ export function InstructorCourseDetailPage({ data }: { data: InstructorCourseDet
         <InstructorSidebar activeItem="courses" />
 
         <main className="min-w-0 flex-1">
-          <InstructorTopbar user={data.user} title="My Courses" searchAction="/instructor/courses" />
+          <InstructorTopbar user={data.user} title="My Courses" />
 
           <div className="mx-auto flex w-full max-w-[1640px] flex-col gap-6 px-5 py-6 sm:px-8 2xl:px-40">
             <InstructorCourseBreadcrumb course={data.course} />
