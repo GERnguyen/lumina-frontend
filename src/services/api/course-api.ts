@@ -57,7 +57,7 @@ import type {
 // ── CourseApi ──────────────────────────────────────────────
 export const CourseApi = {
   getReadableCourseById: cache(async (id: string): Promise<ApiResponse<CourseResponse>> => {
-    return apiClient.get(`/api/v1/courses/${id}`);
+    return apiClient.get(`/api/v1/courses/${id}`, { auth: false });
   }),
 
   async updateCourse(id: string, body: UpdateCourseRequest): Promise<ApiResponse<CourseResponse>> {

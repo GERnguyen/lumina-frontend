@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { LandingPage } from "@/components/landing/LandingPage";
 import { StudentHomePage } from "@/components/home/StudentHomePage";
+import { InstructorDashboardPage } from "@/components/instructor/InstructorDashboardPage";
 import { getServerAccessToken } from "@/lib/server-auth";
 import { UserApi } from "@/services/api/user-api";
 import { StreakApi } from "@/services/api/learning-api";
@@ -10,6 +11,7 @@ import { DailyGoalApi } from "@/services/api/learning-api";
 import { NotificationApi } from "@/services/api/notification-api";
 import { CoursesTopNav } from "@/components/courses/CoursesTopNav";
 import { CoursesFooter } from "@/components/courses/CoursesFooter";
+import { getInstructorDashboardData } from "@/services/instructor-dashboard-service";
 
 export const metadata: Metadata = {
   title: "Lumina - Career-focused online learning",
@@ -34,14 +36,18 @@ export default async function Home() {
     return <LandingPage />;
   }
 
-  // Fetch all raw data on the server
+  const currentUserRes = await UserApi.getCurrentUser().catch(() => ({ data: undefined }));
+  if (currentUserRes.data?.role === "INSTRUCTOR") {
+    const data = await getInstructorDashboardData();
+    return <InstructorDashboardPage data={data} />;
+  }
+
   const today = new Date().toISOString().slice(0, 10);
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
 
   const [
-    userRes,
     enrolledRes,
     goalsRes,
     monthGoalsRes,
@@ -50,7 +56,6 @@ export default async function Home() {
     unreadNotificationsRes,
     catalogRes,
   ] = await Promise.all([
-    UserApi.getCurrentUser().catch(() => ({ data: undefined })),
     EnrollmentApi.getEnrolledCourses({ page: 1, size: 6 }).catch(() => ({ data: [] })),
     DailyGoalApi.getDailyGoals({ date: today }).catch(() => ({ data: [] })),
     DailyGoalApi.getDailyGoalsInMonth({ year, month }).catch(() => ({ data: [] })),
@@ -64,7 +69,7 @@ export default async function Home() {
 
   return (
     <StudentHomePage
-      user={userRes.data}
+      user={currentUserRes.data}
       streak={streakRes.data}
       enrolledCourses={enrolled}
       recommendations={catalogRes.data || []}

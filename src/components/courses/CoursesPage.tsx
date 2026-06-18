@@ -42,8 +42,8 @@ function queryStringFromFilters(filters: CourseCatalogFilters) {
 
 export async function CoursesPage({ filters }: CoursesPageProps) {
   const [catalogRes, categoriesRes] = await Promise.all([
-    CourseApi.getAllCourses(filters),
-    CategoryApi.getAllCategories(),
+    CourseApi.getAllCourses(filters).catch(() => ({ data: [], meta: { page: filters.page || 1, totalElements: 0, totalPages: 1 } })),
+    CategoryApi.getAllCategories().catch(() => ({ data: [] })),
   ]);
 
   const courses = catalogRes.data || [];

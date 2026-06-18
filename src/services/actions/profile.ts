@@ -10,6 +10,8 @@ export async function updateProfileAction(id: string, body: UpdateProfileRequest
     const res = await UserApi.updateUser(id, body);
     revalidatePath("/user-profile");
     revalidatePath("/user-profile/settings");
+    revalidatePath("/instructor");
+    revalidatePath("/instructor/settings");
     revalidatePath("/");
     return { success: true, data: res.data };
   } catch (error: any) {
