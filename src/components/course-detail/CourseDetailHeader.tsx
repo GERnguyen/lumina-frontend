@@ -20,7 +20,7 @@ export function CourseDetailHeader({ course, reviewsCount }: { course: CourseRes
   const reviewsCountText = fullNumber(reviewsCount);
   
   const instructor = getCourseInstructorName(course);
-  const avatar = getProfileAvatar(course.instructor);
+  const avatar = getProfileAvatar(course.instructor, instructor);
 
   return (
     <section className="bg-white px-6 pb-7 pt-10 lg:px-8">
@@ -43,7 +43,7 @@ export function CourseDetailHeader({ course, reviewsCount }: { course: CourseRes
           <h1 className="max-w-[780px] text-[28px] font-semibold leading-[1.22] tracking-normal text-[#1D2026] md:text-[36px]">
             {course.title || "Untitled Course"}
           </h1>
-          <p className="mt-4 max-w-[860px] text-base leading-6 text-[#6E7485] md:text-lg">
+          <p className="mt-4 max-w-[860px] text-base leading-6 text-[#4E5566] md:text-lg">
             {course.description || ""}
           </p>
 
@@ -51,12 +51,12 @@ export function CourseDetailHeader({ course, reviewsCount }: { course: CourseRes
             <div className="flex items-center gap-3">
               <Image src={avatar} alt={instructor} width={48} height={48} className="rounded-full" />
               <div>
-                <p className="text-xs text-[#8C94A3]">Created by:</p>
+                <p className="text-xs font-medium text-[#6E7485]">Created by:</p>
                 <p className="text-sm font-medium text-[#1D2026]">{instructor}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 text-sm text-[#6E7485]">
+            <div className="flex items-center gap-2 text-sm font-medium text-[#4E5566]">
               <CourseRatingStars rating={ratingValue} size="md" />
               <strong className="font-medium text-[#1D2026]">{ratingText}</strong>
               <span>({reviewsCountText} {reviewsCount === 1 ? "review" : "reviews"})</span>

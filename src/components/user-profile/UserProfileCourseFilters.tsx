@@ -6,7 +6,7 @@ function SelectField({ label, name, value, options }: { label: string; name: str
     <label className="flex min-w-0 flex-col gap-2">
       <span className="text-xs leading-4 text-[#6E7485]">{label}</span>
       <span className="relative block">
-        <select name={name} defaultValue={value || options[0]?.value} className="h-12 w-full appearance-none border border-[#E9EAF0] bg-white px-4 pr-10 text-base text-[#4E5566] outline-none transition focus:border-[#564FFD]">
+        <select name={name} defaultValue={value || options[0]?.value} className="h-12 w-full appearance-none rounded-[18px] border border-[#E9EAF0] bg-white px-4 pr-10 text-base text-[#4E5566] outline-none transition focus:border-[#564FFD]">
           {options.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
@@ -26,7 +26,7 @@ export function UserProfileCourseFilters({ filters, courses }: { filters: Profil
     <form className="grid gap-6 lg:grid-cols-[minmax(280px,528px)_repeat(3,minmax(180px,240px))]" action="/user-profile/courses">
       <label className="flex min-w-0 flex-col gap-2">
         <span className="text-xs leading-4 text-[#6E7485]">Search:</span>
-        <span className="flex h-12 items-center gap-3 border border-[#E9EAF0] bg-white px-4 transition focus-within:border-[#564FFD]">
+        <span className="flex h-12 items-center gap-3 rounded-[18px] border border-[#E9EAF0] bg-white px-4 transition focus-within:border-[#564FFD]">
           <Search className="size-6 text-[#8C94A3]" />
           <input
             name="query"

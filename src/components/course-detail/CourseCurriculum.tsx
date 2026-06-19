@@ -47,7 +47,7 @@ export function CourseCurriculum({
     <section id="curriculum" className="pt-2">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-semibold text-[#1D2026]">Curriculum</h2>
-        <div className="flex flex-wrap gap-5 text-sm text-[#4E5566]">
+        <div className="flex flex-wrap gap-5 text-sm text-[#363B47]">
           {curriculumSummary.map((item) => (
             <span key={item.label} className="inline-flex items-center gap-1.5">
               {item.label === "Sections" ? <FolderOpen className="size-4 text-[#7872FD]" /> : null}
@@ -59,7 +59,7 @@ export function CourseCurriculum({
         </div>
       </div>
 
-      <div className="mt-5 border border-[#E9EAF0]">
+      <div className="mt-5 overflow-hidden rounded-[18px] border border-[#E9EAF0] bg-white">
         {sections.map((section, index) => {
           const isOpen = openSections[index];
           const lessons = [...(section.lessons || [])].sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
@@ -78,7 +78,7 @@ export function CourseCurriculum({
                   <ChevronDown className={`size-4 text-[#7872FD] transition-transform ${isOpen ? "" : "-rotate-90"}`} />
                   {section.title || `Section ${index + 1}`}
                 </span>
-                <span className="flex shrink-0 items-center gap-4 text-xs text-[#8C94A3]">
+                <span className="flex shrink-0 items-center gap-4 text-xs font-medium text-[#6E7485]">
                   <span className="inline-flex items-center gap-1">
                     <PlayCircle className="size-4 text-[#7872FD]" />
                     {lessons.length}
@@ -93,12 +93,12 @@ export function CourseCurriculum({
               {isOpen ? (
                 <div id={`course-section-${index}`} className="border-t border-[#E9EAF0] bg-white px-5 py-2">
                   {lessons.map((item, itemIdx) => (
-                    <div key={item.id || itemIdx} className="flex items-center justify-between gap-4 py-2.5 text-sm text-[#4E5566]">
+                    <div key={item.id || itemIdx} className="flex items-center justify-between gap-4 py-2.5 text-sm text-[#363B47]">
                       <span className="inline-flex min-w-0 items-center gap-2">
                         <LessonIcon type={item.lessonType} preview={item.isPreview} />
                         <span className="truncate">{item.title || "Untitled Lesson"}</span>
                       </span>
-                      <span className="shrink-0 text-xs text-[#8C94A3]">{formatDuration(item.duration)}</span>
+                      <span className="shrink-0 text-xs font-medium text-[#6E7485]">{formatDuration(item.duration)}</span>
                     </div>
                   ))}
                 </div>

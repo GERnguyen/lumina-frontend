@@ -10,7 +10,7 @@ type UserProfileHeroData = Pick<UserProfileDashboardData, "user"> & {
 export function UserProfileHero({ dashboard }: { dashboard: UserProfileHeroData }) {
   return (
     <section className="relative bg-[#EBEBFF] px-6 pt-20 lg:px-8">
-      <div className="mx-auto max-w-[1320px] border border-[#D8D6FF] bg-white">
+      <div className="mx-auto max-w-[1320px] overflow-hidden rounded-[18px] border border-[#D8D6FF] bg-white shadow-[0_14px_34px_rgba(86,79,253,0.08)]">
         <div className="flex flex-col gap-8 p-8 sm:p-10 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-center gap-6">
             <div className="relative size-[110px] shrink-0 overflow-hidden rounded-full bg-[#E9EAF0]">

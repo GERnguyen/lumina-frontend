@@ -72,7 +72,11 @@ export function getCourseRating(rating?: number): string {
 }
 
 export function getCourseInstructorName(course: any): string {
-  return course?.instructor?.name || "Lumina Instructor";
+  const instructor = course?.instructor;
+  const name = instructor?.name?.trim?.();
+  if (name) return name;
+
+  return "Course Instructor";
 }
 
 export function getProfileAvatar(user?: any, fallbackName = "Lumina Learner"): string {

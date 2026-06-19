@@ -68,7 +68,7 @@ export function CoursePurchaseCard({
   ];
 
   return (
-    <aside className="sticky top-6 border border-[#E9EAF0] bg-white shadow-[0_10px_30px_rgba(29,32,38,0.08)]">
+    <aside className="sticky top-6 overflow-hidden rounded-[18px] border border-[#E9EAF0] bg-white shadow-[0_10px_30px_rgba(29,32,38,0.08)]">
       <div className="p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-baseline gap-2">
@@ -77,7 +77,7 @@ export function CoursePurchaseCard({
           </div>
           <span className="rounded-[18px] bg-[#EBEBFF] px-3 py-1 text-xs font-semibold text-[#7872FD]">{discount}</span>
         </div>
-        <p className="mt-2 flex items-center gap-2 text-sm font-medium text-[#E34444]">
+        <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-[#C83333]">
           <Clock className="size-4" />
           {urgency}
         </p>
@@ -89,8 +89,8 @@ export function CoursePurchaseCard({
             const Icon = factIcons[index] ?? CheckCircle2;
             return (
               <li key={fact.label} className="flex items-center justify-between gap-4 text-sm">
-                <span className="inline-flex items-center gap-2 text-[#4E5566]">
-                  <Icon className="size-4 text-[#8C94A3]" />
+                <span className="inline-flex items-center gap-2 font-medium text-[#363B47]">
+                  <Icon className="size-4 text-[#6E7485]" />
                   {fact.label}
                 </span>
                 <strong className="text-right text-xs font-medium text-[#1D2026]">{fact.value}</strong>
@@ -115,7 +115,7 @@ export function CoursePurchaseCard({
           {includes.map((item, index) => {
             const Icon = includeIcons[index] ?? CheckCircle2;
             return (
-              <li key={item} className="flex gap-2 text-sm text-[#4E5566]">
+              <li key={item} className="flex gap-2 text-sm font-medium text-[#363B47]">
                 <Icon className="mt-0.5 size-4 shrink-0 text-[#7872FD]" />
                 <span>{item}</span>
               </li>

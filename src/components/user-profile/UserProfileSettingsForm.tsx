@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2, Upload } from "lucide-react";
 import type { UserProfileSettingsData } from "@/data/user-profile";
 import { updateProfileAction, changePasswordAction } from "@/services/actions/profile";
@@ -41,7 +42,7 @@ function SettingsInput({
     <label className="block">
       {label ? <span className="mb-1.5 block text-sm leading-[22px] tracking-[-0.14px] text-[#1D2026]">{label}</span> : null}
       {!label && reserveLabelSpace ? <span className="mb-1.5 block text-sm leading-[22px] opacity-0">Label</span> : null}
-      <span className="flex h-12 items-center border border-[#E9EAF0] bg-white px-4 transition focus-within:border-[#564FFD]">
+      <span className="flex h-12 items-center rounded-[18px] border border-[#E9EAF0] bg-white px-4 transition focus-within:border-[#564FFD]">
         <input
           value={value}
           onChange={(event) => onChange(event.target.value)}
@@ -75,9 +76,11 @@ function PasswordInput({ label, value, onChange }: { label: string; value: strin
 }
 
 export function UserProfileSettingsForm({ settings }: { settings: UserProfileSettingsData }) {
+  const router = useRouter();
   const nameParts = useMemo(() => splitName(settings.user.fullName), [settings.user.fullName]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState(settings.user.avatar);
+  const [avatarFile, setAvatarFile] = useState<File | undefined>();
   const [firstName, setFirstName] = useState(nameParts.firstName);
   const [lastName, setLastName] = useState(nameParts.lastName);
   const [username, setUsername] = useState(settings.user.username);
@@ -91,18 +94,39 @@ export function UserProfileSettingsForm({ settings }: { settings: UserProfileSet
   const [pendingAction, setPendingAction] = useState<"profile" | "password" | undefined>();
   const fullName = [firstName, lastName].map((item) => item.trim()).filter(Boolean).join(" ");
 
+  async function uploadAvatar(file: File) {
+    const formData = new FormData();
+    formData.set("file", file);
+
+    const response = await fetch("/api/uploads/presigned", {
+      method: "POST",
+      body: formData,
+    });
+    const payload = (await response.json().catch(() => ({}))) as { fileKey?: string; message?: string };
+
+    if (!response.ok || !payload.fileKey) {
+      throw new Error(payload.message || "Could not upload avatar.");
+    }
+
+    return payload.fileKey;
+  }
+
   async function saveProfile() {
     setProfileMessage("");
     setPendingAction("profile");
 
     try {
       if (!settings.user.id) throw new Error("User ID is missing.");
+      const avatarFileKey = avatarFile ? await uploadAvatar(avatarFile) : undefined;
       const res = await updateProfileAction(settings.user.id, {
         name: fullName,
         bio,
+        ...(avatarFileKey ? { avatarFileKey } : {}),
       });
       if (!res.success) throw new Error(res.error);
+      setAvatarFile(undefined);
       setProfileMessage("Profile updated successfully.");
+      router.refresh();
     } catch (error: any) {
       setProfileMessage(error?.message || "Could not save profile.");
     } finally {
@@ -140,8 +164,17 @@ export function UserProfileSettingsForm({ settings }: { settings: UserProfileSet
 
   function handleAvatarChange(file?: File) {
     if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setProfileMessage("Please choose an image file.");
+      return;
+    }
+    if (file.size > 1024 * 1024) {
+      setProfileMessage("Image size should be under 1MB.");
+      return;
+    }
+    setAvatarFile(file);
     setAvatarPreview(URL.createObjectURL(file));
-    setProfileMessage("Photo preview updated. File upload will be connected when avatar storage is ready.");
+    setProfileMessage("Photo selected. Save changes to update your avatar.");
   }
 
   return (
@@ -149,8 +182,8 @@ export function UserProfileSettingsForm({ settings }: { settings: UserProfileSet
       <section>
         <h2 className="text-2xl font-semibold leading-8 tracking-[-0.24px] text-[#1D2026]">Account settings</h2>
         <div className="mt-6 grid gap-8 xl:grid-cols-[360px_minmax(0,872px)] xl:gap-20">
-          <div className="border border-[#E9EAF0] bg-white p-8 sm:p-11">
-            <div className="relative mx-auto aspect-square max-w-[280px] overflow-hidden bg-[#E9EAF0]">
+          <div className="rounded-[18px] border border-[#E9EAF0] bg-white p-8 sm:p-11">
+            <div className="relative mx-auto aspect-square max-w-[280px] overflow-hidden rounded-[18px] bg-[#E9EAF0]">
               <Image src={avatarPreview} alt={settings.user.name} fill sizes="280px" className="object-cover" unoptimized={avatarPreview.startsWith("blob:")} />
               <button
                 type="button"
@@ -176,7 +209,7 @@ export function UserProfileSettingsForm({ settings }: { settings: UserProfileSet
             <SettingsInput label="Email" value={email} onChange={() => undefined} placeholder="Email address" />
             <label className="block">
               <span className="mb-1.5 block text-sm leading-[22px] tracking-[-0.14px] text-[#1D2026]">Title</span>
-              <span className="flex h-12 items-center border border-[#E9EAF0] bg-white px-4 transition focus-within:border-[#564FFD]">
+              <span className="flex h-12 items-center rounded-[18px] border border-[#E9EAF0] bg-white px-4 transition focus-within:border-[#564FFD]">
                 <input
                   value={bio}
                   onChange={(event) => setBio(event.target.value.slice(0, 50))}
@@ -190,7 +223,7 @@ export function UserProfileSettingsForm({ settings }: { settings: UserProfileSet
               type="button"
               onClick={() => void saveProfile()}
               disabled={pendingAction === "profile" || !settings.user.id || !fullName}
-              className="inline-flex h-12 items-center justify-center gap-2 bg-[#564FFD] px-6 text-base font-semibold tracking-[-0.128px] text-white transition hover:bg-[#453FCA] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-[18px] bg-[#564FFD] px-6 text-base font-semibold tracking-[-0.128px] text-white transition hover:bg-[#453FCA] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {pendingAction === "profile" ? <Loader2 className="size-4 animate-spin" /> : null}
               Save Changes
@@ -213,7 +246,7 @@ export function UserProfileSettingsForm({ settings }: { settings: UserProfileSet
           type="button"
           onClick={() => void changePassword()}
           disabled={pendingAction === "password" || !currentPassword || !newPassword || !confirmPassword}
-          className="mt-5 inline-flex h-12 items-center justify-center gap-2 bg-[#564FFD] px-6 text-base font-semibold tracking-[-0.128px] text-white transition hover:bg-[#453FCA] disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-5 inline-flex h-12 items-center justify-center gap-2 rounded-[18px] bg-[#564FFD] px-6 text-base font-semibold tracking-[-0.128px] text-white transition hover:bg-[#453FCA] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {pendingAction === "password" ? <Loader2 className="size-4 animate-spin" /> : null}
           Change Password
