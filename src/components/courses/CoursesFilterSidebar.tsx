@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Code2, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import type { CourseCatalogFilters, CourseCategoryFilter } from "@/types";
 import { cn } from "@/lib/utils";
 import { CollapsibleFilterPanel } from "./CollapsibleFilterPanel";
@@ -87,7 +87,6 @@ function FilterLink({
   return (
     <Link href={href} className="flex w-full items-center justify-between gap-3 transition hover:text-[#7872FD]">
       <span className="flex min-w-0 items-center gap-3">
-        <Code2 className={cn("size-5 shrink-0", active ? "text-[#7872FD]" : "text-[#8C94A3]")} />
         <span className={cn("truncate text-sm", active ? "font-medium text-[#1D2026]" : "text-[#4E5566]")}>{label}</span>
       </span>
       {count ? <span className="shrink-0 text-xs text-[#8C94A3]">{count}</span> : null}

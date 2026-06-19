@@ -31,7 +31,7 @@ export function CourseReviews({
   return (
     <section id="review">
       <h2 className="text-2xl font-semibold text-[#1D2026]">Course Rating</h2>
-      <div className="mt-5 grid gap-8 border border-[#E9EAF0] p-8 md:grid-cols-[180px_1fr]">
+      <div className="mt-5 grid gap-8 rounded-[18px] border border-[#E9EAF0] bg-white p-8 shadow-[0_10px_28px_rgba(29,32,38,0.04)] md:grid-cols-[180px_1fr]">
         <div className="flex flex-col items-center justify-center">
           {hasReviews ? (
             <strong className="text-center text-[40px] font-semibold leading-none text-[#1D2026] md:text-[56px]">{ratingText}</strong>
@@ -45,7 +45,7 @@ export function CourseReviews({
         </div>
         <div className="space-y-3">
           {ratingBreakdown.map((item) => (
-            <div key={item.label} className="grid grid-cols-[92px_1fr_48px] items-center gap-3 text-sm text-[#4E5566]">
+            <div key={item.label} className="grid grid-cols-[92px_1fr_48px] items-center gap-3 text-sm font-medium text-[#363B47]">
               <span className="inline-flex items-center gap-2">
                 <span className="w-3 text-right font-medium text-[#1D2026]">{item.label}</span>
                 <CourseRatingStars rating={Number(item.label)} />
@@ -63,25 +63,25 @@ export function CourseReviews({
         <h2 className="text-2xl font-semibold text-[#1D2026]">Students Feedback</h2>
       </div>
 
-      <div className="mt-5 divide-y divide-[#E9EAF0]">
+      <div className="mt-5 overflow-hidden rounded-[18px] border border-[#E9EAF0] bg-white divide-y divide-[#E9EAF0]">
         {reviews.length ? (
           reviews.map((review, index) => {
             const reviewerName = review.userId ? `Learner ${review.userId.slice(0, 8)}` : "Lumina learner";
             const avatar = `/course-detail/person-${(index % 6) + 3}.png`;
             return (
-              <article key={review.id || index} className="flex gap-4 py-5">
+              <article key={review.id || index} className="flex gap-4 p-5">
                 <Image src={avatar} alt={reviewerName} width={48} height={48} className="size-12 shrink-0 rounded-full object-cover" />
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <h3 className="text-sm font-semibold text-[#1D2026]">{reviewerName}</h3>
-                    <span className="text-xs text-[#8C94A3]">Recently</span>
+                    <span className="text-xs font-medium text-[#6E7485]">Recently</span>
                   </div>
                   <div className="mt-1">
                     <CourseRatingStars rating={review.rating || 0} />
                   </div>
-                  <p className="mt-2 text-sm leading-6 text-[#4E5566]">{review.content || "No written feedback."}</p>
+                  <p className="mt-2 text-sm leading-6 text-[#363B47]">{review.content || "No written feedback."}</p>
                   {review.reply?.content ? (
-                    <div className="mt-3 border-l-2 border-[#7872FD] bg-[#F8F8FF] px-4 py-3 text-sm leading-6 text-[#4E5566]">
+                    <div className="mt-3 rounded-[14px] border-l-2 border-[#7872FD] bg-[#F8F8FF] px-4 py-3 text-sm leading-6 text-[#363B47]">
                       <strong className="text-[#1D2026]">Instructor reply:</strong> {review.reply.content}
                     </div>
                   ) : null}
@@ -90,7 +90,7 @@ export function CourseReviews({
             );
           })
         ) : (
-          <div className="py-8 text-sm text-[#6E7485]">No student feedback yet. Reviews will appear here after learners rate this course.</div>
+          <div className="p-8 text-sm font-medium text-[#4E5566]">No student feedback yet. Reviews will appear here after learners rate this course.</div>
         )}
       </div>
 

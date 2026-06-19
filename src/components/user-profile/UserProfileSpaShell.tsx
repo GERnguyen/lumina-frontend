@@ -1,0 +1,211 @@
+"use client";
+
+import Image from "next/image";
+import { useMemo, useState } from "react";
+import { ArrowLeft, ArrowRight, ArrowRightIcon, CheckSquare, PlayCircle, Trophy, Users } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import type {
+  ProfileCourseFilter,
+  ProfileCourseItem,
+  ProfilePurchaseHistoryItem,
+  ProfileWishlistItem,
+  UserProfileDashboardData,
+  UserProfileSettingsData,
+} from "@/data/user-profile";
+import { UserProfileCourseCard } from "./UserProfileCourseCard";
+import { UserProfileCourseFilters } from "./UserProfileCourseFilters";
+import { UserProfileLearningCard } from "./UserProfileLearningCard";
+import { UserProfilePurchaseHistoryList } from "./UserProfilePurchaseHistoryList";
+import { UserProfileSettingsForm } from "./UserProfileSettingsForm";
+import { UserProfileStatCard } from "./UserProfileStatCard";
+import { UserProfileWishlistTable } from "./UserProfileWishlistTable";
+
+type ProfileTabKey = "dashboard" | "courses" | "wishlist" | "purchase-history" | "settings";
+
+type UserProfileSpaShellProps = {
+  user: UserProfileDashboardData["user"];
+  totalEnrolled: number;
+  activeCourses: number;
+  completedCourses: number;
+  learningCourses: UserProfileDashboardData["learningCourses"];
+  courses: ProfileCourseItem[];
+  courseFilters: ProfileCourseFilter;
+  wishlistItems: ProfileWishlistItem[];
+  purchases: ProfilePurchaseHistoryItem[];
+  settings: UserProfileSettingsData;
+};
+
+const tabs: Array<{ key: ProfileTabKey; label: string }> = [
+  { key: "dashboard", label: "Dashboard" },
+  { key: "courses", label: "Courses" },
+  { key: "wishlist", label: "Wishlist" },
+  { key: "purchase-history", label: "Purchase History" },
+  { key: "settings", label: "Settings" },
+];
+
+export function UserProfileSpaShell({
+  user,
+  totalEnrolled,
+  activeCourses,
+  completedCourses,
+  learningCourses,
+  courses,
+  courseFilters,
+  wishlistItems,
+  purchases,
+  settings,
+}: UserProfileSpaShellProps) {
+  const [activeTab, setActiveTab] = useState<ProfileTabKey>("dashboard");
+
+  const stats = useMemo(
+    () => [
+      { label: "Enrolled Courses", value: String(totalEnrolled), icon: PlayCircle, tone: "purple" as const },
+      { label: "Active Courses", value: String(activeCourses), icon: CheckSquare, tone: "purple" as const },
+      { label: "Completed Courses", value: String(completedCourses), icon: Trophy, tone: "green" as const },
+      { label: "Course Instructors", value: "0", icon: Users, tone: "orange" as const },
+    ],
+    [activeCourses, completedCourses, totalEnrolled],
+  );
+
+  return (
+    <>
+      <section className="relative bg-[#EBEBFF] px-6 pt-20 lg:px-8">
+        <div className="mx-auto max-w-[1320px] overflow-hidden rounded-[18px] border border-[#D8D6FF] bg-white shadow-[0_14px_34px_rgba(86,79,253,0.08)]">
+          <div className="flex flex-col gap-8 p-8 sm:p-10 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-6">
+              <div className="relative size-[110px] shrink-0 overflow-hidden rounded-full bg-[#E9EAF0]">
+                <Image src={user.avatar} alt={user.name} fill priority sizes="110px" className="object-cover" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-2xl font-semibold tracking-normal text-[#1D2026]">{user.name}</h1>
+                <p className="mt-3 text-base text-[#4E5566]">{user.headline}</p>
+              </div>
+            </div>
+
+            <button type="button" className="inline-flex h-14 items-center justify-center gap-3 rounded-[18px] bg-[#EBEBFF] px-8 text-lg font-semibold text-[#564FFD] transition hover:bg-[#DEDDFF]">
+              Become Instructor
+              <ArrowRightIcon className="size-6" />
+            </button>
+          </div>
+
+          <nav className="border-t border-[#E9EAF0]" aria-label="Profile tabs">
+            <div className="flex overflow-x-auto px-4 sm:justify-center sm:gap-6 sm:px-0">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`relative flex h-[68px] min-w-[168px] items-center justify-center text-center text-base font-semibold transition ${
+                    activeTab === tab.key ? "text-[#1D2026]" : "text-[#4E5566] hover:text-[#564FFD]"
+                  }`}
+                >
+                  {tab.label}
+                  {activeTab === tab.key ? <span className="absolute inset-x-0 bottom-0 h-[3px] bg-[#564FFD]" /> : null}
+                </button>
+              ))}
+            </div>
+          </nav>
+        </div>
+      </section>
+
+      <section className="px-6 py-10 lg:px-8">
+        <div className="mx-auto max-w-[1320px] animate-[fadeIn_180ms_ease-out]">
+          {activeTab === "dashboard" ? (
+            <DashboardTab user={user} stats={stats} learningCourses={learningCourses} />
+          ) : null}
+          {activeTab === "courses" ? <CoursesTab courses={courses} filters={courseFilters} /> : null}
+          {activeTab === "wishlist" ? <WishlistTab items={wishlistItems} /> : null}
+          {activeTab === "purchase-history" ? <PurchaseHistoryTab purchases={purchases} /> : null}
+          {activeTab === "settings" ? <SettingsTab settings={settings} /> : null}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function DashboardTab({
+  user,
+  stats,
+  learningCourses,
+}: {
+  user: UserProfileDashboardData["user"];
+  stats: Array<{ label: string; value: string; icon: LucideIcon; tone: "purple" | "green" | "orange" }>;
+  learningCourses: UserProfileDashboardData["learningCourses"];
+}) {
+  return (
+    <>
+      <h2 className="text-2xl font-semibold tracking-normal text-[#1D2026]">Dashboard</h2>
+      <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map((stat) => (
+          <UserProfileStatCard key={stat.label} stat={stat} />
+        ))}
+      </div>
+
+      <div className="mt-11 flex items-center justify-between gap-4">
+        <h2 className="text-2xl font-semibold tracking-normal text-[#1D2026]">
+          Let’s start learning, {user.name.split(" ")[0]}
+        </h2>
+        <div className="flex gap-2">
+          <button type="button" aria-label="Previous course" className="flex size-10 items-center justify-center rounded-full bg-[#EBEBFF] text-[#564FFD] transition hover:bg-[#DEDDFF]">
+            <ArrowLeft className="size-5" />
+          </button>
+          <button type="button" aria-label="Next course" className="flex size-10 items-center justify-center rounded-full bg-[#EBEBFF] text-[#564FFD] transition hover:bg-[#DEDDFF]">
+            <ArrowRight className="size-5" />
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+        {learningCourses.map((course) => (
+          <UserProfileLearningCard key={course.id} course={course} />
+        ))}
+      </div>
+    </>
+  );
+}
+
+function CoursesTab({ courses, filters }: { courses: ProfileCourseItem[]; filters: ProfileCourseFilter }) {
+  return (
+    <>
+      <h2 className="text-2xl font-semibold tracking-normal text-[#1D2026]">
+        Courses <span className="font-normal">({courses.length})</span>
+      </h2>
+      <div className="mt-6">
+        <UserProfileCourseFilters filters={filters} courses={courses} />
+      </div>
+      <div className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+        {courses.map((course) => (
+          <UserProfileCourseCard key={course.id} course={course} />
+        ))}
+      </div>
+    </>
+  );
+}
+
+function WishlistTab({ items }: { items: ProfileWishlistItem[] }) {
+  return (
+    <>
+      <h2 className="text-2xl font-semibold tracking-normal text-[#1D2026]">Wishlist</h2>
+      <div className="mt-6">
+        <UserProfileWishlistTable items={items} />
+      </div>
+    </>
+  );
+}
+
+function PurchaseHistoryTab({ purchases }: { purchases: ProfilePurchaseHistoryItem[] }) {
+  return (
+    <>
+      <h2 className="text-2xl font-semibold tracking-normal text-[#1D2026]">Purchase History</h2>
+      <div className="mt-6">
+        <UserProfilePurchaseHistoryList purchases={purchases} />
+      </div>
+    </>
+  );
+}
+
+function SettingsTab({ settings }: { settings: UserProfileSettingsData }) {
+  return (
+    <UserProfileSettingsForm settings={settings} />
+  );
+}

@@ -7,7 +7,7 @@ function WishlistRow({ item }: { item: ProfileWishlistItem }) {
   return (
     <article className="grid gap-5 border-b border-[#E9EAF0] px-4 py-6 last:border-b-0 lg:grid-cols-[minmax(0,600px)_176px_1fr] lg:items-center lg:px-6">
       <div className="flex min-w-0 gap-5">
-        <div className="relative h-[120px] w-[160px] shrink-0 overflow-hidden bg-[#F5F7FA]">
+        <div className="relative h-[120px] w-[160px] shrink-0 overflow-hidden rounded-[18px] bg-[#F5F7FA]">
           <Image src={item.image} alt={item.title} fill sizes="160px" className="object-cover" />
         </div>
 
@@ -41,13 +41,13 @@ function WishlistRow({ item }: { item: ProfileWishlistItem }) {
       </div>
 
       <div className="flex flex-wrap gap-3 lg:justify-end">
-        <button type="button" className="flex h-12 min-w-[132px] items-center justify-center bg-[#F5F7FA] px-6 text-base font-semibold tracking-normal text-[#1D2026] transition hover:bg-[#E9EAF0]">
+        <button type="button" className="flex h-12 min-w-[132px] items-center justify-center rounded-[18px] bg-[#F5F7FA] px-6 text-base font-semibold tracking-normal text-[#1D2026] transition hover:bg-[#E9EAF0]">
           Buy Now
         </button>
-        <button type="button" className="flex h-12 min-w-[132px] items-center justify-center bg-[#564FFD] px-6 text-base font-semibold tracking-normal text-white transition hover:bg-[#433EE8]">
+        <button type="button" className="flex h-12 min-w-[132px] items-center justify-center rounded-[18px] bg-[#564FFD] px-6 text-base font-semibold tracking-normal text-white transition hover:bg-[#433EE8]">
           Add To Cart
         </button>
-        <button type="button" aria-label={`Remove ${item.title} from wishlist`} className="flex size-12 items-center justify-center bg-[#EBEBFF] text-[#564FFD] transition hover:bg-[#DEDDFF]">
+        <button type="button" aria-label={`Remove ${item.title} from wishlist`} className="flex size-12 items-center justify-center rounded-[18px] bg-[#EBEBFF] text-[#564FFD] transition hover:bg-[#DEDDFF]">
           <Heart className="size-6 fill-current" />
         </button>
       </div>
@@ -57,7 +57,7 @@ function WishlistRow({ item }: { item: ProfileWishlistItem }) {
 
 export function UserProfileWishlistTable({ items }: { items: ProfileWishlistItem[] }) {
   return (
-    <div className="border border-[#E9EAF0] bg-white">
+    <div className="overflow-hidden rounded-[18px] border border-[#E9EAF0] bg-white">
       <div className="hidden border-b border-[#E9EAF0] px-6 py-5 text-sm font-medium uppercase leading-none text-[#4E5566] lg:grid lg:grid-cols-[minmax(0,600px)_176px_1fr]">
         <span>Course</span>
         <span>Prices</span>

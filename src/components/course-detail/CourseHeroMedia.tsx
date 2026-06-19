@@ -5,7 +5,7 @@ import { getCourseImage } from "@/lib/format";
 export function CourseHeroMedia({ course }: { course: CourseResponse }) {
   const image = getCourseImage(course);
   return (
-    <div className="relative aspect-[872/500] overflow-hidden bg-[#F5F5FF]">
+    <div className="relative aspect-[872/500] overflow-hidden rounded-[18px] bg-[#F5F5FF]">
       <Image
         src={image}
         alt={course.title || "Untitled Course"}

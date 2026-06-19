@@ -10,8 +10,8 @@ export function UserProfileStatCard({ stat }: { stat: ProfileStat }) {
   const Icon = stat.icon;
 
   return (
-    <article className={`flex min-h-[108px] items-center gap-6 p-6 ${toneClassNames[stat.tone]}`}>
-      <div className="flex size-16 shrink-0 items-center justify-center bg-white">
+    <article className={`flex min-h-[108px] items-center gap-6 rounded-[18px] p-6 ${toneClassNames[stat.tone]}`}>
+      <div className="flex size-16 shrink-0 items-center justify-center rounded-[18px] bg-white">
         <Icon className="size-8" strokeWidth={1.8} />
       </div>
       <div>

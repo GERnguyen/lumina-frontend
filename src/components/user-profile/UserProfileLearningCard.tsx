@@ -4,7 +4,7 @@ import type { ProfileLearningCourse } from "@/data/user-profile";
 
 export function UserProfileLearningCard({ course }: { course: ProfileLearningCourse }) {
   return (
-    <article className={`group flex min-h-[368px] flex-col border border-[#E9EAF0] bg-white transition duration-300 hover:-translate-y-1 hover:shadow-[0_12px_24px_rgba(29,32,38,0.12)] ${course.featured ? "shadow-[0_12px_24px_rgba(29,32,38,0.12)]" : ""}`}>
+    <article className={`group flex min-h-[368px] flex-col overflow-hidden rounded-[18px] border border-[#E9EAF0] bg-white transition duration-300 hover:-translate-y-1 hover:shadow-[0_12px_24px_rgba(29,32,38,0.12)] ${course.featured ? "shadow-[0_12px_24px_rgba(29,32,38,0.12)]" : ""}`}>
       <div className="relative aspect-[312/220] overflow-hidden bg-[#F5F7FA]">
         <Image src={course.image} alt={course.title} fill sizes="(min-width: 1280px) 312px, 90vw" className="object-cover transition duration-500 group-hover:scale-105" />
       </div>
@@ -19,7 +19,7 @@ export function UserProfileLearningCard({ course }: { course: ProfileLearningCou
           <div className="flex items-center justify-between gap-4">
             <Link
               href={course.href}
-              className={`inline-flex h-10 items-center justify-center px-4 text-sm font-semibold tracking-normal transition ${
+              className={`inline-flex h-10 items-center justify-center rounded-[18px] px-4 text-sm font-semibold tracking-normal transition ${
                 course.featured ? "bg-[#564FFD] text-white hover:bg-[#433EE8]" : "bg-[#EBEBFF] text-[#564FFD] hover:bg-[#DEDDFF]"
               }`}
             >

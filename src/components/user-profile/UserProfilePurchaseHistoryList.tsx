@@ -29,7 +29,7 @@ function PurchaseCourseRow({ course }: { course: ProfilePurchaseCourse }) {
   return (
     <article className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_86px] sm:items-center">
       <div className="flex min-w-0 gap-5">
-        <div className="relative h-[92px] w-[124px] shrink-0 overflow-hidden bg-[#F5F7FA] sm:h-[120px] sm:w-[160px]">
+        <div className="relative h-[92px] w-[124px] shrink-0 overflow-hidden rounded-[18px] bg-[#F5F7FA] sm:h-[120px] sm:w-[160px]">
           <Image src={course.image} alt={course.title} fill sizes="160px" className="object-cover" />
         </div>
 
@@ -64,7 +64,7 @@ function ExpandedPurchaseContent({ purchase }: { purchase: ProfilePurchaseHistor
         {purchase.courses.length ? (
           purchase.courses.map((course) => <PurchaseCourseRow key={course.id} course={course} />)
         ) : (
-          <div className="border border-dashed border-[#D8D6FF] bg-[#F9F9FF] p-6 text-sm text-[#6E7485]">
+          <div className="rounded-[18px] border border-dashed border-[#D8D6FF] bg-[#F9F9FF] p-6 text-sm text-[#6E7485]">
             Course details will appear here when the order API includes line items.
           </div>
         )}
@@ -90,7 +90,7 @@ function ExpandedPurchaseContent({ purchase }: { purchase: ProfilePurchaseHistor
 
 function PurchaseHistoryItem({ purchase, defaultOpen }: { purchase: ProfilePurchaseHistoryItem; defaultOpen?: boolean }) {
   return (
-    <details className="group border border-[#E9EAF0] bg-white transition duration-300 open:shadow-[0_6px_16px_rgba(0,0,0,0.06)]" open={defaultOpen}>
+    <details className="group overflow-hidden rounded-[18px] border border-[#E9EAF0] bg-white transition duration-300 open:shadow-[0_6px_16px_rgba(0,0,0,0.06)]" open={defaultOpen}>
       <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4 transition hover:bg-[#F8F9FF] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#564FFD] sm:p-6 [&::-webkit-details-marker]:hidden">
         <div className="min-w-0">
           <p className="text-lg leading-6 tracking-normal text-[#1D2026] transition group-open:text-[#564FFD]">{purchase.purchasedAt}</p>
@@ -99,7 +99,7 @@ function PurchaseHistoryItem({ purchase, defaultOpen }: { purchase: ProfilePurch
           </div>
         </div>
 
-        <span className="flex size-12 shrink-0 items-center justify-center bg-[#F5F7FA] text-[#1D2026] transition duration-300 group-open:bg-[#564FFD] group-open:text-white group-hover:scale-105">
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-[18px] bg-[#F5F7FA] text-[#1D2026] transition duration-300 group-open:bg-[#564FFD] group-open:text-white group-hover:scale-105">
           <ChevronDown className="size-6 transition duration-300 group-open:rotate-180" />
         </span>
       </summary>
