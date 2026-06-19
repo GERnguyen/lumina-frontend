@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 const topLinks = [
   { label: "Home", href: "/" },
   { label: "Courses", href: "/courses" },
-  { label: "About", href: "/#features" },
+  { label: "My Learning", href: "/my-learning" },
   { label: "Contact", href: "/#faq" },
   { label: "Become an Instructor", href: "/register" },
 ];
@@ -15,6 +15,7 @@ const topLinks = [
 function isActivePath(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
   if (href === "/courses") return pathname.startsWith("/courses");
+  if (href === "/my-learning") return pathname.startsWith("/my-learning");
   return false;
 }
 

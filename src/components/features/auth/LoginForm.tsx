@@ -44,7 +44,7 @@ export default function LoginForm() {
     onSuccess: async (tokens) => {
       const session = await persistAuthSession(tokens);
       setSession({ accessToken: session.accessToken });
-      router.push(role === "INSTRUCTOR" ? "/instructor" : "/courses");
+      router.push(role === "INSTRUCTOR" ? "/instructor" : "/");
       router.refresh();
     },
   });
@@ -78,6 +78,25 @@ export default function LoginForm() {
         </div>
       )}
 
+      <div className="flex flex-col">
+        <label className="mb-2 block text-sm font-medium text-foreground">
+          Account type
+        </label>
+        <div className="flex flex-row gap-2">
+          {roleOptions.map((option) => (
+            <Radio
+              key={option.value}
+              name="role"
+              value={option.value}
+              checked={role === option.value}
+              onChange={handleRoleChange}
+              label={option.label}
+              id={`login-${option.value}`}
+            />
+          ))}
+        </div>
+      </div>
+
       <Input
         id="email"
         name="email"
@@ -99,25 +118,6 @@ export default function LoginForm() {
         autoComplete="current-password"
         required
       />
-
-      <div className="flex flex-col">
-        <label className="mb-2 block text-sm font-medium text-foreground">
-          Account type
-        </label>
-        <div className="flex flex-row gap-2">
-          {roleOptions.map((option) => (
-            <Radio
-              key={option.value}
-              name="role"
-              value={option.value}
-              checked={role === option.value}
-              onChange={handleRoleChange}
-              label={option.label}
-              id={`login-${option.value}`}
-            />
-          ))}
-        </div>
-      </div>
 
       <div className="flex items-center justify-between">
         <Link
