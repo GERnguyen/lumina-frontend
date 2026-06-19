@@ -93,7 +93,7 @@ export function GoalCalendar({ goals }: { goals: DailyGoalResponse[] }) {
   }
 
   return (
-    <div className="border border-[#E9EAF0] bg-white p-5">
+    <div className="rounded-[18px] border border-[#E9EAF0] bg-white p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-base font-semibold text-[#1D2026]">Learning calendar</h3>
@@ -103,7 +103,7 @@ export function GoalCalendar({ goals }: { goals: DailyGoalResponse[] }) {
           <select
             value={month}
             onChange={(event) => handleMonthChange(Number(event.target.value))}
-            className="h-10 rounded-[8px] border-[#E9EAF0] text-sm focus:border-[#7872FD] focus:ring-[#7872FD]"
+            className="h-10 rounded-[12px] border-[#E9EAF0] text-sm focus:border-[#7872FD] focus:ring-[#7872FD]"
             aria-label="Select month"
           >
             {months.map((item, index) => (
@@ -115,7 +115,7 @@ export function GoalCalendar({ goals }: { goals: DailyGoalResponse[] }) {
           <select
             value={year}
             onChange={(event) => handleYearChange(Number(event.target.value))}
-            className="h-10 rounded-[8px] border-[#E9EAF0] text-sm focus:border-[#7872FD] focus:ring-[#7872FD]"
+            className="h-10 rounded-[12px] border-[#E9EAF0] text-sm focus:border-[#7872FD] focus:ring-[#7872FD]"
             aria-label="Select year"
           >
             {yearOptions.map((item) => (
@@ -149,7 +149,7 @@ export function GoalCalendar({ goals }: { goals: DailyGoalResponse[] }) {
               type="button"
               key={day}
               onClick={() => setSelectedDay(day)}
-              className="relative grid aspect-square min-h-10 place-items-center"
+              className="relative grid aspect-square min-h-10 place-items-center rounded-[12px]"
               aria-label={`Select ${months[month - 1]} ${day}, ${year}`}
             >
               {hasGoal && hasPreviousGoal ? <span className="absolute left-0 top-1/2 h-2 w-1/2 -translate-y-1/2 bg-[#D8D6FF]" /> : null}
@@ -235,7 +235,7 @@ function CalendarGoalForm({
           <select
             value={goalType}
             onChange={(event) => setGoalType(event.target.value as GoalType)}
-            className="h-11 rounded-[8px] border-[#E9EAF0] text-sm focus:border-[#7872FD] focus:ring-[#7872FD]"
+            className="h-11 rounded-[12px] border-[#E9EAF0] text-sm focus:border-[#7872FD] focus:ring-[#7872FD]"
           >
             {(["XP", "LEARNING_ITEMS_COMPLETED", "VIDEOS_COMPLETED", "QUIZZES_PASSED"] as const).map((type) => (
               <option key={type} value={type}>
@@ -251,7 +251,7 @@ function CalendarGoalForm({
             min="1"
             value={targetValue}
             onChange={(event) => setTargetValue(event.target.value)}
-            className="h-11 rounded-[8px] border-[#E9EAF0] text-sm focus:border-[#7872FD] focus:ring-[#7872FD]"
+            className="h-11 rounded-[12px] border-[#E9EAF0] text-sm focus:border-[#7872FD] focus:ring-[#7872FD]"
           />
         </label>
       </div>

@@ -20,6 +20,7 @@ import {
   HomeStats,
 } from "./HomePrimitives";
 import { GoalCalendar } from "./HomeVariantTools";
+import { getCourseProgressPercentage } from "@/lib/format";
 
 type StudentHomePageProps = {
   user?: UserDto;
@@ -117,10 +118,18 @@ function RoadmapStudio({
     { title: "Set today's target", copy: "Use daily goals to define the next measurable learning block.", icon: CalendarDays },
     { title: "Keep the streak alive", copy: "Review progress and return tomorrow with less friction.", icon: Sparkles },
   ];
+  const inProgressCourses = enrolledCourses.filter((course) => {
+    const progress = courseProgresses.find((item) => item.courseId === course.id);
+    const percentage = getCourseProgressPercentage(progress);
+    return progress && !progress.isCompleted && percentage > 0 && percentage < 100;
+  });
+  const activeCourses = inProgressCourses.length
+    ? inProgressCourses
+    : enrolledCourses.filter((course) => !courseProgresses.find((item) => item.courseId === course.id)?.isCompleted);
 
   return (
     <div className="grid gap-8">
-      <section className="grid gap-6 border border-[#E9EAF0] bg-white p-6 lg:grid-cols-[0.9fr_1.1fr]">
+      <section className="grid gap-6 rounded-[18px] border border-[#E9EAF0] bg-white p-6 lg:grid-cols-[0.9fr_1.1fr]">
         <div>
           <p className="text-sm font-semibold uppercase text-[#7872FD]">Roadmap Studio</p>
           <h2 className="mt-3 text-3xl font-semibold leading-tight text-[#1D2026]">Turn today&apos;s study time into a visible plan.</h2>
@@ -135,7 +144,7 @@ function RoadmapStudio({
           {steps.map((step, index) => {
             const Icon = step.icon;
             return (
-              <div key={step.title} className="flex gap-4 border border-[#E9EAF0] bg-[#F8F8FF] p-5">
+              <div key={step.title} className="flex gap-4 rounded-[18px] border border-[#E9EAF0] bg-[#F8F8FF] p-5">
                 <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[#7872FD] text-sm font-semibold text-white">{index + 1}</span>
                 <div>
                   <div className="flex items-center gap-2">
@@ -152,10 +161,10 @@ function RoadmapStudio({
 
       <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
         <section>
-          <HomeSectionHeader title="Next courses in your path" action="/user-profile/courses" />
+          <HomeSectionHeader title="In progress courses" action="/user-profile/courses" />
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {enrolledCourses.length ? (
-              enrolledCourses.slice(0, 4).map((course, index) => {
+            {activeCourses.length ? (
+              activeCourses.slice(0, 4).map((course, index) => {
                 const progress = courseProgresses.find((p) => p.courseId === course.id);
                 return (
                   <ContinueCourseCard
@@ -163,23 +172,50 @@ function RoadmapStudio({
                     course={course}
                     progress={progress}
                     index={index}
-                    compact
                     isLoading={isLoading}
                   />
                 );
               })
             ) : (
               <EmptyHomeState
-                title="No path yet"
-                copy="Enroll in your first course and Lumina will build this path from your activity."
+                title="No courses in progress"
+                copy="Start a course and your active learning queue will appear here."
                 href="/courses"
-                action="Start learning"
+                action="Explore courses"
               />
             )}
           </div>
         </section>
         <GoalCalendar goals={monthGoals} />
       </div>
+
+      <section>
+        <HomeSectionHeader title="Next courses in your path" action="/user-profile/courses" />
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {enrolledCourses.length ? (
+            enrolledCourses.slice(0, 4).map((course, index) => {
+              const progress = courseProgresses.find((p) => p.courseId === course.id);
+              return (
+                <ContinueCourseCard
+                  key={course.id || index}
+                  course={course}
+                  progress={progress}
+                  index={index}
+                  compact
+                  isLoading={isLoading}
+                />
+              );
+            })
+          ) : (
+            <EmptyHomeState
+              title="No path yet"
+              copy="Enroll in your first course and Lumina will build this path from your activity."
+              href="/courses"
+              action="Start learning"
+            />
+          )}
+        </div>
+      </section>
 
       <section>
         <HomeSectionHeader title="Recommended next" action="/courses" />
