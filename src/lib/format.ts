@@ -112,9 +112,9 @@ export function formatPurchaseDate(value?: string): string {
 }
 
 export function paymentMethodLabel(method?: string): string {
-  if (method === "VN_PAY") return "VNPay";
   if (method === "MOMO") return "MoMo";
-  return "Credit Card";
+  if (method === "STRIPE") return "Stripe";
+  return "Payment provider";
 }
 
 export function maskedPaymentAccount(paymentInfo?: string): string {

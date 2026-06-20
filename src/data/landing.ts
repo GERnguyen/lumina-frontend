@@ -1,6 +1,5 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  Apple,
   BookOpenCheck,
   BriefcaseBusiness,
   Code2,
@@ -45,8 +44,6 @@ export const trustedLogos: TrustedLogo[] = [
   { name: "IBM", image: "/landing/figma/hero-ibm.png", width: 255, height: 104 },
   { name: "Microsoft", image: "/landing/figma/hero-microsoft.png", width: 381, height: 122 },
   { name: "Meta", image: "/landing/figma/hero-meta.png", width: 238, height: 230 },
-  { name: "AWS", text: "aws" },
-  { name: "Apple", text: "Apple", icon: Apple },
 ];
 
 export const courseTabs = [
@@ -61,13 +58,14 @@ export const courseTabs = [
 export type LandingCourse = {
   id?: string;
   title: string;
+  categoryId?: string;
   category: string;
   price: string;
   image: string;
   students: string;
   rating?: string;
   href?: string;
-  icon: LucideIcon;
+  icon?: LucideIcon;
 };
 
 export const landingCourses: LandingCourse[] = [

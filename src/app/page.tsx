@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { HomeMarketplacePage } from "@/components/home/HomeMarketplacePage";
 import { InstructorDashboardPage } from "@/components/instructor/InstructorDashboardPage";
+import { LandingPage } from "@/components/landing/LandingPage";
 import { getServerAccessToken } from "@/lib/server-auth";
 import { CategoryApi, CourseApi } from "@/services/api/course-api";
 import { UserApi } from "@/services/api/user-api";
@@ -26,12 +27,20 @@ export const metadata: Metadata = {
 export default async function Home() {
   const token = await getServerAccessToken();
 
-  if (token) {
-    const currentUserRes = await UserApi.getCurrentUser().catch(() => ({ data: undefined }));
-    if (currentUserRes.data?.role === "INSTRUCTOR") {
-      const data = await getInstructorDashboardData();
-      return <InstructorDashboardPage data={data} />;
-    }
+  if (!token) {
+    return <LandingPage />;
+  }
+
+  const currentUserRes = await UserApi.getCurrentUser().catch(() => ({ data: undefined }));
+  const currentUser = currentUserRes.data;
+
+  if (!currentUser) {
+    return <LandingPage />;
+  }
+
+  if (currentUser.role === "INSTRUCTOR") {
+    const data = await getInstructorDashboardData();
+    return <InstructorDashboardPage data={data} />;
   }
 
   const [featuredRes, popularRes, categoriesRes] = await Promise.all([

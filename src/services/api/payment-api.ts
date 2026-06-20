@@ -1,7 +1,6 @@
 import { apiClient } from "@/lib/api-client";
 import type {
   ApiResponse,
-  PaymentRequest,
   PaymentResponse,
   VNPayIPNResponse,
 } from "@/types";
@@ -11,8 +10,10 @@ export const PaymentApi = {
     return apiClient.put("/api/v1/payments/cancel", undefined, { params });
   },
 
-  async requestMomoPayment(body: PaymentRequest): Promise<ApiResponse<string>> {
-    return apiClient.post("/api/v1/payments", body);
+  async createCheckoutLink(paymentId: string, paymentMethod: string): Promise<ApiResponse<string>> {
+    return apiClient.post(`/api/v1/payments/${paymentId}/checkout-link`, undefined, {
+      params: { paymentMethod },
+    });
   },
 
   async handleMoMoCallback(body: Record<string, string>): Promise<ApiResponse<Record<string, unknown>>> {

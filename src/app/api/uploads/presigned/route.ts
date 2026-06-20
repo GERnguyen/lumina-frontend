@@ -59,6 +59,7 @@ export async function POST(request: Request) {
       method: "PUT",
       headers: {
         "Content-Type": contentType,
+        "x-amz-acl": "public-read",
       },
       body: Buffer.from(await file.arrayBuffer()),
     });

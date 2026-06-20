@@ -5,15 +5,15 @@ export function ClientsSection() {
   const marqueeLogos = [...clientLogos, ...clientLogos];
 
   return (
-    <section className="bg-[#FAFAFA] px-5 py-[72px] sm:px-8 lg:px-[100px]">
-      <div className="mx-auto max-w-[960px] overflow-hidden">
+    <section className="bg-[#FAFAFA] py-[72px]">
+      <div className="w-full overflow-hidden">
         <h2 className="mx-auto max-w-[440px] text-center font-general text-4xl font-semibold leading-tight text-[#1E242C]">
           We are happy to work with incredible clients
         </h2>
         <div className="relative mt-10">
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-[#FAFAFA] to-transparent" />
-          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-[#FAFAFA] to-transparent" />
-          <div className="animate-logo-marquee flex w-max gap-6 py-2">
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r from-[#FAFAFA] to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l from-[#FAFAFA] to-transparent" />
+          <div className="animate-logo-marquee flex w-max gap-8 px-8 py-2">
           {marqueeLogos.map((logo, index) => (
             <div
               key={`${logo}-${index}`}

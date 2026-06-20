@@ -6,7 +6,7 @@ import { faqs } from "@/data/landing";
 import { cn } from "@/lib/utils";
 
 export function FaqSection() {
-  const [openIndex, setOpenIndex] = useState(3);
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
     <section className="bg-white px-5 py-[88px] sm:px-8 lg:px-[100px]">
@@ -23,20 +23,20 @@ export function FaqSection() {
               <article
                 key={`${index}-${item.question}`}
                 className={cn(
-                  "flex gap-4 rounded-[20px] border p-6 transition",
+                  "group flex gap-4 rounded-[20px] border p-6 transition",
                   isOpen
                     ? "border-[#8AB9FF] bg-[#E6F0FF] shadow-[10px_25px_50px_rgba(0,43,107,0.18)]"
                     : "border-[#E6E9EA] bg-white hover:-translate-y-1 hover:border-[#C9DCFF] hover:shadow-[0_18px_42px_rgba(0,43,107,0.08)]",
                 )}
               >
-                <span className={cn("flex size-14 shrink-0 items-center justify-center rounded-full text-xl font-medium text-[#002B6B]", isOpen ? "bg-white" : "bg-[#EDEEF0]")}>
+                <span className={cn("flex size-14 shrink-0 items-center justify-center rounded-full text-xl font-medium text-[#002B6B] transition", isOpen ? "bg-white" : "bg-[#EDEEF0] group-hover:bg-[#E6F0FF]")}>
                   {String(index + 1).padStart(2, "0")}
                 </span>
                 <div className="flex-1">
                 <button
                   type="button"
                   className="flex w-full items-center justify-between gap-4 text-left"
-                  onClick={() => setOpenIndex(isOpen ? -1 : index)}
+                  onClick={() => setOpenIndex(isOpen ? null : index)}
                   aria-expanded={isOpen}
                 >
                   <span className="font-general text-2xl font-semibold leading-[1.2] text-[#1E242C]">{item.question}</span>

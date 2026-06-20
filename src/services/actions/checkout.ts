@@ -5,6 +5,7 @@ import { OrderApi, VoucherApi } from "@/services/api/enrollment-api";
 import { PaymentApi } from "@/services/api/payment-api";
 import { revalidatePath } from "next/cache";
 import type { CartItemDto, CourseResponse } from "@/types";
+import { getErrorMessage } from "@/lib/errors";
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -16,7 +17,7 @@ export async function createOrderAction(params: {
   voucherCode?: string;
   cartItemIds?: string[];
 }) {
-  const { courseId, paymentMethod = "VN_PAY", voucherCode, cartItemIds = [] } = params;
+  const { courseId, paymentMethod = "STRIPE", voucherCode, cartItemIds = [] } = params;
 
   try {
     // 1. If courseId is provided, add it to cart first
@@ -44,7 +45,7 @@ export async function createOrderAction(params: {
       .filter((item): item is { id: string; course: CourseResponse } => Boolean(item.id && item.course))
       .map((item) => ({ id: item.id, course: item.course }));
 
-    const method = paymentMethod as "VN_PAY" | "MOMO";
+    const method = paymentMethod as "MOMO" | "STRIPE";
 
     // 4. Create order
     const orderRes = await OrderApi.createOrder({
@@ -54,18 +55,19 @@ export async function createOrderAction(params: {
     });
 
     const orderId = orderRes.data?.id;
+    const paymentId = orderRes.data?.payment?.id;
     if (!orderRes.success || !orderId) {
       return { success: false, error: orderRes.message || "Could not create order" };
+    }
+    if (!paymentId) {
+      return { success: false, error: "Order created, but the backend did not return a payment id." };
     }
 
     // 5. Sleep to allow backend to persist order details
     await sleep(800);
 
-    // 6. Request payment link
-    const paymentRes = await PaymentApi.requestMomoPayment({
-      orderId,
-      paymentMethod: method,
-    });
+    // 6. Request provider checkout link for the created payment record
+    const paymentRes = await PaymentApi.createCheckoutLink(paymentId, method);
 
     const paymentUrl = paymentRes.data;
     if (!paymentRes.success || !paymentUrl) {
@@ -81,8 +83,8 @@ export async function createOrderAction(params: {
       orderId,
       paymentUrl,
     };
-  } catch (error: any) {
-    return { success: false, error: error?.message || "Checkout failed" };
+  } catch (error: unknown) {
+    return { success: false, error: getErrorMessage(error, "Checkout failed") };
   }
 }
 

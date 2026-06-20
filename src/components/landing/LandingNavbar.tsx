@@ -19,7 +19,7 @@ export function LandingNavbar() {
 
       <div className="hidden items-center gap-3 md:flex">
         <LandingButton
-          href="/register"
+          href="/login"
           variant="ghost"
           size="sm"
           className="group h-14 gap-5 border border-white/85 py-1 pl-8 pr-1.5 text-lg text-white hover:border-white hover:bg-white/10"
@@ -29,7 +29,7 @@ export function LandingNavbar() {
             </span>
           }
         >
-          Register Now
+          Sign in
         </LandingButton>
       </div>
 

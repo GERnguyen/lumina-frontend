@@ -12,34 +12,20 @@ import {
   Select,
   FileUpload,
 } from "@/components/ui";
-import axios from "axios";
 import type { RegisterRequest } from "@/types";
-import { AuthService, PresignedUrlService } from "@/services";
+import { AuthService } from "@/services";
 import { getErrorMessage } from "@/lib/errors";
+import { uploadFileWithPresignedUrl } from "@/lib/presigned-upload";
 
 type RegisterRole = NonNullable<RegisterRequest["role"]>;
 type RegisterGender = NonNullable<RegisterRequest["gender"]>;
 
 async function uploadInstructorCv(file: File) {
-  const response = await PresignedUrlService.getPresignedUrl({
-    fileName: file.name,
-    contentType: file.type || "application/pdf",
+  return uploadFileWithPresignedUrl(file, {
+    fallbackContentType: "application/pdf",
+    prepareError: "Could not prepare CV upload",
+    uploadError: "Could not upload instructor CV.",
   });
-
-  const presignedUrl = response.data?.presignedUrl;
-  const fileKey = response.data?.fileKey;
-
-  if (!presignedUrl || !fileKey) {
-    throw new Error(response.message || "Could not prepare CV upload");
-  }
-
-  await axios.put(presignedUrl, file, {
-    headers: {
-      "Content-Type": file.type || "application/pdf",
-    },
-  });
-
-  return fileKey;
 }
 
 const RegisterForm = () => {

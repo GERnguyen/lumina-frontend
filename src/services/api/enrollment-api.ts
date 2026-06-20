@@ -10,7 +10,6 @@ import type {
   DashboardMetricsResponse,
   InstructorStatisticsResponse,
   OrderDetailResponse,
-  OrderResponse,
   UpdateVoucherRequest,
   VoucherResponse,
 } from "@/types";
@@ -62,7 +61,7 @@ export const OrderApi = {
     return apiClient.get("/api/v1/orders", { params });
   },
 
-  async createOrder(body: CreateOrderRequest): Promise<ApiResponse<OrderResponse>> {
+  async createOrder(body: CreateOrderRequest): Promise<ApiResponse<OrderDetailResponse>> {
     return apiClient.post("/api/v1/orders", body);
   },
 

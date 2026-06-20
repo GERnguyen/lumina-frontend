@@ -33,6 +33,7 @@ import { InstructorFooter } from "@/components/instructor/InstructorDashboardWid
 import { InstructorSidebar } from "@/components/instructor/InstructorSidebar";
 import { InstructorTopbar } from "@/components/instructor/InstructorTopbar";
 import { getErrorMessage } from "@/lib/errors";
+import { uploadFileWithPresignedUrl as uploadToPresignedStorage } from "@/lib/presigned-upload";
 import { cn } from "@/lib/utils";
 import {
   ArticleLessonService,
@@ -831,21 +832,10 @@ function createAssignmentAttachment(lesson: Lesson) {
 
 async function uploadFileWithPresignedUrl(file: File) {
   try {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const response = await fetch("/api/uploads/presigned", {
-      method: "POST",
-      body: formData,
+    return await uploadToPresignedStorage(file, {
+      prepareError: "Could not prepare course media upload.",
+      uploadError: "Could not upload course media.",
     });
-
-    const payload = (await response.json().catch(() => ({}))) as { fileKey?: string; message?: string };
-
-    if (!response.ok || !payload.fileKey) {
-      throw new Error(payload.message || "Could not upload file.");
-    }
-
-    return payload.fileKey;
   } catch (error) {
     throw new Error(`Could not upload "${file.name}". ${getErrorMessage(error, "Please check upload settings.")}`);
   }
@@ -1311,9 +1301,11 @@ function ContentStep({
 function MediaStep({
   courseImages,
   setCourseImages,
+  onRemovePersistedImage,
 }: {
   courseImages: CourseImage[];
   setCourseImages: (images: CourseImage[]) => void;
+  onRemovePersistedImage: (imageId: string) => void;
 }) {
   function addImages(files: FileList | null) {
     if (!files?.length) return;
@@ -1337,6 +1329,7 @@ function MediaStep({
   function removeImage(imageId: string) {
     const image = courseImages.find((item) => item.id === imageId);
     if (image?.url.startsWith("blob:")) URL.revokeObjectURL(image.url);
+    if (image?.uploaded && !image.file) onRemovePersistedImage(image.id);
 
     const nextImages = courseImages.filter((item) => item.id !== imageId);
     if (image?.isCover && nextImages[0]) {
@@ -1506,6 +1499,7 @@ function StepBody({
   setSections,
   courseImages,
   setCourseImages,
+  onRemovePersistedImage,
   selectedSectionId,
   setSelectedSectionId,
   selectedLessonId,
@@ -1518,6 +1512,7 @@ function StepBody({
   setSections: (sections: Section[]) => void;
   courseImages: CourseImage[];
   setCourseImages: (images: CourseImage[]) => void;
+  onRemovePersistedImage: (imageId: string) => void;
   selectedSectionId?: string;
   setSelectedSectionId: (sectionId: string) => void;
   selectedLessonId?: string;
@@ -1547,7 +1542,15 @@ function StepBody({
       />
     );
   }
-  if (activeStep === "media") return <MediaStep courseImages={courseImages} setCourseImages={setCourseImages} />;
+  if (activeStep === "media") {
+    return (
+      <MediaStep
+        courseImages={courseImages}
+        setCourseImages={setCourseImages}
+        onRemovePersistedImage={onRemovePersistedImage}
+      />
+    );
+  }
   return <ReviewStep sections={sections} courseImages={courseImages} />;
 }
 
@@ -1626,6 +1629,7 @@ export function CourseCreateOptionsPage({ mode = "create", courseId }: CourseCre
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "submitting" | "submitted" | "error">("idle");
   const [saveMessage, setSaveMessage] = useState("");
   const [savedImageKeys, setSavedImageKeys] = useState<string[]>([]);
+  const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
   const courseImagesRef = useRef<CourseImage[]>([]);
   const [selectedSectionId, setSelectedSectionId] = useState(initialSections[0].id);
   const [selectedLessonId, setSelectedLessonId] = useState(initialSections[0].lessons[0].id);
@@ -1677,6 +1681,7 @@ export function CourseCreateOptionsPage({ mode = "create", courseId }: CourseCre
             })),
           );
           setSavedImageKeys((course.images || []).map((image) => image.imageUrl || "").filter(Boolean));
+          setDeletedImageIds([]);
         }
 
         const mappedSections = mapCurriculumSections(curriculumResponse.data?.sections);
@@ -1714,6 +1719,10 @@ export function CourseCreateOptionsPage({ mode = "create", courseId }: CourseCre
       });
     };
   }, []);
+
+  function queuePersistedImageRemoval(imageId: string) {
+    setDeletedImageIds((current) => (current.includes(imageId) ? current : [...current, imageId]));
+  }
 
   function goNext() {
     setActiveStep(steps[Math.min(steps.length - 1, activeIndex + 1)].id);
@@ -1874,6 +1883,18 @@ export function CourseCreateOptionsPage({ mode = "create", courseId }: CourseCre
         nextSections.push({ ...section, serverId: sectionId, lessons: nextLessons });
       }
 
+      if (deletedImageIds.length) {
+        await Promise.all(
+          deletedImageIds.map((imageId) =>
+            CourseImageService.deleteCourseImage({
+              courseId,
+              imageId,
+            }),
+          ),
+        );
+        setDeletedImageIds([]);
+      }
+
       if (courseImages.length) {
         const coverFirstImages = [...courseImages].sort((left, right) => Number(right.isCover) - Number(left.isCover));
         const uploadedImages: CourseImage[] = [];
@@ -2003,6 +2024,7 @@ export function CourseCreateOptionsPage({ mode = "create", courseId }: CourseCre
                   setSections={setSections}
                   courseImages={courseImages}
                   setCourseImages={setCourseImages}
+                  onRemovePersistedImage={queuePersistedImageRemoval}
                   selectedSectionId={selectedSectionId}
                   setSelectedSectionId={setSelectedSectionId}
                   selectedLessonId={selectedLessonId}

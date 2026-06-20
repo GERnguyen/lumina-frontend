@@ -118,7 +118,7 @@ export function CoursePurchaseActions({
     setPendingAction("checkout");
 
     try {
-      const res = await createOrderAction({ courseId, paymentMethod: "VN_PAY" });
+      const res = await createOrderAction({ courseId, paymentMethod: "STRIPE" });
       if (!res.success) throw new Error(res.error);
 
       if (res.paymentUrl) {

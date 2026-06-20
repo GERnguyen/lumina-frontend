@@ -42,17 +42,17 @@ export function HeroSection() {
           </div>
       </div>
 
-      <div className="absolute left-1/2 top-[582px] h-[338px] w-[calc(100%+57px)] max-w-[1497px] -translate-x-1/2 overflow-hidden rounded-[20px] bg-[#FDFDFF] shadow-[0_18px_80px_rgba(0,43,107,0.05)]">
+      <div className="absolute inset-x-0 top-[582px] h-[338px] w-full overflow-hidden bg-[#FDFDFF] shadow-[0_18px_80px_rgba(0,43,107,0.05)]">
         <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-28 bg-gradient-to-r from-[#FDFDFF] to-transparent" />
         <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-28 bg-gradient-to-l from-[#FDFDFF] to-transparent" />
-        <div className="animate-logo-marquee flex h-full w-max items-center gap-20 px-16">
+        <div className="animate-logo-marquee flex h-full w-max items-center gap-28 px-20">
           {marqueeLogos.map((logo, index) => {
             const Icon = logo.icon;
 
             return (
-              <div key={`${logo.name}-${index}`} className="flex h-[230px] min-w-[220px] items-center justify-center transition duration-500 hover:scale-105">
+              <div key={`${logo.name}-${index}`} className="flex h-[230px] min-w-[260px] items-center justify-center transition duration-500 hover:scale-105">
                 {logo.image ? (
-                  <Image src={logo.image} alt={logo.name} width={logo.width} height={logo.height} className="max-h-[210px] w-auto object-contain" priority={index < trustedLogos.length} />
+                  <Image src={logo.image} alt={logo.name} width={logo.width} height={logo.height} className="max-h-[170px] w-auto object-contain" priority={index < trustedLogos.length} />
                 ) : (
                   <span className="flex items-center gap-4 font-general text-6xl font-semibold text-[#172033]">
                     {Icon ? <Icon className="size-14 fill-current" /> : null}

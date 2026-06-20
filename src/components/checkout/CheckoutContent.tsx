@@ -19,7 +19,7 @@ export function CheckoutContent({
   voucherError,
   voucherCode,
 }: CheckoutContentProps) {
-  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("VN_PAY");
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("STRIPE");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -37,9 +37,7 @@ export function CheckoutContent({
       if (!res.success) {
         throw new Error(
           res.error ||
-          (selectedMethod === "MOMO"
-            ? "MoMo did not return a payment URL. Please check the backend MoMo credentials, return URL, notify URL, and request type."
-            : "Could not start checkout."),
+          `${selectedMethod === "MOMO" ? "MoMo" : "Stripe"} did not return a payment URL. Please check the backend payment configuration.`,
         );
       }
 
@@ -49,9 +47,7 @@ export function CheckoutContent({
       }
 
       setMessage(
-        selectedMethod === "MOMO"
-          ? "MoMo did not return a payment URL. Please check the backend MoMo configuration."
-          : "Order created, but the payment provider did not return a redirect URL.",
+        `${selectedMethod === "MOMO" ? "MoMo" : "Stripe"} did not return a payment URL. Please check the backend payment configuration.`,
       );
     } catch (error: any) {
       setMessage(error?.message || "Could not complete payment.");
