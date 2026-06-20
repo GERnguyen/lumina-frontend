@@ -7,10 +7,7 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2, Upload } from "lucide-react";
 import type { UserProfileSettingsData } from "@/data/user-profile";
 import { updateProfileAction, changePasswordAction } from "@/services/actions/profile";
-
-type ApiMessage = {
-  message?: string;
-};
+import { uploadFileWithPresignedUrl } from "@/lib/presigned-upload";
 
 function splitName(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -94,30 +91,19 @@ export function UserProfileSettingsForm({ settings }: { settings: UserProfileSet
   const [pendingAction, setPendingAction] = useState<"profile" | "password" | undefined>();
   const fullName = [firstName, lastName].map((item) => item.trim()).filter(Boolean).join(" ");
 
-  async function uploadAvatar(file: File) {
-    const formData = new FormData();
-    formData.set("file", file);
-
-    const response = await fetch("/api/uploads/presigned", {
-      method: "POST",
-      body: formData,
-    });
-    const payload = (await response.json().catch(() => ({}))) as { fileKey?: string; message?: string };
-
-    if (!response.ok || !payload.fileKey) {
-      throw new Error(payload.message || "Could not upload avatar.");
-    }
-
-    return payload.fileKey;
-  }
-
   async function saveProfile() {
     setProfileMessage("");
     setPendingAction("profile");
 
     try {
       if (!settings.user.id) throw new Error("User ID is missing.");
-      const avatarFileKey = avatarFile ? await uploadAvatar(avatarFile) : undefined;
+      const avatarFileKey = avatarFile
+        ? await uploadFileWithPresignedUrl(avatarFile, {
+            fallbackContentType: "image/jpeg",
+            prepareError: "Could not prepare avatar upload.",
+            uploadError: "Could not upload avatar.",
+          })
+        : undefined;
       const res = await updateProfileAction(settings.user.id, {
         name: fullName,
         bio,

@@ -10,7 +10,6 @@ import type {
   ApiResponse,
 } from '@/types';
 import type {
-  PaymentRequest,
   PaymentResponse,
   VNPayIPNResponse,
 } from '@/types';
@@ -25,8 +24,8 @@ export const PaymentService = {
     return data;
   },
 
-  async requestMomoPayment({ body }: { body: PaymentRequest }, config?: AxiosRequestConfig): Promise<ApiResponse<string>> {
-    const { data } = await axiosClient.post('/api/v1/payments', body, config);
+  async createCheckoutLink({ paymentId, paymentMethod }: { paymentId: string; paymentMethod: string }, config?: AxiosRequestConfig): Promise<ApiResponse<string>> {
+    const { data } = await axiosClient.post(`/api/v1/payments/${paymentId}/checkout-link`, undefined, { params: { paymentMethod }, ...config });
     return data;
   },
 

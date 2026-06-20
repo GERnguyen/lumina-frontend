@@ -2,7 +2,7 @@
 
 import { CheckCircle2 } from "lucide-react";
 
-export type PaymentMethod = "VN_PAY" | "MOMO";
+export type PaymentMethod = "MOMO" | "STRIPE";
 
 type CheckoutPaymentPanelProps = {
   selectedMethod: PaymentMethod;
@@ -16,10 +16,10 @@ const paymentMethods: Array<{
   mark: string;
 }> = [
   {
-    id: "VN_PAY",
-    title: "VNPay",
-    description: "Pay securely with domestic bank cards, QR code, or supported Vietnamese banking apps.",
-    mark: "VN",
+    id: "STRIPE",
+    title: "Stripe",
+    description: "Pay with cards and supported international payment methods through Stripe Checkout.",
+    mark: "S",
   },
   {
     id: "MOMO",
@@ -46,7 +46,7 @@ export function CheckoutPaymentPanel({ selectedMethod, onSelectedMethodChange }:
                 isSelected ? "border-[#23BD33]" : "border-[#E9EAF0]"
               }`}
             >
-              <span className={`flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ${method.id === "MOMO" ? "bg-[#A50064] text-white" : "bg-[#EBEBFF] text-[#564FFD]"}`}>
+              <span className={`flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ${method.id === "MOMO" ? "bg-[#A50064] text-white" : "bg-[#635BFF] text-white"}`}>
                 {method.mark}
               </span>
               <span className="min-w-0 flex-1">

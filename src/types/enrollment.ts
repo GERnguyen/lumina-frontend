@@ -27,7 +27,7 @@ export interface OrderDetailResponse {
   discounted?: number;
   orderDate?: string;
   status?: "PENDING" | "PAID" | "CANCELLED" | "REFUNDED";
-  paymentMethod?: "VN_PAY" | "MOMO";
+  paymentMethod?: "MOMO" | "STRIPE";
   payment?: PaymentResponse;
   voucher?: VoucherResponse;
 }
@@ -72,7 +72,7 @@ export interface CartItemDto {
 
 export interface CreateOrderRequest {
   cartItems: CartItemDto[];
-  paymentMethod: "VN_PAY" | "MOMO";
+  paymentMethod: "MOMO" | "STRIPE";
   voucherCode?: string;
 }
 
@@ -84,7 +84,7 @@ export interface OrderResponse {
   discounted?: number;
   orderDate?: string;
   status?: "PENDING" | "PAID" | "CANCELLED" | "REFUNDED";
-  paymentMethod?: "VN_PAY" | "MOMO";
+  paymentMethod?: "MOMO" | "STRIPE";
 }
 
 export interface CheckEnrollmentStatus {

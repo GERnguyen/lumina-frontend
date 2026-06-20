@@ -76,7 +76,7 @@ export const OrderService = {
     return data;
   },
 
-  async createOrder({ body }: { body: CreateOrderRequest }, config?: AxiosRequestConfig): Promise<ApiResponse<OrderResponse>> {
+  async createOrder({ body }: { body: CreateOrderRequest }, config?: AxiosRequestConfig): Promise<ApiResponse<OrderDetailResponse>> {
     const { data } = await axiosClient.post('/api/v1/orders', body, config);
     return data;
   },
