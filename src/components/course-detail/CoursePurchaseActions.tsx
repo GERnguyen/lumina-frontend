@@ -46,7 +46,7 @@ export function CoursePurchaseActions({
   if (isEnrolled) {
     return (
       <div className="space-y-3 p-6">
-        <Link href={`/courses/${courseId}/watch`} className="flex h-12 w-full items-center justify-center rounded-[18px] bg-[#7872FD] text-sm font-semibold text-white transition hover:bg-[#6C66F3]">
+        <Link href={`/learning/${courseId}`} className="flex h-12 w-full items-center justify-center rounded-[18px] bg-[#7872FD] text-sm font-semibold text-white transition hover:bg-[#6C66F3]">
           Continue Learning
         </Link>
         <button

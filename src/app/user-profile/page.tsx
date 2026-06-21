@@ -64,7 +64,7 @@ export default async function Page() {
       lesson: "Continue your learning",
       image: getCourseImage(course, index),
       progress,
-      href: `/courses/${course.id}/watch`,
+      href: `/learning/${course.id}`,
       featured: index === 3,
       teacher: getCourseInstructorName(course),
       status: progressItem?.isCompleted ? ("completed" as const) : ("active" as const),

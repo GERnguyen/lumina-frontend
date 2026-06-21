@@ -65,7 +65,7 @@ export function UserProfileDashboardPage({
       lesson: "Continue your learning",
       image: course.images?.[0]?.imageUrl || `/courses/course-0${(index % 8) + 1}.png`,
       progress,
-      href: `/courses/${course.id}/watch`,
+      href: `/learning/${course.id}`,
       featured: index === 3,
     };
   });

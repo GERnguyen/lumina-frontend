@@ -6,7 +6,6 @@ import {
   ArrowRight,
   BadgeCheck,
   BookOpen,
-  Bold,
   CheckCircle2,
   ChevronDown,
   ClipboardCheck,
@@ -14,9 +13,7 @@ import {
   FileText,
   GripVertical,
   ImageIcon,
-  Italic,
   Layers,
-  Link,
   ListChecks,
   Lock,
   PanelLeftClose,
@@ -33,13 +30,13 @@ import { InstructorFooter } from "@/components/instructor/InstructorDashboardWid
 import { InstructorSidebar } from "@/components/instructor/InstructorSidebar";
 import { InstructorTopbar } from "@/components/instructor/InstructorTopbar";
 import { getErrorMessage } from "@/lib/errors";
-import { uploadFileWithPresignedUrl as uploadToPresignedStorage } from "@/lib/presigned-upload";
 import { cn } from "@/lib/utils";
 import {
   ArticleLessonService,
   AssignmentLessonService,
   CourseImageService,
   CourseService,
+  CourseUploadService,
   LessonService,
   QuizLessonService,
   SectionService,
@@ -94,15 +91,26 @@ type CourseBasics = {
 };
 
 type LessonContent = {
+  videoFile?: File;
+  videoFileKey?: string;
   videoFileName?: string;
   videoFileSize?: string;
+  videoFileType?: string;
   videoDescription?: string;
-  articleHtml?: string;
+  articleFile?: File;
+  articleFileKey?: string;
+  articleFileName?: string;
+  articleFileSize?: number;
+  articleFileType?: string;
   quizQuestions?: QuizQuestion[];
   passingScore?: number;
   assignmentInstructions?: string;
   assignmentDueDays?: number;
+  assignmentAttachmentFile?: File;
+  assignmentAttachmentFileKey?: string;
   assignmentAttachment?: string;
+  assignmentAttachmentType?: string;
+  assignmentAttachmentSize?: number;
 };
 
 type QuizQuestion = {
@@ -791,6 +799,14 @@ function getApiData<T>(response: { data?: T }, fallbackMessage: string): T {
   return response.data;
 }
 
+async function safeApiCall<T>(call: () => Promise<T>): Promise<T | undefined> {
+  try {
+    return await call();
+  } catch {
+    return undefined;
+  }
+}
+
 function createCourseDraftPayload(sections: Section[], basics: CourseBasics) {
   return {
     title: basics.title,
@@ -805,46 +821,223 @@ function createCourseDraftPayload(sections: Section[], basics: CourseBasics) {
   };
 }
 
-function createArticleFilePayload(lesson: Lesson) {
-  const html = lesson.content?.articleHtml || "<p>Lesson content</p>";
-  const size = new Blob([html]).size;
-  return {
-    fileKey: draftFileKey("articles", `${lesson.id}.html`),
-    fileName: `${lesson.title || "article"}.html`,
-    fileType: "text/html",
-    fileSize: size,
-  };
+function isNotFoundError(error: unknown) {
+  const maybeError = error as { response?: { status?: number }; status?: number };
+  return maybeError?.response?.status === 404 || maybeError?.status === 404;
 }
 
-function createAssignmentAttachment(lesson: Lesson) {
-  const attachmentName = lesson.content?.assignmentAttachment;
-  if (!attachmentName) return [];
-
-  return [
-    {
-      fileKey: draftFileKey("assignments", attachmentName),
-      fileName: attachmentName,
-      fileType: "application/octet-stream",
-      fileSize: 0,
-    },
-  ];
+function hasMeaningfulLessonContent(lesson: Lesson) {
+  const content = lesson.content;
+  if (!content) return false;
+  if (lesson.type === "VIDEO") return Boolean(content.videoFile || content.videoFileKey);
+  if (lesson.type === "ARTICLE") return Boolean(content.articleFile || content.articleFileKey);
+  if (lesson.type === "QUIZ") return Boolean(content.quizQuestions?.length);
+  return Boolean(content.assignmentInstructions?.trim() || content.assignmentAttachmentFile || content.assignmentAttachmentFileKey);
 }
 
 async function uploadFileWithPresignedUrl(file: File) {
   try {
-    return await uploadToPresignedStorage(file, {
-      prepareError: "Could not prepare course media upload.",
-      uploadError: "Could not upload course media.",
+    const contentType = file.type || "application/octet-stream";
+    const response = await CourseUploadService.getPresignedUrl({
+      fileName: file.name,
+      contentType,
     });
+
+    const presignedUrl = response.data?.presignedUrl;
+    const fileKey = response.data?.fileKey;
+
+    if (!presignedUrl || !fileKey) {
+      throw new Error(response.message || "Could not prepare course media upload.");
+    }
+
+    const uploadResponse = await fetch(presignedUrl, {
+      method: "PUT",
+      body: file,
+      headers: {
+        "Content-Type": contentType,
+        "x-amz-acl": "public-read",
+      },
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error(`Could not upload course media. Storage returned ${uploadResponse.status}.`);
+    }
+
+    return fileKey;
   } catch (error) {
     throw new Error(`Could not upload "${file.name}". ${getErrorMessage(error, "Please check upload settings.")}`);
   }
 }
 
+async function upsertVideoLessonContent(courseId: string, lesson: Lesson, lessonId: string, isExistingLesson: boolean) {
+  const content = getLessonContent(lesson);
+  let fileKey = content.videoFileKey;
+  const file = content.videoFile;
+
+  if (file) {
+    fileKey = await uploadFileWithPresignedUrl(file);
+  }
+
+  if (!fileKey || !content.videoFileName) return;
+
+  const body = {
+    fileKey,
+    fileName: content.videoFileName,
+    fileType: content.videoFileType || file?.type || "video/mp4",
+    fileSize: file?.size || parseSizeLabel(content.videoFileSize),
+    duration: lesson.duration,
+  };
+
+  if (isExistingLesson) {
+    try {
+      await VideoLessonService.updateVideoLesson({ courseId, lessonId, body });
+      return;
+    } catch (error) {
+      if (!isNotFoundError(error)) throw error;
+    }
+  }
+
+  await VideoLessonService.createVideoLesson({ courseId, lessonId, body });
+}
+
+async function upsertArticleLessonContent(courseId: string, lesson: Lesson, lessonId: string, isExistingLesson: boolean) {
+  const content = getLessonContent(lesson);
+  let fileKey = content.articleFileKey;
+  let fileName = content.articleFileName;
+  let fileSize = content.articleFileSize;
+  let fileType = content.articleFileType || "application/pdf";
+  const file = content.articleFile;
+
+  if (file) {
+    fileKey = await uploadFileWithPresignedUrl(file);
+    fileName = file.name;
+    fileSize = file.size;
+    fileType = file.type || "application/pdf";
+  }
+
+  if (!fileKey || !fileName) return;
+
+  const body = {
+    fileKey,
+    fileName,
+    fileType,
+    fileSize: fileSize || file?.size || 0,
+  };
+
+  if (isExistingLesson) {
+    try {
+      await ArticleLessonService.updateArticleLesson({ courseId, lessonId, body });
+      return;
+    } catch (error) {
+      if (!isNotFoundError(error)) throw error;
+    }
+  }
+
+  await ArticleLessonService.createArticleLesson({ courseId, lessonId, body });
+}
+
+async function upsertQuizLessonContent(courseId: string, lesson: Lesson, lessonId: string, isExistingLesson: boolean) {
+  const content = getLessonContent(lesson);
+  const questions = content.quizQuestions?.length ? content.quizQuestions : defaultQuizQuestions;
+  const settings = {
+    numberOfQuestionPerQuizSession: Math.max(1, questions.length),
+    maxAttempt: 3,
+    duration: lesson.duration,
+    isReviewAllowed: true,
+    isShowAnswersOnReview: true,
+    shuffleQuestions: false,
+    shuffleOptions: false,
+    scoringMode: "HIGHEST" as const,
+  };
+
+  if (isExistingLesson) {
+    try {
+      await QuizLessonService.updateQuizSettings({ courseId, lessonId, body: settings });
+      await QuizLessonService.syncQuiz({
+        courseId,
+        lessonId,
+        body: { triggerRegrade: false, changeReason: "Instructor updated quiz settings" },
+      }).catch(() => undefined);
+      return;
+    } catch (error) {
+      if (!isNotFoundError(error)) throw error;
+    }
+  }
+
+  await QuizLessonService.createQuizLesson({
+    courseId,
+    lessonId,
+    body: {
+      ...settings,
+      questions: questions.map((question) => ({
+        questionText: question.prompt,
+        questionType: "SINGLE_CHOICE",
+        scoringMethod: "ALL_OR_NOTHING",
+        options: question.options.map((option, index) => ({
+          optionText: option,
+          isCorrect: question.answerIndex === index,
+          optionOrder: index,
+        })),
+      })),
+    },
+  });
+}
+
+async function upsertAssignmentLessonContent(courseId: string, lesson: Lesson, lessonId: string, isExistingLesson: boolean) {
+  const content = getLessonContent(lesson);
+  const attachments = [];
+  let fileKey = content.assignmentAttachmentFileKey;
+  const file = content.assignmentAttachmentFile;
+
+  if (file) {
+    fileKey = await uploadFileWithPresignedUrl(file);
+  }
+
+  if (fileKey && content.assignmentAttachment) {
+    attachments.push({
+      fileKey,
+      fileName: content.assignmentAttachment,
+      fileType: content.assignmentAttachmentType || file?.type || "application/octet-stream",
+      fileSize: content.assignmentAttachmentSize || file?.size || 0,
+    });
+  }
+
+  const body = {
+    description: content.assignmentInstructions || "Assignment instructions",
+    attachments,
+  };
+
+  if (isExistingLesson) {
+    try {
+      await AssignmentLessonService.updateAssigmentLesson({ courseId, lessonId, body });
+      return;
+    } catch (error) {
+      if (!isNotFoundError(error)) throw error;
+    }
+  }
+
+  await AssignmentLessonService.createAssigmentLesson({ courseId, lessonId, body });
+}
+
+async function upsertLessonContent(courseId: string, lesson: Lesson, lessonId: string, isExistingLesson: boolean) {
+  if (lesson.type === "VIDEO") {
+    await upsertVideoLessonContent(courseId, lesson, lessonId, isExistingLesson);
+    return;
+  }
+  if (lesson.type === "ARTICLE") {
+    await upsertArticleLessonContent(courseId, lesson, lessonId, isExistingLesson);
+    return;
+  }
+  if (lesson.type === "QUIZ") {
+    await upsertQuizLessonContent(courseId, lesson, lessonId, isExistingLesson);
+    return;
+  }
+  await upsertAssignmentLessonContent(courseId, lesson, lessonId, isExistingLesson);
+}
+
 function getLessonContent(lesson: Lesson): LessonContent {
   return {
     videoDescription: "Introduce the lesson goals, prerequisites, and what learners should build.",
-    articleHtml: "<h2>Lesson overview</h2><p>Write the concept explanation, examples, and practical steps here.</p>",
     quizQuestions: defaultQuizQuestions,
     passingScore: 70,
     assignmentInstructions: "Describe the task, expected deliverables, acceptance criteria, and submission format.",
@@ -892,7 +1085,13 @@ function VideoLessonEditor({ content, patchContent }: { content: LessonContent; 
           onChange={(event) => {
             const file = event.target.files?.[0];
             if (!file) return;
-            patchContent({ videoFileName: file.name, videoFileSize: formatBytes(file.size) });
+            patchContent({
+              videoFile: file,
+              videoFileKey: undefined,
+              videoFileName: file.name,
+              videoFileSize: formatBytes(file.size),
+              videoFileType: file.type || "video/mp4",
+            });
           }}
         />
         <span className="flex size-16 items-center justify-center rounded-[22px] bg-[#EBEBFF] text-[#564FFD]">
@@ -925,71 +1124,79 @@ function VideoLessonEditor({ content, patchContent }: { content: LessonContent; 
 }
 
 function ArticleLessonEditor({
-  lessonId,
   content,
   patchContent,
 }: {
-  lessonId: string;
   content: LessonContent;
   patchContent: (patch: Partial<LessonContent>) => void;
 }) {
-  const editorRef = useRef<HTMLDivElement>(null);
-  const initialHtml = content.articleHtml || "";
-  const tools = [
-    { label: "Bold", icon: Bold, command: "bold" },
-    { label: "Italic", icon: Italic, command: "italic" },
-    { label: "Link", icon: Link, command: "createLink" },
-    { label: "List", icon: ListChecks, command: "insertUnorderedList" },
-  ];
-
-  useEffect(() => {
-    if (editorRef.current) {
-      editorRef.current.innerHTML = initialHtml;
-    }
-  }, [lessonId]);
-
-  function syncEditorContent() {
-    if (!editorRef.current) return;
-    patchContent({ articleHtml: editorRef.current.innerHTML });
-  }
+  const hasArticleFile = Boolean(content.articleFile || content.articleFileKey);
+  const articleFileSize = content.articleFileSize ? `${(content.articleFileSize / 1024 / 1024).toFixed(2)} MB` : null;
 
   return (
-    <div className="overflow-hidden rounded-[18px] border border-[#E9EAF0] bg-white">
-      <div className="flex flex-wrap items-center gap-2 border-b border-[#E9EAF0] bg-[#FCFCFD] p-3">
-        {tools.map((tool) => {
-          const ToolIcon = tool.icon;
-          return (
-            <button
-              key={tool.label}
-              type="button"
-              onClick={() => {
-                if (tool.command === "createLink") {
-                  const url = window.prompt("Paste a URL");
-                  if (!url) return;
-                  document.execCommand(tool.command, false, url);
-                } else {
-                  document.execCommand(tool.command);
-                }
-                syncEditorContent();
-              }}
-              className="inline-flex h-10 items-center gap-2 rounded-[12px] border border-[#E9EAF0] bg-white px-3 text-sm font-semibold text-[#4E5566] transition hover:border-[#D8D6FF] hover:text-[#564FFD]"
-            >
-              <ToolIcon className="size-4" />
-              {tool.label}
-            </button>
-          );
-        })}
-      </div>
-      <div
-        ref={editorRef}
-        contentEditable
-        suppressContentEditableWarning
-        className="min-h-[620px] px-6 py-5 text-base leading-8 text-[#1D2026] outline-none prose-headings:font-semibold"
-        onInput={syncEditorContent}
-      />
-      <div className="border-t border-[#E9EAF0] bg-[#FCFCFD] px-5 py-3 text-xs leading-5 text-[#8C94A3]">
-        Use headings, lists, and links to make the lesson easy to scan.
-      </div>
+    <div className="grid min-h-[620px] gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <label
+        className={cn(
+          "flex cursor-pointer flex-col items-center justify-center rounded-[18px] border border-dashed bg-white px-8 py-12 text-center transition hover:border-[#564FFD] hover:bg-[#F7F7FF]",
+          hasArticleFile ? "border-[#564FFD] bg-[#F7F7FF]" : "border-[#DADDE7]",
+        )}
+      >
+        <input
+          type="file"
+          accept="application/pdf,.pdf"
+          className="sr-only"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (!file) return;
+            const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+            if (!isPdf) return;
+
+            patchContent({
+              articleFile: file,
+              articleFileKey: undefined,
+              articleFileName: file.name,
+              articleFileSize: file.size,
+              articleFileType: "application/pdf",
+            });
+          }}
+        />
+        <span className="flex size-20 items-center justify-center rounded-[26px] bg-[#EBEBFF] text-[#564FFD]">
+          {hasArticleFile ? <FileText className="size-9" /> : <UploadCloud className="size-9" />}
+        </span>
+        <h4 className="mt-6 max-w-[680px] text-xl font-semibold text-[#1D2026]">
+          {content.articleFileName || "Upload article PDF"}
+        </h4>
+        <p className="mt-3 max-w-[560px] text-sm leading-6 text-[#6E7485]">
+          Attach a prepared PDF for this article lesson. Learners will read this file inside the learning page.
+        </p>
+        {articleFileSize ? <span className="mt-5 rounded-full bg-white px-4 py-2 text-xs font-semibold text-[#564FFD]">{articleFileSize}</span> : null}
+      </label>
+
+      <aside className="rounded-[18px] bg-[#111033] p-5 text-white">
+        <p className="text-sm text-white/65">PDF article lesson</p>
+        <div className="mt-5 space-y-4 text-sm leading-6 text-white/75">
+          <p>Use a clear title page, readable typography, and practical examples.</p>
+          <p>Only PDF files are accepted for article lessons.</p>
+        </div>
+        {hasArticleFile ? (
+          <button
+            type="button"
+            onClick={() =>
+              patchContent({
+                articleFile: undefined,
+                articleFileKey: undefined,
+                articleFileName: undefined,
+                articleFileSize: undefined,
+                articleFileType: undefined,
+              })
+            }
+            className="mt-6 inline-flex h-11 items-center justify-center rounded-[14px] bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/15"
+          >
+            Remove PDF
+          </button>
+        ) : null}
+      </aside>
     </div>
   );
 }
@@ -1129,7 +1336,17 @@ function AssignmentLessonEditor({ content, patchContent }: { content: LessonCont
           <input
             type="file"
             className="sr-only"
-            onChange={(event) => patchContent({ assignmentAttachment: event.target.files?.[0]?.name || "" })}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (!file) return;
+              patchContent({
+                assignmentAttachmentFile: file,
+                assignmentAttachmentFileKey: undefined,
+                assignmentAttachment: file.name,
+                assignmentAttachmentType: file.type || "application/octet-stream",
+                assignmentAttachmentSize: file.size,
+              });
+            }}
           />
           <UploadCloud className="mx-auto size-8 text-[#564FFD]" />
           <p className="mt-3 text-sm font-semibold text-[#1D2026]">{content.assignmentAttachment || "Attach rubric/template"}</p>
@@ -1148,7 +1365,7 @@ function LessonContentEditor({ lesson, patchLesson }: { lesson: Lesson; patchLes
   }
 
   if (lesson.type === "VIDEO") return <VideoLessonEditor content={content} patchContent={patchContent} />;
-  if (lesson.type === "ARTICLE") return <ArticleLessonEditor lessonId={lesson.id} content={content} patchContent={patchContent} />;
+  if (lesson.type === "ARTICLE") return <ArticleLessonEditor content={content} patchContent={patchContent} />;
   if (lesson.type === "QUIZ") return <QuizLessonEditor content={content} patchContent={patchContent} />;
   return <AssignmentLessonEditor content={content} patchContent={patchContent} />;
 }
@@ -1621,8 +1838,20 @@ function mapCurriculumSections(sections: NonNullable<Awaited<ReturnType<typeof C
 }
 
 export function CourseCreateOptionsPage({ mode = "create", courseId }: CourseCreateOptionsPageProps) {
+  const isEditMode = mode === "edit";
   const [activeStep, setActiveStep] = useState<StepId>("basics");
-  const [basics, setBasics] = useState<CourseBasics>(defaultCourseBasics);
+  const [basics, setBasics] = useState<CourseBasics>(() =>
+    isEditMode
+      ? {
+          ...defaultCourseBasics,
+          title: "Loading course...",
+          description: "",
+          price: "0",
+          discountedPrice: "0",
+          certificateTitle: "",
+        }
+      : defaultCourseBasics,
+  );
   const [sections, setSections] = useState(initialSections);
   const [courseImages, setCourseImages] = useState<CourseImage[]>([]);
   const [draftCourseId, setDraftCourseId] = useState<string | undefined>(courseId);
@@ -1635,7 +1864,6 @@ export function CourseCreateOptionsPage({ mode = "create", courseId }: CourseCre
   const [selectedLessonId, setSelectedLessonId] = useState(initialSections[0].lessons[0].id);
   const activeIndex = steps.findIndex((step) => step.id === activeStep);
   const active = useMemo(() => steps[activeIndex] || steps[0], [activeIndex]);
-  const isEditMode = mode === "edit";
 
   useEffect(() => {
     if (!courseId || !isEditMode) return;
@@ -1648,43 +1876,48 @@ export function CourseCreateOptionsPage({ mode = "create", courseId }: CourseCre
       setSaveMessage("Loading course draft...");
 
       try {
-        const [courseResponse, curriculumResponse] = await Promise.all([
-          CourseService.getEditableCourseDraft({ id: editableCourseId }),
-          CourseService.getEditableDraftCurriculum({ id: editableCourseId }),
+        const [draftCourseResponse, readableCourseResponse, draftCurriculumResponse, readableCurriculumResponse] = await Promise.all([
+          safeApiCall(() => CourseService.getEditableCourseDraft({ id: editableCourseId })),
+          safeApiCall(() => CourseService.getReadableCourseById({ id: editableCourseId })),
+          safeApiCall(() => CourseService.getEditableDraftCurriculum({ id: editableCourseId })),
+          safeApiCall(() => CourseService.getReadableCurriculum({ id: editableCourseId })),
         ]);
-        const course = courseResponse.data;
+        const course = draftCourseResponse?.data || readableCourseResponse?.data;
 
         if (!isMounted) return;
 
-        if (course) {
-          setBasics({
-            title: course.title || defaultCourseBasics.title,
-            categoryId: course.category?.id || defaultCourseBasics.categoryId,
-            categoryName: course.category?.name || defaultCourseBasics.categoryName,
-            description: course.description || defaultCourseBasics.description,
-            price: String(course.price ?? 0),
-            discountedPrice: String(course.discountedPrice ?? course.price ?? 0),
-            durationLabel: minutesLabel(course.duration || 0),
-            isInSubscription: Boolean(course.isInSubscription),
-            hasCertificate: Boolean(course.hasCertificate),
-            certificateTitle: course.certificateTitle || "",
-          });
-          setCourseImages(
-            (course.images || []).map((image, index) => ({
-              id: image.id || `course-image-${index}`,
-              fileKey: image.imageUrl || "",
-              name: `Course image ${index + 1}`,
-              size: "",
-              url: image.imageUrl || "",
-              isCover: index === 0,
-              uploaded: true,
-            })),
-          );
-          setSavedImageKeys((course.images || []).map((image) => image.imageUrl || "").filter(Boolean));
-          setDeletedImageIds([]);
+        if (!course) {
+          throw new Error("Could not find this course. Please refresh the courses page and try again.");
         }
 
-        const mappedSections = mapCurriculumSections(curriculumResponse.data?.sections);
+        setBasics({
+          title: course.title || "Untitled course",
+          categoryId: course.category?.id || defaultCourseBasics.categoryId,
+          categoryName: course.category?.name || defaultCourseBasics.categoryName,
+          description: course.description || "",
+          price: String(course.price ?? 0),
+          discountedPrice: String(course.discountedPrice ?? course.price ?? 0),
+          durationLabel: minutesLabel(course.duration || 0),
+          isInSubscription: Boolean(course.isInSubscription),
+          hasCertificate: Boolean(course.hasCertificate),
+          certificateTitle: course.certificateTitle || "",
+        });
+        setCourseImages(
+          (course.images || []).map((image, index) => ({
+            id: image.id || `course-image-${index}`,
+            fileKey: image.imageUrl || "",
+            name: `Course image ${index + 1}`,
+            size: "",
+            url: image.imageUrl || "",
+            isCover: index === 0,
+            uploaded: true,
+          })),
+        );
+        setSavedImageKeys((course.images || []).map((image) => image.imageUrl || "").filter(Boolean));
+        setDeletedImageIds([]);
+
+        const curriculum = draftCurriculumResponse?.data || readableCurriculumResponse?.data;
+        const mappedSections = mapCurriculumSections(curriculum?.sections);
         if (mappedSections.length) {
           setSections(mappedSections);
           setSelectedSectionId(mappedSections[0].id);
@@ -1813,68 +2046,9 @@ export function CourseCreateOptionsPage({ mode = "create", courseId }: CourseCre
           const lessonId = savedLesson.id || lesson.serverId;
           if (!lessonId) throw new Error(`Lesson "${lesson.title}" was saved but no lesson id was returned.`);
 
-          const shouldPersistLessonContent = !lesson.serverId || Boolean(lesson.content);
-          const content = shouldPersistLessonContent ? getLessonContent(lesson) : undefined;
-
-          if (content && lesson.type === "VIDEO" && content.videoFileName) {
-            await VideoLessonService.createVideoLesson({
-              courseId,
-              lessonId,
-              body: {
-                fileKey: draftFileKey("videos", content.videoFileName),
-                fileName: content.videoFileName,
-                fileType: "video/mp4",
-                fileSize: parseSizeLabel(content.videoFileSize),
-                duration: lesson.duration,
-              },
-            }).catch(() => undefined);
-          }
-
-          if (content && lesson.type === "ARTICLE") {
-            await ArticleLessonService.createArticleLesson({
-              courseId,
-              lessonId,
-              body: createArticleFilePayload(lesson),
-            }).catch(() => undefined);
-          }
-
-          if (content && lesson.type === "QUIZ") {
-            const questions = content.quizQuestions?.length ? content.quizQuestions : defaultQuizQuestions;
-            await QuizLessonService.createQuizLesson({
-              courseId,
-              lessonId,
-              body: {
-                numberOfQuestionPerQuizSession: Math.max(1, questions.length),
-                maxAttempt: 3,
-                duration: lesson.duration,
-                isReviewAllowed: true,
-                isShowAnswersOnReview: true,
-                shuffleQuestions: false,
-                shuffleOptions: false,
-                scoringMode: "HIGHEST",
-                questions: questions.map((question) => ({
-                  questionText: question.prompt,
-                  questionType: "SINGLE_CHOICE",
-                  scoringMethod: "ALL_OR_NOTHING",
-                  options: question.options.map((option, index) => ({
-                    optionText: option,
-                    isCorrect: question.answerIndex === index,
-                    optionOrder: index,
-                  })),
-                })),
-              },
-            }).catch(() => undefined);
-          }
-
-          if (content && lesson.type === "ASSIGNMENT") {
-            await AssignmentLessonService.createAssigmentLesson({
-              courseId,
-              lessonId,
-              body: {
-                description: content.assignmentInstructions || "Assignment instructions",
-                attachments: createAssignmentAttachment(lesson),
-              },
-            }).catch(() => undefined);
+          const shouldPersistLessonContent = !lesson.serverId || hasMeaningfulLessonContent(lesson);
+          if (shouldPersistLessonContent) {
+            await upsertLessonContent(courseId, lesson, lessonId, Boolean(lesson.serverId));
           }
 
           nextLessons.push({ ...lesson, serverId: lessonId });
