@@ -31,7 +31,7 @@ export function CoursesFilterSidebar({ categories, filters, queryString }: Cours
       <CollapsibleFilterPanel title="Rating">
         <div className="space-y-3">
           {[5, 4, 3, 2, 1].map((rating) => (
-            <Link key={rating} href={queryString({ rating, page: 1 })} className="flex items-center justify-between gap-3">
+            <Link key={rating} href={queryString({ rating, page: 1 })} className="flex items-center justify-between gap-3 rounded-[14px] px-3 py-2 transition hover:bg-[#F7F7FF]">
               <span className="flex items-center gap-2">
                 <span className={filters.rating === rating ? "size-3 rounded-full border-2 border-[#7872FD]" : "size-3 rounded-full border border-[#C6CAD1]"} />
                 <span className="flex items-center gap-1 text-sm text-[#4E5566]">
@@ -56,8 +56,8 @@ export function CoursesFilterSidebar({ categories, filters, queryString }: Cours
           {filters.rating ? <input type="hidden" name="rating" value={filters.rating} /> : null}
           {filters.sort ? <input type="hidden" name="sort" value={filters.sort} /> : null}
           <div className="flex gap-3">
-            <input name="priceFrom" defaultValue={filters.priceFrom ?? ""} className="h-9 w-full rounded-[8px] border-[#E9EAF0] text-sm" placeholder="Min VND" />
-            <input name="priceTo" defaultValue={filters.priceTo ?? ""} className="h-9 w-full rounded-[8px] border-[#E9EAF0] text-sm" placeholder="Max VND" />
+            <input name="priceFrom" defaultValue={filters.priceFrom ?? ""} className="h-10 w-full rounded-[14px] border-[#E9EAF0] text-sm focus:border-[#7872FD] focus:ring-[#7872FD]" placeholder="Min VND" />
+            <input name="priceTo" defaultValue={filters.priceTo ?? ""} className="h-10 w-full rounded-[14px] border-[#E9EAF0] text-sm focus:border-[#7872FD] focus:ring-[#7872FD]" placeholder="Max VND" />
           </div>
           <button type="submit" className="h-10 w-full rounded-[18px] bg-[#7872FD] text-sm font-semibold text-white">
             Apply price
@@ -85,7 +85,7 @@ function FilterLink({
   count?: string;
 }) {
   return (
-    <Link href={href} className="flex w-full items-center justify-between gap-3 transition hover:text-[#7872FD]">
+    <Link href={href} className={cn("flex w-full items-center justify-between gap-3 rounded-[14px] px-3 py-2 transition hover:bg-[#F7F7FF] hover:text-[#7872FD]", active && "bg-[#F7F7FF]")}>
       <span className="flex min-w-0 items-center gap-3">
         <span className={cn("truncate text-sm", active ? "font-medium text-[#1D2026]" : "text-[#4E5566]")}>{label}</span>
       </span>

@@ -20,12 +20,16 @@ export async function PaymentReturnHandler({
   defaultProvider = "payment",
 }: PaymentReturnHandlerProps) {
   const params = (await searchParams) || {};
-  const orderId = getParam(params, ["orderId", "order_id", "metadata_order_id"]);
+  const orderId = getParam(params, ["orderId", "order_id", "metadata_order_id", "order"]);
   const provider = getParam(params, ["paymentMethod", "provider", "method"]) || defaultProvider;
-  const status = getParam(params, ["status", "resultCode", "code", "redirect_status"]);
+  const status = getParam(params, ["status", "resultCode", "code", "redirect_status", "payment_status"]);
+  const message = getParam(params, ["message", "error", "error_description"]);
 
   if (orderId) {
-    redirect(`/checkouts/thank-you/${encodeURIComponent(orderId)}?provider=${encodeURIComponent(provider)}${status ? `&status=${encodeURIComponent(status)}` : ""}`);
+    const query = new URLSearchParams({ provider });
+    if (status) query.set("status", status);
+    if (message) query.set("message", message);
+    redirect(`/checkouts/thank-you/${encodeURIComponent(orderId)}?${query.toString()}`);
   }
 
   return (

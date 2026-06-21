@@ -6,7 +6,6 @@ import { useState } from "react";
 import { Heart, Loader2, ShoppingCart } from "lucide-react";
 import { addToCartAction, removeFromCartAction } from "@/services/actions/cart";
 import { addToWishlistAction, removeFromWishlistAction } from "@/services/actions/wishlist";
-import { createOrderAction } from "@/services/actions/checkout";
 
 type CoursePurchaseActionsProps = {
   courseId: string;
@@ -49,16 +48,6 @@ export function CoursePurchaseActions({
         <Link href={`/learning/${courseId}`} className="flex h-12 w-full items-center justify-center rounded-[18px] bg-[#7872FD] text-sm font-semibold text-white transition hover:bg-[#6C66F3]">
           Continue Learning
         </Link>
-        <button
-          type="button"
-          onClick={() => void toggleWishlist()}
-          disabled={pendingAction === "wishlist"}
-          className="flex h-10 w-full items-center justify-center gap-2 rounded-[18px] border border-[#E9EAF0] text-xs font-semibold text-[#4E5566] transition hover:border-[#7872FD] hover:text-[#7872FD] disabled:opacity-60"
-        >
-          {pendingAction === "wishlist" ? <Loader2 className="size-4 animate-spin" /> : <Heart className={isWishlisted ? "size-4 fill-[#7872FD] text-[#7872FD]" : "size-4"} />}
-          {isWishlisted ? "Remove From Wishlist" : "Add To Wishlist"}
-        </button>
-        {message ? <p className="text-center text-xs text-[#8C94A3]">{message}</p> : null}
       </div>
     );
   }
@@ -118,18 +107,21 @@ export function CoursePurchaseActions({
     setPendingAction("checkout");
 
     try {
-      const res = await createOrderAction({ courseId, paymentMethod: "STRIPE" });
-      if (!res.success) throw new Error(res.error);
-
-      if (res.paymentUrl) {
-        window.location.href = res.paymentUrl;
+      if (isInCart && cartItemId) {
+        router.push(`/checkout?items=${encodeURIComponent(cartItemId)}`);
         return;
       }
 
-      setMessage("Order created. Payment URL is not available yet.");
+      const res = await addToCartAction(courseId);
+      if (!res.success) throw new Error(res.error);
+
+      const nextCartItemId = res.data?.id ? String(res.data.id) : undefined;
+      setIsInCart(true);
+      if (nextCartItemId) setCartItemId(nextCartItemId);
       router.refresh();
+      router.push(`/checkout${nextCartItemId ? `?items=${encodeURIComponent(nextCartItemId)}` : ""}`);
     } catch (error: any) {
-      setMessage(error?.message || "Could not start checkout.");
+      setMessage(error?.message || "Could not prepare checkout.");
     } finally {
       setPendingAction(undefined);
     }

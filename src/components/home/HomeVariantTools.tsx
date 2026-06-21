@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import type { DailyGoalResponse } from "@/types";
 import { cn } from "@/lib/utils";
-import { setDailyGoalAction, editDailyGoalAction, getDailyGoalsInMonthAction } from "@/services/actions/learning";
+import { setDailyGoalAction, editDailyGoalAction, getDailyGoalsInMonthAction, getIncompleteEnrolledLessonsAction } from "@/services/actions/learning";
 
 const months = [
   "January",
@@ -194,16 +194,29 @@ function CalendarGoalForm({
 }) {
   const [goalType, setGoalType] = useState<GoalType>((existingGoal?.goalType as GoalType) || "XP");
   const [targetValue, setTargetValue] = useState(String(existingGoal?.targetValue || 30));
+  const [targetItemId, setTargetItemId] = useState(existingGoal?.targetItemId || "");
+  const [lessonOptions, setLessonOptions] = useState<Array<{ id: string; title: string; lessons: Array<{ id: string; title: string; type: string; sectionTitle: string }> }>>([]);
   const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (goalType !== "SPECIFIC_LESSON_COMPLETED") return;
+    getIncompleteEnrolledLessonsAction().then((res) => {
+      if (res.success && res.data) {
+        setLessonOptions(res.data);
+        if (!targetItemId) setTargetItemId(res.data[0]?.lessons[0]?.id || "");
+      }
+    });
+  }, [goalType, targetItemId]);
 
   function submitGoal() {
     setMessage("");
     startTransition(async () => {
       const payload = {
         goalType,
-        targetValue: Number(targetValue),
+        targetValue: goalType === "SPECIFIC_LESSON_COMPLETED" ? 1 : Number(targetValue),
         goalDate: date,
+        targetItemId: goalType === "SPECIFIC_LESSON_COMPLETED" ? targetItemId : undefined,
       };
 
       const res = existingGoal
@@ -237,28 +250,47 @@ function CalendarGoalForm({
             onChange={(event) => setGoalType(event.target.value as GoalType)}
             className="h-11 rounded-[12px] border-[#E9EAF0] text-sm focus:border-[#7872FD] focus:ring-[#7872FD]"
           >
-            {(["XP", "LEARNING_ITEMS_COMPLETED", "VIDEOS_COMPLETED", "QUIZZES_PASSED"] as const).map((type) => (
+            {(["XP", "LEARNING_ITEMS_COMPLETED", "VIDEOS_COMPLETED", "QUIZZES_PASSED", "ASSIGNMENTS_SUBMITTED", "SPECIFIC_LESSON_COMPLETED"] as const).map((type) => (
               <option key={type} value={type}>
                 {goalLabel(type)}
               </option>
             ))}
           </select>
         </label>
-        <label className="grid gap-2 text-sm font-medium text-[#4E5566]">
-          Target
-          <input
-            type="number"
-            min="1"
-            value={targetValue}
-            onChange={(event) => setTargetValue(event.target.value)}
-            className="h-11 rounded-[12px] border-[#E9EAF0] text-sm focus:border-[#7872FD] focus:ring-[#7872FD]"
-          />
-        </label>
+        {goalType === "SPECIFIC_LESSON_COMPLETED" ? (
+          <label className="grid gap-2 text-sm font-medium text-[#4E5566]">
+            Lesson
+            <select
+              value={targetItemId}
+              onChange={(event) => setTargetItemId(event.target.value)}
+              className="h-11 rounded-[12px] border-[#E9EAF0] text-sm focus:border-[#7872FD] focus:ring-[#7872FD]"
+            >
+              {lessonOptions.flatMap((course) =>
+                course.lessons.map((lesson) => (
+                  <option key={lesson.id} value={lesson.id}>
+                    {course.title} - {lesson.title}
+                  </option>
+                )),
+              )}
+            </select>
+          </label>
+        ) : (
+          <label className="grid gap-2 text-sm font-medium text-[#4E5566]">
+            Target
+            <input
+              type="number"
+              min="1"
+              value={targetValue}
+              onChange={(event) => setTargetValue(event.target.value)}
+              className="h-11 rounded-[12px] border-[#E9EAF0] text-sm focus:border-[#7872FD] focus:ring-[#7872FD]"
+            />
+          </label>
+        )}
       </div>
       <button
         type="button"
         onClick={submitGoal}
-        disabled={isPending || Number(targetValue) < 1}
+        disabled={isPending || (goalType === "SPECIFIC_LESSON_COMPLETED" ? !targetItemId : Number(targetValue) < 1)}
         className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#7872FD] text-sm font-semibold text-white transition hover:bg-[#5F58F0] disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isPending ? <Loader2 className="size-4 animate-spin" /> : null}

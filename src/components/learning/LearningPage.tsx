@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, CheckCircle2, Clock, FileText, Menu, PanelRightOpen, PlayCircle, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, ArrowRight, Clock, FileText, Menu, PanelRightOpen, PlayCircle, X } from "lucide-react";
 import type { LearningPageData } from "@/types/learning-page";
 import { formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { markItemAsCompleteAction } from "@/services/actions/learning";
+import { API_BASE_URL } from "@/lib/api-base";
 import { LearningArticleLesson } from "./LearningArticleLesson";
 import { LearningAssignmentLesson } from "./LearningAssignmentLesson";
 import { LearningCurriculumDrawer } from "./LearningCurriculumDrawer";
@@ -29,6 +30,20 @@ export function LearningPage({ data }: LearningPageProps) {
   });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [contentsOpen, setContentsOpen] = useState(true);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      fetch(`${API_BASE_URL}/api/v1/learning/activity`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ courseId: data.courseId, itemId: data.currentLesson.id, activeSeconds: 10 }),
+        keepalive: true,
+      }).catch(() => undefined);
+    }, 10000);
+
+    return () => window.clearInterval(interval);
+  }, [data.courseId, data.currentLesson.id]);
 
   const sections = useMemo(
     () =>
@@ -169,69 +184,6 @@ export function LearningPage({ data }: LearningPageProps) {
                 </div>
               </div>
 
-              <div className="mt-5 max-w-[916px]">
-                <nav className="border-y border-[#E9EAF0]">
-                  <div className="flex overflow-x-auto">
-                    {["Description", "Notes", "Resources"].map((tab, index) => (
-                      <a
-                        key={tab}
-                        href={`#${tab.toLowerCase()}`}
-                        className="relative flex h-[62px] min-w-[155px] items-center justify-center gap-2 px-5 text-sm font-medium text-[#4E5566]"
-                      >
-                        <span className={index === 0 ? "text-[#1D2026]" : ""}>{tab}</span>
-                        {index === 0 ? <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#7872FD]" /> : null}
-                      </a>
-                    ))}
-                  </div>
-                </nav>
-              </div>
-
-              <div className="mt-9 max-w-[916px] space-y-12">
-                <section id="description">
-                  <h3 className="text-2xl font-semibold text-[#1D2026]">Lecture Description</h3>
-                  <div className="mt-5 space-y-4 text-sm leading-6 text-[#4E5566]">
-                    {(data.courseDescription ? data.courseDescription.split(/\n{2,}|(?<=\.)\s+(?=[A-Z])/).filter(Boolean).slice(0, 3) : ["Continue this lesson and complete the learning activity to keep your progress synced."]).map((paragraph) => (
-                      <p key={paragraph}>{paragraph}</p>
-                    ))}
-                  </div>
-                </section>
-
-                <section id="notes">
-                  <div className="flex items-center justify-between gap-4">
-                    <h3 className="text-2xl font-semibold text-[#1D2026]">Lecture Notes</h3>
-                    <button type="button" className="inline-flex h-10 items-center gap-2 rounded-[18px] bg-[#EBEBFF] px-4 text-sm font-semibold text-[#7872FD]">
-                      <CheckCircle2 className="size-4" />
-                      Saved
-                    </button>
-                  </div>
-                  <div className="mt-5 space-y-4 text-sm leading-6 text-[#4E5566]">
-                    <p>Review the lesson, practice the core idea, then mark the lesson complete when you are ready.</p>
-                    <p>Use the course contents panel to jump between sections without leaving the learning flow.</p>
-                  </div>
-                </section>
-
-                <section id="resources">
-                  <h3 className="text-2xl font-semibold text-[#1D2026]">Resources</h3>
-                  <div className="mt-5 flex items-center justify-between gap-4 bg-[#F5F7FA] p-6">
-                    <div className="flex items-center gap-4">
-                      <span className="flex size-12 items-center justify-center bg-white text-[#7872FD]">
-                        <FileText className="size-6" />
-                      </span>
-                      <div>
-                        <h4 className="text-sm font-semibold text-[#1D2026]">{data.currentLesson.title}</h4>
-                        <p className="text-xs text-[#6E7485]">{data.currentLesson.type.toLowerCase()} lesson</p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={markCurrentComplete}
-                      className="h-12 rounded-[18px] bg-[#7872FD] px-6 text-sm font-semibold text-white"
-                    >
-                      Mark Complete
-                    </button>
-                  </div>
-                </section>
-              </div>
             </div>
           </main>
 

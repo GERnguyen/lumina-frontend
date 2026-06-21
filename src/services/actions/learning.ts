@@ -1,7 +1,9 @@
 "use server";
 
-import { AssignmentApi, DailyGoalApi, LearningProgressApi, QuizSessionApi } from "@/services/api/learning-api";
-import type { CreateAssignmentSubmissionRequest, ChooseQuizAnswerRequest, SetDailyGoalRequest, SubmitQuizSessionRequest } from "@/types";
+import { AssignmentApi, DailyGoalApi, LearningProgressApi, QuizSessionApi, VideoNoteApi } from "@/services/api/learning-api";
+import { CourseApi } from "@/services/api/course-api";
+import { EnrollmentApi } from "@/services/api/enrollment-api";
+import type { CreateAssignmentSubmissionRequest, CreateVideoNoteRequest, ChooseQuizAnswerRequest, SetDailyGoalRequest, SubmitQuizSessionRequest, UpdateVideoNoteRequest } from "@/types";
 import { revalidatePath } from "next/cache";
 
 export async function setDailyGoalAction(body: SetDailyGoalRequest) {
@@ -62,6 +64,44 @@ export async function getCourseProgressByCourseIdsAction(courseIds: string) {
   }
 }
 
+export async function getIncompleteEnrolledLessonsAction() {
+  try {
+    const enrolledRes = await EnrollmentApi.getEnrolledCourses({ page: 1, size: 50 });
+    const courses = enrolledRes.data || [];
+    const items = await Promise.all(
+      courses
+        .filter((course) => course.id)
+        .map(async (course) => {
+          const [curriculumRes, progressRes] = await Promise.all([
+            CourseApi.getReadableCurriculum(course.id!),
+            LearningProgressApi.getLearningItemProgressByCourseId(course.id!),
+          ]);
+          const completedIds = new Set((progressRes.data || []).filter((item) => item.itemId && item.isCompleted).map((item) => item.itemId as string));
+          const lessons =
+            curriculumRes.data?.sections?.flatMap((section) =>
+              (section.lessons || [])
+                .filter((lesson) => lesson.id && !completedIds.has(lesson.id))
+                .map((lesson) => ({
+                  id: lesson.id!,
+                  title: lesson.title || "Untitled lesson",
+                  type: lesson.lessonType || "VIDEO",
+                  sectionTitle: section.title || "Course section",
+                })),
+            ) || [];
+          return {
+            id: course.id!,
+            title: course.title || "Untitled course",
+            lessons,
+          };
+        }),
+    );
+
+    return { success: true, data: items.filter((course) => course.lessons.length) };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to load unfinished lessons" };
+  }
+}
+
 export async function createQuizSessionAction(courseId: string, lessonId: string) {
   try {
     const res = await QuizSessionApi.createQuizSession(courseId, lessonId);
@@ -115,5 +155,41 @@ export async function submitAssignmentAction(assignmentId: string, body: CreateA
     return { success: true, data: res.data };
   } catch (error: any) {
     return { success: false, error: error?.message || "Failed to submit assignment" };
+  }
+}
+
+export async function getVideoNotesByLessonAction(courseId: string, lessonId: string) {
+  try {
+    const res = await VideoNoteApi.getNotesByLesson(courseId, lessonId);
+    return { success: true, data: res.data || [] };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to load video notes" };
+  }
+}
+
+export async function createVideoNoteAction(courseId: string, lessonId: string, body: CreateVideoNoteRequest) {
+  try {
+    const res = await VideoNoteApi.createNote(courseId, lessonId, body);
+    return { success: true, data: res.data };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to create video note" };
+  }
+}
+
+export async function updateVideoNoteAction(noteId: string, body: UpdateVideoNoteRequest) {
+  try {
+    const res = await VideoNoteApi.updateNote(noteId, body);
+    return { success: true, data: res.data };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to update video note" };
+  }
+}
+
+export async function deleteVideoNoteAction(noteId: string) {
+  try {
+    await VideoNoteApi.deleteNote(noteId);
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to delete video note" };
   }
 }
