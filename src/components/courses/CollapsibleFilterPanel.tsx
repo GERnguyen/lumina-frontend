@@ -13,7 +13,7 @@ export function CollapsibleFilterPanel({ title, children }: CollapsibleFilterPan
   const [open, setOpen] = useState(true);
 
   return (
-    <section className="border border-[#E9EAF0] bg-white">
+    <section className="overflow-hidden rounded-[18px] border border-[#E9EAF0] bg-white">
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}

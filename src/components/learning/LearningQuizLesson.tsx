@@ -20,10 +20,13 @@ type LearningQuizLessonProps = {
   onComplete: (lessonId: string) => void;
 };
 
+type MatchingAnswer = Array<{ optionId: string; matchText: string }>;
+type QuizAnswerValue = string | string[] | MatchingAnswer;
+
 export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: LearningQuizLessonProps) {
   const [session, setSession] = useState<QuizSessionResponse>();
   const [questions, setQuestions] = useState<QuizSessionQuestionResponse[]>([]);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, QuizAnswerValue>>({});
   const [message, setMessage] = useState<string>();
   const [isResultOpen, setIsResultOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -32,14 +35,25 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
     return question.questionId || question.id || "";
   }
 
-  function encodeUserAnswer(answer: string) {
-    return JSON.stringify([answer]);
+  function getDefaultAnswer(question: QuizSessionQuestionResponse): QuizAnswerValue {
+    if (question.questionType === "ORDERING") return (question.options || []).map((option) => option.id || option.optionText || "").filter(Boolean);
+    if (question.questionType === "MULTI_CHOICE") return [];
+    if (question.questionType === "MATCHING") return [];
+    return "";
   }
 
-  function decodeUserAnswer(answer?: string) {
-    if (!answer) return "";
+  function encodeUserAnswer(question: QuizSessionQuestionResponse, answer: QuizAnswerValue) {
+    if (question.questionType === "MATCHING") return JSON.stringify(Array.isArray(answer) ? answer : []);
+    if (question.questionType === "ORDERING" || question.questionType === "MULTI_CHOICE") return JSON.stringify(Array.isArray(answer) ? answer : []);
+    return JSON.stringify([String(answer || "")]);
+  }
+
+  function decodeUserAnswer(question: QuizSessionQuestionResponse, answer?: string): QuizAnswerValue {
+    if (!answer) return getDefaultAnswer(question);
     try {
       const parsed = JSON.parse(answer);
+      if (question.questionType === "MATCHING") return Array.isArray(parsed) ? parsed : [];
+      if (question.questionType === "ORDERING" || question.questionType === "MULTI_CHOICE") return Array.isArray(parsed) ? parsed.map(String) : [];
       return Array.isArray(parsed) ? String(parsed[0] || "") : answer;
     } catch {
       return answer;
@@ -47,10 +61,10 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
   }
 
   function getInitialAnswers(nextQuestions: QuizSessionQuestionResponse[]) {
-    return nextQuestions.reduce<Record<string, string>>((acc, question) => {
+    return nextQuestions.reduce<Record<string, QuizAnswerValue>>((acc, question) => {
       const requestQuestionId = getRequestQuestionId(question);
-      if (requestQuestionId && question.userAnswer) {
-        acc[requestQuestionId] = decodeUserAnswer(question.userAnswer);
+      if (requestQuestionId) {
+        acc[requestQuestionId] = decodeUserAnswer(question, question.userAnswer);
       }
       return acc;
     }, {});
@@ -98,13 +112,13 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
     });
   }
 
-  function setAnswer(question: QuizSessionQuestionResponse, answer: string) {
+  function setAnswer(question: QuizSessionQuestionResponse, answer: QuizAnswerValue) {
     const requestQuestionId = getRequestQuestionId(question);
     if (!requestQuestionId) return;
 
     setAnswers((current) => ({ ...current, [requestQuestionId]: answer }));
     if (!session?.id) return;
-    chooseQuizAnswerAction(session.id, { questionId: requestQuestionId, userAnswer: encodeUserAnswer(answer) }).catch(() => undefined);
+    chooseQuizAnswerAction(session.id, { questionId: requestQuestionId, userAnswer: encodeUserAnswer(question, answer) }).catch(() => undefined);
   }
 
   function submitQuiz() {
@@ -116,7 +130,7 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
           .map((question) => {
             const questionId = getRequestQuestionId(question);
             const answer = answers[questionId];
-            return questionId && answer ? { questionId, userAnswer: encodeUserAnswer(answer) } : undefined;
+            return questionId && answer ? { questionId, userAnswer: encodeUserAnswer(question, answer) } : undefined;
           })
           .filter((answer): answer is { questionId: string; userAnswer: string } => Boolean(answer)),
       });
@@ -140,6 +154,35 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
   const score = typeof result?.score === "number" ? result.score : undefined;
   const correctAnswers = typeof result?.totalCorrectAnswers === "number" ? result.totalCorrectAnswers : undefined;
   const isPassed = typeof score === "number" ? score >= 5 : undefined;
+
+  function arrayAnswer(question: QuizSessionQuestionResponse) {
+    const value = answers[getRequestQuestionId(question)];
+    return Array.isArray(value) ? value.map((item) => (typeof item === "string" ? item : item.optionId)) : [];
+  }
+
+  function matchingAnswer(question: QuizSessionQuestionResponse): MatchingAnswer {
+    const value = answers[getRequestQuestionId(question)];
+    return Array.isArray(value) ? value.filter((item): item is { optionId: string; matchText: string } => typeof item === "object" && item !== null && "optionId" in item) : [];
+  }
+
+  function toggleMultiAnswer(question: QuizSessionQuestionResponse, optionId: string) {
+    const current = arrayAnswer(question);
+    setAnswer(question, current.includes(optionId) ? current.filter((item) => item !== optionId) : [...current, optionId]);
+  }
+
+  function setMatchingValue(question: QuizSessionQuestionResponse, optionId: string, matchText: string) {
+    const current = matchingAnswer(question).filter((item) => item.optionId !== optionId);
+    setAnswer(question, [...current, { optionId, matchText }]);
+  }
+
+  function moveOrderAnswer(question: QuizSessionQuestionResponse, fromIndex: number, direction: -1 | 1) {
+    const current = arrayAnswer(question);
+    const toIndex = fromIndex + direction;
+    if (toIndex < 0 || toIndex >= current.length) return;
+    const next = [...current];
+    [next[fromIndex], next[toIndex]] = [next[toIndex], next[fromIndex]];
+    setAnswer(question, next);
+  }
 
   return (
     <section className="rounded-[18px] border border-[#E9EAF0] bg-white p-6 shadow-[0_18px_48px_rgba(29,32,38,0.06)] lg:p-8">
@@ -176,17 +219,69 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
               <p className="text-sm font-bold uppercase tracking-[0.08em] text-[#8C94A3]">Question {index + 1}</p>
               <h3 className="mt-2 text-lg font-bold text-[#1D2026]">{question.questionText || "Untitled question"}</h3>
 
-              {question.options?.length ? (
+              {question.questionType === "SHORT_TEXT" ? (
+                <textarea
+                  value={String(answers[getRequestQuestionId(question)] || "")}
+                  onChange={(event) => setAnswer(question, event.target.value)}
+                  className="mt-4 min-h-32 w-full rounded-[16px] border border-[#E9EAF0] px-4 py-3 text-sm font-medium outline-none transition focus:border-[#564FFD]"
+                  placeholder="Type your answer"
+                />
+              ) : question.questionType === "MATCHING" ? (
+                <div className="mt-4 grid gap-3">
+                  {(question.options || [])
+                    .filter((option) => option.side !== "RIGHT")
+                    .map((option) => {
+                      const value = option.id || "";
+                      const rightOptions = (question.options || []).filter((item) => item.side === "RIGHT").map((item) => item.optionText || "");
+                      const current = matchingAnswer(question).find((item) => item.optionId === value)?.matchText || "";
+                      return (
+                        <div key={value || option.optionText} className="grid gap-3 rounded-[16px] border border-[#E9EAF0] p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                          <div className="rounded-[12px] bg-[#F9FAFB] px-4 py-3 text-sm font-semibold text-[#1D2026]">{option.optionText || "Match item"}</div>
+                          <select
+                            value={current}
+                            onChange={(event) => setMatchingValue(question, value, event.target.value)}
+                            className="h-12 rounded-[12px] border border-[#E9EAF0] bg-white px-4 text-sm font-semibold text-[#1D2026] outline-none transition focus:border-[#564FFD]"
+                          >
+                            <option value="">Choose match</option>
+                            {rightOptions.map((item) => (
+                              <option key={item} value={item}>
+                                {item}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      );
+                    })}
+                </div>
+              ) : question.questionType === "ORDERING" ? (
+                <div className="mt-4 grid gap-3">
+                  {arrayAnswer(question).map((optionId, optionIndex) => {
+                    const option = (question.options || []).find((item) => (item.id || item.optionText) === optionId);
+                    return (
+                      <div key={`${optionId}-${optionIndex}`} className="flex items-center gap-3 rounded-[16px] border border-[#E9EAF0] p-3">
+                        <span className="inline-flex size-9 items-center justify-center rounded-full bg-[#EBEBFF] text-sm font-black text-[#564FFD]">{optionIndex + 1}</span>
+                        <p className="min-w-0 flex-1 text-sm font-semibold text-[#1D2026]">{option?.optionText || optionId}</p>
+                        <button type="button" onClick={() => moveOrderAnswer(question, optionIndex, -1)} className="rounded-full px-3 py-2 text-xs font-bold text-[#564FFD] hover:bg-[#F7F7FF]">
+                          Up
+                        </button>
+                        <button type="button" onClick={() => moveOrderAnswer(question, optionIndex, 1)} className="rounded-full px-3 py-2 text-xs font-bold text-[#564FFD] hover:bg-[#F7F7FF]">
+                          Down
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : question.options?.length ? (
                 <div className="mt-4 grid gap-3">
                   {question.options.map((option) => {
                     const value = option.id || option.optionText || "";
                     const requestQuestionId = getRequestQuestionId(question);
-                    const isSelected = answers[requestQuestionId] === value;
+                    const isSelected = question.questionType === "MULTI_CHOICE" ? arrayAnswer(question).includes(value) : answers[requestQuestionId] === value;
                     return (
                       <button
                         key={value}
                         type="button"
-                        onClick={() => setAnswer(question, value)}
+                        onClick={() => (question.questionType === "MULTI_CHOICE" ? toggleMultiAnswer(question, value) : setAnswer(question, value))}
                         className={cn(
                           "rounded-[16px] border px-4 py-3 text-left text-sm font-semibold transition",
                           isSelected ? "border-[#564FFD] bg-[#EBEBFF] text-[#1D2026]" : "border-[#E9EAF0] text-[#4E5566] hover:border-[#D8D6FF] hover:bg-[#F9FAFB]"
@@ -199,7 +294,7 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
                 </div>
               ) : (
                 <textarea
-                  value={answers[getRequestQuestionId(question)] || ""}
+                  value={String(answers[getRequestQuestionId(question)] || "")}
                   onChange={(event) => setAnswer(question, event.target.value)}
                   className="mt-4 min-h-32 w-full rounded-[16px] border border-[#E9EAF0] px-4 py-3 text-sm font-medium outline-none transition focus:border-[#564FFD]"
                   placeholder="Type your answer"

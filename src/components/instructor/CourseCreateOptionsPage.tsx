@@ -39,12 +39,16 @@ import {
   CourseUploadService,
   LessonService,
   QuizLessonService,
+  QuizQuestionService,
   SectionService,
+  VideoQuestionService,
   VideoLessonService,
 } from "@/services/courseService";
 
 type LessonType = "VIDEO" | "ARTICLE" | "QUIZ" | "ASSIGNMENT";
 type StepId = "basics" | "pricing" | "curriculum" | "content" | "media" | "review";
+type QuizQuestionType = "SINGLE_CHOICE" | "MULTI_CHOICE" | "SHORT_TEXT" | "ORDERING" | "MATCHING";
+type QuizScoringMethod = "ALL_OR_NOTHING" | "PARTIAL_CREDIT" | "NEGATIVE_MARK";
 
 type Lesson = {
   id: string;
@@ -97,6 +101,7 @@ type LessonContent = {
   videoFileSize?: string;
   videoFileType?: string;
   videoDescription?: string;
+  videoQuestions?: VideoCheckpointQuestion[];
   articleFile?: File;
   articleFileKey?: string;
   articleFileName?: string;
@@ -115,9 +120,32 @@ type LessonContent = {
 
 type QuizQuestion = {
   id: string;
+  serverId?: string;
   prompt: string;
-  options: string[];
-  answerIndex: number;
+  questionType: QuizQuestionType;
+  scoringMethod: QuizScoringMethod;
+  options: Array<{
+    id: string;
+    serverId?: string;
+    text: string;
+    isCorrect: boolean;
+    order: number;
+    matchText?: string;
+  }>;
+};
+
+type VideoCheckpointQuestion = {
+  id: string;
+  serverId?: string;
+  prompt: string;
+  questionType: "SINGLE_CHOICE" | "MULTI_CHOICE";
+  timestampSeconds: number;
+  options: Array<{
+    id: string;
+    serverId?: string;
+    text: string;
+    isCorrect: boolean;
+  }>;
 };
 
 const shellUser = {
@@ -767,14 +795,83 @@ function CurriculumStep({
   );
 }
 
+function createQuizOption(text: string, index: number, isCorrect = false, matchText?: string) {
+  return {
+    id: `option-${Date.now()}-${index}-${Math.random().toString(16).slice(2)}`,
+    text,
+    isCorrect,
+    order: index,
+    matchText,
+  };
+}
+
+function createDefaultQuizOptions(type: QuizQuestionType): QuizQuestion["options"] {
+  if (type === "SHORT_TEXT") return [createQuizOption("Accepted answer", 0, true)];
+  if (type === "MATCHING") {
+    return [
+      createQuizOption("Concept A", 0, true, "Definition A"),
+      createQuizOption("Concept B", 1, true, "Definition B"),
+    ];
+  }
+  if (type === "ORDERING") {
+    return [
+      createQuizOption("First step", 0, true),
+      createQuizOption("Second step", 1, true),
+      createQuizOption("Third step", 2, true),
+    ];
+  }
+  return [
+    createQuizOption("Correct option", 0, true),
+    createQuizOption("Distractor option", 1),
+    createQuizOption("Another distractor", 2),
+    createQuizOption("Last distractor", 3),
+  ];
+}
+
+function createQuizQuestion(type: QuizQuestionType = "SINGLE_CHOICE"): QuizQuestion {
+  return {
+    id: `question-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    prompt: "New quiz question",
+    questionType: type,
+    scoringMethod: type === "MULTI_CHOICE" ? "PARTIAL_CREDIT" : "ALL_OR_NOTHING",
+    options: createDefaultQuizOptions(type),
+  };
+}
+
 const defaultQuizQuestions: QuizQuestion[] = [
   {
+    ...createQuizQuestion("SINGLE_CHOICE"),
     id: "question-1",
     prompt: "What is the main outcome learners should achieve in this lesson?",
-    options: ["Understand the concept", "Skip the practice", "Disable validation", "Ignore the learning goal"],
-    answerIndex: 0,
+    options: [
+      createQuizOption("Understand the concept", 0, true),
+      createQuizOption("Skip the practice", 1),
+      createQuizOption("Disable validation", 2),
+      createQuizOption("Ignore the learning goal", 3),
+    ],
   },
 ];
+
+function createVideoCheckpointOption(text: string, index: number, isCorrect = false): VideoCheckpointQuestion["options"][number] {
+  return {
+    id: `video-option-${Date.now()}-${index}-${Math.random().toString(16).slice(2)}`,
+    text,
+    isCorrect,
+  };
+}
+
+function createVideoCheckpointQuestion(): VideoCheckpointQuestion {
+  return {
+    id: `video-question-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    prompt: "New video checkpoint question",
+    questionType: "SINGLE_CHOICE",
+    timestampSeconds: 30,
+    options: [
+      createVideoCheckpointOption("Correct answer", 0, true),
+      createVideoCheckpointOption("Wrong answer", 1),
+    ],
+  };
+}
 
 function formatBytes(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -869,6 +966,67 @@ async function uploadFileWithPresignedUrl(file: File) {
   }
 }
 
+function normalizeVideoCheckpointQuestion(question: VideoCheckpointQuestion) {
+  const options = question.options.length ? question.options : [
+    createVideoCheckpointOption("Correct answer", 0, true),
+    createVideoCheckpointOption("Wrong answer", 1),
+  ];
+  const normalizedOptions = options.map((option) => ({
+    id: option.serverId,
+    optionText: option.text || "Option",
+    isCorrect: Boolean(option.isCorrect),
+  }));
+
+  if (question.questionType === "SINGLE_CHOICE" && !normalizedOptions.some((option) => option.isCorrect)) {
+    normalizedOptions[0].isCorrect = true;
+  }
+
+  return {
+    questionText: question.prompt || "Video checkpoint question",
+    questionType: question.questionType,
+    timestampSeconds: Math.max(0, Number(question.timestampSeconds) || 0),
+    options: normalizedOptions,
+  };
+}
+
+async function syncVideoCheckpointQuestions(courseId: string, lessonId: string, questions: VideoCheckpointQuestion[]) {
+  const existingResponse = await VideoQuestionService.getQuestionsByLessonId({ courseId, lessonId }).catch(() => undefined);
+  const existingQuestions = existingResponse?.data || [];
+  const nextServerIds = new Set(questions.map((question) => question.serverId).filter(Boolean));
+
+  for (const existing of existingQuestions) {
+    if (existing.id && !nextServerIds.has(existing.id)) {
+      await VideoQuestionService.deleteQuestion({ courseId, lessonId, id: existing.id }).catch(() => undefined);
+    }
+  }
+
+  for (const question of questions) {
+    const body = normalizeVideoCheckpointQuestion(question);
+    if (!question.serverId) {
+      await VideoQuestionService.createQuestion({ courseId, lessonId, body });
+      continue;
+    }
+
+    const existing = existingQuestions.find((item) => item.id === question.serverId);
+    if (existing?.questionType && existing.questionType !== question.questionType) {
+      await VideoQuestionService.deleteQuestion({ courseId, lessonId, id: question.serverId }).catch(() => undefined);
+      await VideoQuestionService.createQuestion({ courseId, lessonId, body });
+      continue;
+    }
+
+    await VideoQuestionService.updateQuestion({
+      courseId,
+      lessonId,
+      id: question.serverId,
+      body: {
+        questionText: body.questionText,
+        timestampSeconds: body.timestampSeconds,
+        options: body.options,
+      },
+    });
+  }
+}
+
 async function upsertVideoLessonContent(courseId: string, lesson: Lesson, lessonId: string, isExistingLesson: boolean) {
   const content = getLessonContent(lesson);
   let fileKey = content.videoFileKey;
@@ -891,6 +1049,7 @@ async function upsertVideoLessonContent(courseId: string, lesson: Lesson, lesson
   if (isExistingLesson) {
     try {
       await VideoLessonService.updateVideoLesson({ courseId, lessonId, body });
+      await syncVideoCheckpointQuestions(courseId, lessonId, content.videoQuestions || []);
       return;
     } catch (error) {
       if (!isNotFoundError(error)) throw error;
@@ -898,6 +1057,7 @@ async function upsertVideoLessonContent(courseId: string, lesson: Lesson, lesson
   }
 
   await VideoLessonService.createVideoLesson({ courseId, lessonId, body });
+  await syncVideoCheckpointQuestions(courseId, lessonId, content.videoQuestions || []);
 }
 
 async function upsertArticleLessonContent(courseId: string, lesson: Lesson, lessonId: string, isExistingLesson: boolean) {
@@ -936,6 +1096,73 @@ async function upsertArticleLessonContent(courseId: string, lesson: Lesson, less
   await ArticleLessonService.createArticleLesson({ courseId, lessonId, body });
 }
 
+function normalizeQuizQuestion(question: QuizQuestion) {
+  const options = question.options.length ? question.options : createDefaultQuizOptions(question.questionType);
+  const normalizedOptions = options.map((option, index) => {
+    const isCorrect =
+      question.questionType === "ORDERING" || question.questionType === "MATCHING"
+        ? true
+        : option.isCorrect;
+
+    return {
+      id: option.serverId,
+      optionText: option.text || `Option ${index + 1}`,
+      isCorrect,
+      optionOrder: index,
+      matchText: question.questionType === "MATCHING" ? option.matchText || "" : undefined,
+    };
+  });
+
+  if (question.questionType === "SINGLE_CHOICE" && !normalizedOptions.some((option) => option.isCorrect)) {
+    normalizedOptions[0].isCorrect = true;
+  }
+
+  return {
+    questionText: question.prompt || "Untitled question",
+    questionType: question.questionType,
+    scoringMethod: question.scoringMethod,
+    options: normalizedOptions,
+  };
+}
+
+async function syncExistingQuizQuestions(courseId: string, lessonId: string, questions: QuizQuestion[]) {
+  const existingResponse = await QuizQuestionService.getQuestions({ courseId, lessonId }).catch(() => undefined);
+  const existingQuestions = existingResponse?.data || [];
+  const nextServerIds = new Set(questions.map((question) => question.serverId).filter(Boolean));
+
+  for (const existing of existingQuestions) {
+    if (existing.id && !nextServerIds.has(existing.id)) {
+      await QuizQuestionService.deleteQuestion_1({ courseId, lessonId, questionId: existing.id }).catch(() => undefined);
+    }
+  }
+
+  for (const question of questions) {
+    const body = normalizeQuizQuestion(question);
+    if (!question.serverId) {
+      await QuizQuestionService.addQuestion({ courseId, lessonId, body });
+      continue;
+    }
+
+    const existing = existingQuestions.find((item) => item.id === question.serverId);
+    if (existing?.questionType && existing.questionType !== question.questionType) {
+      await QuizQuestionService.deleteQuestion_1({ courseId, lessonId, questionId: question.serverId }).catch(() => undefined);
+      await QuizQuestionService.addQuestion({ courseId, lessonId, body });
+      continue;
+    }
+
+    await QuizQuestionService.updateQuestion_1({
+      courseId,
+      lessonId,
+      questionId: question.serverId,
+      body: {
+        questionText: body.questionText,
+        scoringMethod: body.scoringMethod,
+        options: body.options,
+      },
+    });
+  }
+}
+
 async function upsertQuizLessonContent(courseId: string, lesson: Lesson, lessonId: string, isExistingLesson: boolean) {
   const content = getLessonContent(lesson);
   const questions = content.quizQuestions?.length ? content.quizQuestions : defaultQuizQuestions;
@@ -953,6 +1180,7 @@ async function upsertQuizLessonContent(courseId: string, lesson: Lesson, lessonI
   if (isExistingLesson) {
     try {
       await QuizLessonService.updateQuizSettings({ courseId, lessonId, body: settings });
+      await syncExistingQuizQuestions(courseId, lessonId, questions);
       await QuizLessonService.syncQuiz({
         courseId,
         lessonId,
@@ -969,16 +1197,7 @@ async function upsertQuizLessonContent(courseId: string, lesson: Lesson, lessonI
     lessonId,
     body: {
       ...settings,
-      questions: questions.map((question) => ({
-        questionText: question.prompt,
-        questionType: "SINGLE_CHOICE",
-        scoringMethod: "ALL_OR_NOTHING",
-        options: question.options.map((option, index) => ({
-          optionText: option,
-          isCorrect: question.answerIndex === index,
-          optionOrder: index,
-        })),
-      })),
+      questions: questions.map(normalizeQuizQuestion),
     },
   });
 }
@@ -1075,6 +1294,35 @@ function LessonTypePicker({ lesson, patchLesson }: { lesson: Lesson; patchLesson
 }
 
 function VideoLessonEditor({ content, patchContent }: { content: LessonContent; patchContent: (patch: Partial<LessonContent>) => void }) {
+  const videoQuestions = content.videoQuestions || [];
+
+  function patchVideoQuestions(nextQuestions: VideoCheckpointQuestion[]) {
+    patchContent({ videoQuestions: nextQuestions });
+  }
+
+  function patchVideoQuestion(questionId: string, patch: Partial<VideoCheckpointQuestion>) {
+    patchVideoQuestions(videoQuestions.map((question) => (question.id === questionId ? { ...question, ...patch } : question)));
+  }
+
+  function patchVideoQuestionOption(questionId: string, optionId: string, patch: Partial<VideoCheckpointQuestion["options"][number]>) {
+    patchVideoQuestions(
+      videoQuestions.map((question) =>
+        question.id === questionId
+          ? { ...question, options: question.options.map((option) => (option.id === optionId ? { ...option, ...patch } : option)) }
+          : question,
+      ),
+    );
+  }
+
+  function toggleVideoCorrect(question: VideoCheckpointQuestion, optionId: string) {
+    patchVideoQuestion(question.id, {
+      options: question.options.map((option) => ({
+        ...option,
+        isCorrect: question.questionType === "SINGLE_CHOICE" ? option.id === optionId : option.id === optionId ? !option.isCorrect : option.isCorrect,
+      })),
+    });
+  }
+
   return (
     <div className="space-y-5">
       <label className="flex min-h-[520px] cursor-pointer flex-col items-center justify-center rounded-[18px] border border-dashed border-[#C6CAD1] bg-[#FCFCFD] p-10 text-center transition hover:border-[#564FFD] hover:bg-[#F8F8FF]">
@@ -1117,6 +1365,97 @@ function VideoLessonEditor({ content, patchContent }: { content: LessonContent; 
         <div className="rounded-[18px] bg-[#111033] p-5 text-white">
           <p className="text-sm text-white/65">Video tips</p>
           <p className="mt-3 text-sm leading-6 text-white/75">Use clear audio, a steady pace, and a short recap at the end.</p>
+        </div>
+      </div>
+
+      <div className="rounded-[18px] border border-[#E9EAF0] bg-white p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h4 className="text-lg font-semibold text-[#1D2026]">Video checkpoint quizzes</h4>
+            <p className="mt-1 text-sm text-[#6E7485]">Pause the video at a timestamp until learners answer correctly.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => patchVideoQuestions([...videoQuestions, createVideoCheckpointQuestion()])}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-[14px] bg-[#564FFD] px-4 text-sm font-semibold text-white"
+          >
+            <Plus className="size-4" />
+            Add checkpoint
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-4">
+          {videoQuestions.map((question, questionIndex) => (
+            <article key={question.id} className="rounded-[16px] border border-[#E9EAF0] bg-[#FCFCFD] p-4">
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_160px_180px_auto]">
+                <input
+                  value={question.prompt}
+                  onChange={(event) => patchVideoQuestion(question.id, { prompt: event.target.value })}
+                  className="h-12 rounded-[14px] border border-[#E9EAF0] bg-white px-4 text-sm font-semibold text-[#1D2026] outline-none focus:border-[#564FFD]"
+                  placeholder={`Checkpoint question ${questionIndex + 1}`}
+                />
+                <input
+                  type="number"
+                  min={0}
+                  value={question.timestampSeconds}
+                  onChange={(event) => patchVideoQuestion(question.id, { timestampSeconds: Number(event.target.value) || 0 })}
+                  className="h-12 rounded-[14px] border border-[#E9EAF0] bg-white px-4 text-sm font-semibold text-[#1D2026] outline-none focus:border-[#564FFD]"
+                  placeholder="Seconds"
+                />
+                <select
+                  value={question.questionType}
+                  onChange={(event) => patchVideoQuestion(question.id, { questionType: event.target.value as "SINGLE_CHOICE" | "MULTI_CHOICE" })}
+                  className="h-12 rounded-[14px] border border-[#E9EAF0] bg-white px-4 text-sm font-semibold text-[#1D2026] outline-none focus:border-[#564FFD]"
+                >
+                  <option value="SINGLE_CHOICE">Single choice</option>
+                  <option value="MULTI_CHOICE">Multiple choice</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={() => patchVideoQuestions(videoQuestions.filter((item) => item.id !== question.id))}
+                  className="inline-flex size-12 items-center justify-center rounded-[14px] text-[#A1A5B3] transition hover:bg-[#FFF5F0] hover:text-[#E34444]"
+                  aria-label="Delete checkpoint"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {question.options.map((option, optionIndex) => (
+                  <label key={option.id} className={cn("flex items-center gap-3 rounded-[14px] border bg-white p-3", option.isCorrect ? "border-[#D8D6FF]" : "border-[#E9EAF0]")}>
+                    <button
+                      type="button"
+                      onClick={() => toggleVideoCorrect(question, option.id)}
+                      className={cn("flex size-7 shrink-0 items-center justify-center rounded-full border", option.isCorrect ? "border-[#564FFD] bg-[#564FFD] text-white" : "border-[#CED1D9]")}
+                    >
+                      {option.isCorrect ? <CheckCircle2 className="size-4" /> : null}
+                    </button>
+                    <input
+                      value={option.text}
+                      onChange={(event) => patchVideoQuestionOption(question.id, option.id, { text: event.target.value })}
+                      className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[#1D2026] outline-none"
+                      placeholder={`Option ${optionIndex + 1}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => patchVideoQuestion(question.id, { options: question.options.filter((item) => item.id !== option.id) })}
+                      className="rounded-full p-2 text-[#A1A5B3] transition hover:bg-[#FFF5F0] hover:text-[#E34444]"
+                      aria-label="Delete option"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </label>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => patchVideoQuestion(question.id, { options: [...question.options, createVideoCheckpointOption(`Option ${question.options.length + 1}`, question.options.length)] })}
+                className="mt-3 inline-flex h-10 items-center gap-2 rounded-[14px] border border-[#D8D6FF] px-4 text-sm font-semibold text-[#564FFD]"
+              >
+                <Plus className="size-4" />
+                Add option
+              </button>
+            </article>
+          ))}
         </div>
       </div>
     </div>
@@ -1203,33 +1542,58 @@ function ArticleLessonEditor({
 
 function QuizLessonEditor({ content, patchContent }: { content: LessonContent; patchContent: (patch: Partial<LessonContent>) => void }) {
   const questions = content.quizQuestions?.length ? content.quizQuestions : defaultQuizQuestions;
+  const quizTypes: Array<{ value: QuizQuestionType; label: string }> = [
+    { value: "SINGLE_CHOICE", label: "Single choice" },
+    { value: "MULTI_CHOICE", label: "Multiple choice" },
+    { value: "MATCHING", label: "Matching" },
+    { value: "ORDERING", label: "Ordering" },
+    { value: "SHORT_TEXT", label: "Short answer" },
+  ];
 
   function patchQuestion(questionId: string, patch: Partial<QuizQuestion>) {
     patchContent({ quizQuestions: questions.map((question) => (question.id === questionId ? { ...question, ...patch } : question)) });
   }
 
-  function patchOption(questionId: string, optionIndex: number, value: string) {
+  function changeQuestionType(question: QuizQuestion, questionType: QuizQuestionType) {
+    patchQuestion(question.id, {
+      questionType,
+      scoringMethod: questionType === "MULTI_CHOICE" ? "PARTIAL_CREDIT" : "ALL_OR_NOTHING",
+      options: createDefaultQuizOptions(questionType),
+    });
+  }
+
+  function patchOption(questionId: string, optionId: string, patch: Partial<QuizQuestion["options"][number]>) {
     patchContent({
       quizQuestions: questions.map((question) =>
         question.id === questionId
-          ? { ...question, options: question.options.map((option, index) => (index === optionIndex ? value : option)) }
+          ? { ...question, options: question.options.map((option) => (option.id === optionId ? { ...option, ...patch } : option)) }
           : question,
       ),
     });
   }
 
-  function addQuestion() {
-    patchContent({
-      quizQuestions: [
-        ...questions,
-        {
-          id: `question-${Date.now()}`,
-          prompt: "New quiz question",
-          options: ["Option A", "Option B", "Option C", "Option D"],
-          answerIndex: 0,
-        },
-      ],
+  function toggleCorrect(question: QuizQuestion, optionId: string) {
+    patchQuestion(question.id, {
+      options: question.options.map((option) => ({
+        ...option,
+        isCorrect: question.questionType === "SINGLE_CHOICE" ? option.id === optionId : option.id === optionId ? !option.isCorrect : option.isCorrect,
+      })),
     });
+  }
+
+  function addOption(question: QuizQuestion) {
+    patchQuestion(question.id, {
+      options: [...question.options, createQuizOption(`Option ${question.options.length + 1}`, question.options.length, question.questionType === "MATCHING", question.questionType === "MATCHING" ? `Match ${question.options.length + 1}` : undefined)],
+    });
+  }
+
+  function deleteOption(question: QuizQuestion, optionId: string) {
+    const nextOptions = question.options.filter((option) => option.id !== optionId).map((option, index) => ({ ...option, order: index }));
+    patchQuestion(question.id, { options: nextOptions.length ? nextOptions : createDefaultQuizOptions(question.questionType) });
+  }
+
+  function addQuestion() {
+    patchContent({ quizQuestions: [...questions, createQuizQuestion("SINGLE_CHOICE")] });
   }
 
   function deleteQuestion(questionId: string) {
@@ -1269,42 +1633,109 @@ function QuizLessonEditor({ content, patchContent }: { content: LessonContent; p
               <Trash2 className="size-4" />
             </button>
           </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
+
+          <div className="mt-4 grid gap-3 lg:grid-cols-[220px_220px_minmax(0,1fr)]">
+            <label className="block">
+              <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[#8C94A3]">Question type</span>
+              <select
+                value={question.questionType}
+                onChange={(event) => changeQuestionType(question, event.target.value as QuizQuestionType)}
+                className="mt-2 h-12 w-full rounded-[14px] border border-[#E9EAF0] bg-white px-3 text-sm font-semibold text-[#1D2026] outline-none transition focus:border-[#564FFD]"
+              >
+                {quizTypes.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[#8C94A3]">Scoring</span>
+              <select
+                value={question.scoringMethod}
+                onChange={(event) => patchQuestion(question.id, { scoringMethod: event.target.value as QuizScoringMethod })}
+                className="mt-2 h-12 w-full rounded-[14px] border border-[#E9EAF0] bg-white px-3 text-sm font-semibold text-[#1D2026] outline-none transition focus:border-[#564FFD]"
+              >
+                <option value="ALL_OR_NOTHING">All or nothing</option>
+                <option value="PARTIAL_CREDIT">Partial credit</option>
+                <option value="NEGATIVE_MARK">Negative mark</option>
+              </select>
+            </label>
+            <div className="rounded-[14px] bg-[#FCFCFD] px-4 py-3 text-sm leading-6 text-[#6E7485]">
+              {question.questionType === "MATCHING"
+                ? "Learners pair each left item with the matching text."
+                : question.questionType === "ORDERING"
+                  ? "Learners arrange these options in the order shown here."
+                  : question.questionType === "SHORT_TEXT"
+                    ? "Each option is an accepted text answer."
+                    : "Mark the correct option choices below."}
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3">
             {question.options.map((option, optionIndex) => {
-              const selected = question.answerIndex === optionIndex;
+              const lockedCorrect = question.questionType === "MATCHING" || question.questionType === "ORDERING";
+              const correct = lockedCorrect || option.isCorrect;
 
               return (
-                <label
-                  key={`${question.id}-${optionIndex}`}
+                <div
+                  key={option.id}
                   className={cn(
-                    "group flex items-center gap-3 rounded-[14px] border bg-[#FCFCFD] p-3 transition focus-within:border-[#564FFD] focus-within:bg-white focus-within:outline-none",
-                    selected ? "border-[#564FFD] bg-[#F8F8FF]" : "border-[#E9EAF0] hover:border-[#D8D6FF]",
+                    "grid gap-3 rounded-[14px] border bg-[#FCFCFD] p-3 transition focus-within:border-[#564FFD] focus-within:bg-white",
+                    question.questionType === "MATCHING" ? "md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" : "md:grid-cols-[auto_minmax(0,1fr)_auto]",
+                    correct ? "border-[#D8D6FF]" : "border-[#E9EAF0]",
                   )}
                 >
+                  {question.questionType !== "MATCHING" ? (
+                    <button
+                      type="button"
+                      onClick={() => !lockedCorrect && toggleCorrect(question, option.id)}
+                      className={cn(
+                        "flex size-9 items-center justify-center rounded-full border transition",
+                        correct ? "border-[#564FFD] bg-[#564FFD] text-white" : "border-[#CED1D9] bg-white text-transparent",
+                      )}
+                      aria-label={`Mark option ${optionIndex + 1} as correct`}
+                    >
+                      <CheckCircle2 className="size-5" />
+                    </button>
+                  ) : null}
                   <input
-                    type="radio"
-                    checked={selected}
-                    onChange={() => patchQuestion(question.id, { answerIndex: optionIndex })}
-                    tabIndex={-1}
-                    className="hidden"
+                    value={option.text}
+                    onChange={(event) => patchOption(question.id, option.id, { text: event.target.value })}
+                    placeholder={question.questionType === "SHORT_TEXT" ? "Accepted answer" : `Option ${optionIndex + 1}`}
+                    className="min-w-0 rounded-[12px] border border-transparent bg-transparent px-3 py-2 text-sm font-medium text-[#1D2026] outline-none transition focus:border-[#D8D6FF] focus:bg-white"
                   />
-                  <span
-                    className={cn(
-                      "flex size-6 shrink-0 items-center justify-center rounded-full border transition",
-                      selected ? "border-[#564FFD] bg-[#564FFD]" : "border-[#CED1D9] bg-white group-focus-within:border-[#564FFD]",
-                    )}
+                  {question.questionType === "MATCHING" ? (
+                    <input
+                      value={option.matchText || ""}
+                      onChange={(event) => patchOption(question.id, option.id, { matchText: event.target.value, isCorrect: true })}
+                      placeholder="Matching text"
+                      className="min-w-0 rounded-[12px] border border-transparent bg-transparent px-3 py-2 text-sm font-medium text-[#1D2026] outline-none transition focus:border-[#D8D6FF] focus:bg-white"
+                    />
+                  ) : question.questionType === "ORDERING" ? (
+                    <span className="inline-flex h-10 items-center justify-center rounded-[12px] bg-[#EBEBFF] px-3 text-xs font-bold text-[#564FFD]">
+                      Order {optionIndex + 1}
+                    </span>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => deleteOption(question, option.id)}
+                    className="inline-flex size-10 items-center justify-center rounded-[12px] text-[#A1A5B3] transition hover:bg-[#FFF5F0] hover:text-[#E34444]"
+                    aria-label={`Delete option ${optionIndex + 1}`}
                   >
-                    {selected ? <CheckCircle2 className="size-4 text-white" /> : null}
-                  </span>
-                  <input
-                    value={option}
-                    onFocus={() => patchQuestion(question.id, { answerIndex: optionIndex })}
-                    onChange={(event) => patchOption(question.id, optionIndex, event.target.value)}
-                    className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-medium text-[#1D2026] outline-none ring-0 transition focus:border-0 focus:outline-none focus:ring-0 focus-visible:outline-none"
-                  />
-                </label>
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
               );
             })}
+            <button
+              type="button"
+              onClick={() => addOption(question)}
+              className="inline-flex h-11 w-fit items-center gap-2 rounded-[14px] border border-[#D8D6FF] px-4 text-sm font-semibold text-[#564FFD] transition hover:bg-[#F7F7FF]"
+            >
+              <Plus className="size-4" />
+              Add option
+            </button>
           </div>
         </article>
       ))}
@@ -1837,6 +2268,74 @@ function mapCurriculumSections(sections: NonNullable<Awaited<ReturnType<typeof C
   }));
 }
 
+function mapApiQuizQuestions(items: NonNullable<Awaited<ReturnType<typeof QuizQuestionService.getQuestions>>["data"]>): QuizQuestion[] {
+  return (items || []).map((question, questionIndex) => ({
+    id: question.id || `question-${questionIndex}`,
+    serverId: question.id,
+    prompt: question.questionText || `Question ${questionIndex + 1}`,
+    questionType: (question.questionType === "ESSAY" ? "SHORT_TEXT" : question.questionType || "SINGLE_CHOICE") as QuizQuestionType,
+    scoringMethod: question.scoringMethod || "ALL_OR_NOTHING",
+    options: question.options?.length
+      ? question.options.map((option, optionIndex) => ({
+          id: option.id || `option-${questionIndex}-${optionIndex}`,
+          serverId: option.id,
+          text: option.optionText || "",
+          isCorrect: Boolean(option.isCorrect),
+          order: option.optionOrder ?? optionIndex,
+          matchText: option.matchText || "",
+        }))
+      : createDefaultQuizOptions((question.questionType === "ESSAY" ? "SHORT_TEXT" : question.questionType || "SINGLE_CHOICE") as QuizQuestionType),
+  }));
+}
+
+async function hydrateQuizQuestionContent(courseId: string, sections: Section[]) {
+  return Promise.all(
+    sections.map(async (section) => ({
+      ...section,
+      lessons: await Promise.all(
+        section.lessons.map(async (lesson) => {
+          if (lesson.type !== "QUIZ" || !lesson.serverId) return lesson;
+          const response = await QuizQuestionService.getQuestions({ courseId, lessonId: lesson.serverId }).catch(() => undefined);
+          const quizQuestions = response?.data ? mapApiQuizQuestions(response.data) : [];
+          return quizQuestions.length ? { ...lesson, content: { ...lesson.content, quizQuestions } } : lesson;
+        }),
+      ),
+    })),
+  );
+}
+
+function mapApiVideoQuestions(items: NonNullable<Awaited<ReturnType<typeof VideoQuestionService.getQuestionsByLessonId>>["data"]>): VideoCheckpointQuestion[] {
+  return (items || []).map((question, questionIndex) => ({
+    id: question.id || `video-question-${questionIndex}`,
+    serverId: question.id,
+    prompt: question.questionText || `Video checkpoint ${questionIndex + 1}`,
+    questionType: question.questionType || "SINGLE_CHOICE",
+    timestampSeconds: question.timestampSeconds || 0,
+    options: (question.options || []).map((option, optionIndex) => ({
+      id: option.id || `video-option-${questionIndex}-${optionIndex}`,
+      serverId: option.id,
+      text: option.optionText || "",
+      isCorrect: Boolean(option.isCorrect),
+    })),
+  }));
+}
+
+async function hydrateVideoQuestionContent(courseId: string, sections: Section[]) {
+  return Promise.all(
+    sections.map(async (section) => ({
+      ...section,
+      lessons: await Promise.all(
+        section.lessons.map(async (lesson) => {
+          if (lesson.type !== "VIDEO" || !lesson.serverId) return lesson;
+          const response = await VideoQuestionService.getQuestionsByLessonId({ courseId, lessonId: lesson.serverId }).catch(() => undefined);
+          const videoQuestions = response?.data ? mapApiVideoQuestions(response.data) : [];
+          return videoQuestions.length ? { ...lesson, content: { ...lesson.content, videoQuestions } } : lesson;
+        }),
+      ),
+    })),
+  );
+}
+
 export function CourseCreateOptionsPage({ mode = "create", courseId }: CourseCreateOptionsPageProps) {
   const isEditMode = mode === "edit";
   const [activeStep, setActiveStep] = useState<StepId>("basics");
@@ -1919,9 +2418,12 @@ export function CourseCreateOptionsPage({ mode = "create", courseId }: CourseCre
         const curriculum = draftCurriculumResponse?.data || readableCurriculumResponse?.data;
         const mappedSections = mapCurriculumSections(curriculum?.sections);
         if (mappedSections.length) {
-          setSections(mappedSections);
-          setSelectedSectionId(mappedSections[0].id);
-          setSelectedLessonId(mappedSections[0].lessons[0]?.id || "");
+          const quizHydratedSections = await hydrateQuizQuestionContent(editableCourseId, mappedSections);
+          const hydratedSections = await hydrateVideoQuestionContent(editableCourseId, quizHydratedSections);
+          if (!isMounted) return;
+          setSections(hydratedSections);
+          setSelectedSectionId(hydratedSections[0].id);
+          setSelectedLessonId(hydratedSections[0].lessons[0]?.id || "");
         }
 
         setDraftCourseId(editableCourseId);
