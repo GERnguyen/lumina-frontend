@@ -85,7 +85,7 @@ export default async function Page({ searchParams }: UserProfileCoursesRouteProp
       lesson: "Continue your learning",
       image: course.images?.[0]?.imageUrl || `/courses/course-0${(index % 8) + 1}.png`,
       progress,
-      href: `/courses/${course.id}/watch`,
+      href: `/learning/${course.id}`,
       featured: index === 3 || index === 11,
       teacher: course.instructor?.name || "Lumina Instructor",
       status: progressItem?.isCompleted ? ("completed" as const) : ("active" as const),

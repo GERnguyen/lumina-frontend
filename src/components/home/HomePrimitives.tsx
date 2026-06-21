@@ -99,7 +99,7 @@ export function ContinueCourseCard({
   const title = course.title || "Untitled Course";
   const instructor = getCourseInstructorName(course);
   const percentage = getCourseProgressPercentage(progress);
-  const watchHref = course.id ? `/courses/${course.id}/watch` : "/courses";
+  const watchHref = course.id ? `/learning/${course.id}` : "/courses";
 
   return (
     <Link href={watchHref} className="group flex gap-4 rounded-[18px] border border-[#E9EAF0] bg-white p-3 transition hover:-translate-y-0.5 hover:border-[#D8D6FF] hover:shadow-[0_16px_36px_rgba(29,32,38,0.08)]">
