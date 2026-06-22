@@ -3,12 +3,22 @@ import { ArrowRight, Code2, Database, Layers3, Search, ShieldCheck, Star, UserRo
 import { CoursesFooter } from "@/components/courses/CoursesFooter";
 import { CoursesTopNav } from "@/components/courses/CoursesTopNav";
 import { CourseListingCard } from "@/components/courses/CourseListingCard";
+import { getCourseImage, getCourseInstructorName } from "@/lib/format";
 import type { CategoryResponse, CourseResponse } from "@/types";
+
+type ContinueLearningCourse = {
+  course: CourseResponse;
+  progressPercent: number;
+  completedItems: number;
+  totalItems: number;
+  index: number;
+};
 
 type HomeMarketplacePageProps = {
   featuredCourses: CourseResponse[];
   popularCourses: CourseResponse[];
   categories: CategoryResponse[];
+  continueLearningCourses?: ContinueLearningCourse[];
 };
 
 const companyLogos = [
@@ -60,7 +70,7 @@ const careerTracks = [
 
 const trendingSearches = ["Python", "Spring Boot", "React", "SQL", "Docker", "Cybersecurity", "Machine Learning", "AWS"];
 
-export function HomeMarketplacePage({ featuredCourses, popularCourses, categories }: HomeMarketplacePageProps) {
+export function HomeMarketplacePage({ featuredCourses, popularCourses, categories, continueLearningCourses = [] }: HomeMarketplacePageProps) {
   const displayCategories = categories.length ? categories.map((category) => category.name).filter(Boolean) as string[] : fallbackCategories;
   const primaryCourses = featuredCourses.length ? featuredCourses : popularCourses;
   const secondaryCourses = popularCourses.length ? popularCourses : featuredCourses;
@@ -70,6 +80,7 @@ export function HomeMarketplacePage({ featuredCourses, popularCourses, categorie
       <CoursesTopNav />
       <HeroSection />
       <PartnerStrip />
+      <ContinueLearningSection courses={continueLearningCourses.slice(0, 3)} />
       <FeaturedCourses courses={primaryCourses.slice(0, 4)} />
       <CareerTracks />
       <CategorySection categories={displayCategories.slice(0, 8)} />
@@ -78,6 +89,55 @@ export function HomeMarketplacePage({ featuredCourses, popularCourses, categorie
       <InstructorLandingSection />
       <CoursesFooter />
     </main>
+  );
+}
+
+function ContinueLearningSection({ courses }: { courses: ContinueLearningCourse[] }) {
+  if (!courses.length) return null;
+
+  return (
+    <section className="bg-white px-6 py-16 lg:px-8">
+      <div className="mx-auto max-w-[1320px]">
+        <SectionHeader
+          title="Continue learning"
+          copy="Pick up the courses you have already started and keep your streak moving."
+          href="/my-learning"
+          action="Open my learning"
+        />
+        <div className="mt-8 grid gap-6 lg:grid-cols-3">
+          {courses.map(({ course, progressPercent, completedItems, totalItems, index }) => {
+            const courseId = course.id || "";
+            const title = course.title || "Untitled course";
+            return (
+              <Link
+                key={courseId || title}
+                href={courseId ? `/learning/${courseId}` : "/my-learning"}
+                className="group overflow-hidden rounded-[18px] border border-[#E9EAF0] bg-white shadow-[0_14px_34px_rgba(29,32,38,0.06)] transition hover:-translate-y-1 hover:border-[#D8D6FF] hover:shadow-[0_18px_42px_rgba(86,79,253,0.14)]"
+              >
+                <div className="relative aspect-[16/9] overflow-hidden bg-[#F5F7FA]">
+                  <img src={getCourseImage(course, index)} alt={title} className="size-full object-cover transition duration-500 group-hover:scale-105" />
+                </div>
+                <div className="p-5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#7872FD]">{getCourseInstructorName(course)}</p>
+                  <h3 className="mt-2 line-clamp-2 min-h-[56px] text-lg font-semibold leading-7 text-[#1D2026] transition group-hover:text-[#564FFD]">{title}</h3>
+                  <div className="mt-5">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium text-[#1D2026]">{progressPercent}% complete</span>
+                      <span className="text-[#6E7485]">
+                        {completedItems}/{totalItems || "?"} items
+                      </span>
+                    </div>
+                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#E9EAF0]">
+                      <div className="h-full rounded-full bg-[#564FFD]" style={{ width: `${Math.max(4, progressPercent)}%` }} />
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </section>
   );
 }
 

@@ -204,6 +204,32 @@
   .font-general {
     @apply font-['General_Sans'];
   }
+
+  .instructor-shell :where(button, a[href], summary, [role="button"]) {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .instructor-shell :where(button:not(:disabled), a[href], summary, [role="button"]) {
+    cursor: pointer;
+    transition-property: transform, box-shadow, background-color, border-color, color, opacity;
+    transition-duration: 160ms;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .instructor-shell :where(button:not(:disabled), a[href], summary, [role="button"]):active {
+    transform: translateY(1px) scale(0.975);
+    box-shadow: 0 5px 14px rgba(86, 79, 253, 0.16) inset, 0 2px 8px rgba(29, 32, 38, 0.08);
+  }
+
+  .instructor-shell :where(button:not(:disabled), a[href], summary, [role="button"]):focus-visible {
+    outline: 3px solid rgba(86, 79, 253, 0.28);
+    outline-offset: 3px;
+  }
+
+  .instructor-shell button:disabled {
+    cursor: not-allowed;
+    transform: none;
+  }
 }
 
 @keyframes lumina-fade-up {

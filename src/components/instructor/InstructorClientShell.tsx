@@ -29,7 +29,7 @@ function parseRange(range?: string | null): InstructorRange {
 
 function InstructorLoadingShell({ activeItem, title }: { activeItem: "dashboard" | "earning"; title: string }) {
   return (
-    <div className="min-h-screen bg-[#F5F7FA] text-[#1D2026]">
+    <div className="instructor-shell min-h-screen bg-[#F5F7FA] text-[#1D2026]">
       <div className="flex min-h-screen">
         <InstructorSidebar activeItem={activeItem} />
 
@@ -57,7 +57,7 @@ function InstructorLoadingShell({ activeItem, title }: { activeItem: "dashboard"
 
 function InstructorErrorShell({ activeItem, title, message }: { activeItem: "dashboard" | "earning"; title: string; message: string }) {
   return (
-    <div className="min-h-screen bg-[#F5F7FA] text-[#1D2026]">
+    <div className="instructor-shell min-h-screen bg-[#F5F7FA] text-[#1D2026]">
       <div className="flex min-h-screen">
         <InstructorSidebar activeItem={activeItem} />
 

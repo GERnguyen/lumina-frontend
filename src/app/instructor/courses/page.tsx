@@ -45,6 +45,7 @@ export default async function InstructorCoursesRoute({ searchParams }: Instructo
     sort: sortParam(params.sort),
     rating: numberParam(params.rating),
     categoryId: firstParam(params.categoryId),
+    status: firstParam(params.status),
   };
 
   const data = await getInstructorCoursesData(filters);

@@ -3,6 +3,7 @@ import { UserProfileWishlistPage } from "@/components/user-profile/UserProfileWi
 import { UserApi } from "@/services/api/user-api";
 import { WishlistApi } from "@/services/api/social-api";
 import { CourseApi } from "@/services/api/course-api";
+import { EnrollmentApi } from "@/services/api/enrollment-api";
 import { getProfileTabs, mockUserProfileDashboard, mockProfileWishlist } from "@/data/user-profile";
 import { getProfileAvatar, money, getCourseRating, getCourseImage, getCourseInstructorName } from "@/lib/format";
 
@@ -15,9 +16,10 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-  const [userRes, wishlistRes] = await Promise.all([
+  const [userRes, wishlistRes, enrolledRes] = await Promise.all([
     UserApi.getCurrentUser().catch(() => ({ data: undefined })),
     WishlistApi.getWishlist().catch(() => ({ data: [] })),
+    EnrollmentApi.getEnrolledCourses({ page: 1, size: 200 }).catch(() => ({ data: [] })),
   ]);
 
   const user = userRes.data;
@@ -33,7 +35,8 @@ export default async function Page() {
     );
   }
 
-  const wishlistItems = wishlistRes.data || [];
+  const enrolledIds = new Set((enrolledRes.data || []).map((course) => course.id).filter(Boolean) as string[]);
+  const wishlistItems = (wishlistRes.data || []).filter((item) => !item.courseId || !enrolledIds.has(item.courseId));
   const courseIds = wishlistItems.map((item) => item.courseId).filter(Boolean) as string[];
 
   let courses: any[] = [];
@@ -69,7 +72,7 @@ export default async function Page() {
       avatar: getProfileAvatar(user),
     },
     tabs: getProfileTabs("Wishlist"),
-    items: hydratedItems.length ? hydratedItems : mockProfileWishlist,
+    items: hydratedItems,
   };
 
   return <UserProfileWishlistPage wishlistPage={wishlistPage} />;

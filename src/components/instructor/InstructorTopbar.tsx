@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Bell } from "lucide-react";
+import { InstructorNotifications } from "@/components/instructor/InstructorNotifications";
 import type { InstructorDashboardData } from "@/services/instructor-dashboard-service";
 
 type InstructorTopbarProps = {
@@ -25,10 +25,7 @@ export function InstructorTopbar({ user, title = "Dashboard" }: InstructorTopbar
       </div>
 
       <div className="flex items-center gap-3 sm:gap-4">
-        <button type="button" aria-label="Notifications" className="relative flex size-12 items-center justify-center rounded-[18px] bg-[#F5F7FA] text-[#4E5566]">
-          <Bell className="size-5" />
-          <span className="absolute right-3 top-3 size-2 rounded-full bg-[#564FFD]" />
-        </button>
+        <InstructorNotifications />
 
         <div className="relative size-12 overflow-hidden rounded-full bg-[#EBEBFF]">
           <Image src={user.avatar} alt={user.name} fill sizes="48px" className="object-cover" />

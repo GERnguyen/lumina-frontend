@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Bell, Heart, Search, ShoppingCart } from "lucide-react";
+import { Heart, Search, ShoppingCart } from "lucide-react";
+import { InstructorNotifications } from "@/components/instructor/InstructorNotifications";
 import { TopNavLinks } from "@/components/courses/TopNavLinks";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { getNavCounts } from "@/services/api/nav-api";
@@ -32,10 +33,11 @@ export async function UserProfileTopNav({ avatar }: { avatar: string }) {
           </div>
 
           <div className="flex items-center gap-6">
-            <button type="button" aria-label="Notifications" className="relative hidden text-[#1D2026] transition hover:text-[#7872FD] md:block">
-              <Bell className="size-6" />
-              <span className="absolute right-0 top-0 size-2 rounded-full bg-[#564FFD]" />
-            </button>
+            <InstructorNotifications
+              emptyDescription="Learning updates, payment messages, Q&A replies, and certificates will appear here."
+              buttonClassName="hidden size-6 rounded-none bg-transparent text-[#1D2026] hover:bg-transparent hover:text-[#7872FD] md:flex"
+              iconClassName="size-6"
+            />
             <Link href="/user-profile/wishlist" aria-label="Wishlist" className="relative hidden text-[#1D2026] transition hover:text-[#7872FD] md:block">
               <Heart className="size-6" />
               {counts.wishlistCount > 0 ? (

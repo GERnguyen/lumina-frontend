@@ -46,7 +46,7 @@ export function CartSelectableContent({ items }: { items: CartItemResponse[] }) 
 
   return (
     <div className="mt-6 flex flex-col gap-8 lg:flex-row lg:items-start">
-      <div className="min-w-0 flex-1 border border-[#E9EAF0] bg-white">
+      <div className="min-w-0 flex-1 overflow-hidden rounded-[18px] border border-[#E9EAF0] bg-white">
         <div className="hidden h-[54px] grid-cols-[52px_1fr_180px_180px] items-center border-b border-[#E9EAF0] px-6 text-sm font-medium uppercase text-[#4E5566] lg:grid">
           <label className="flex items-center">
             <input
@@ -54,7 +54,7 @@ export function CartSelectableContent({ items }: { items: CartItemResponse[] }) 
               checked={allSelected}
               onChange={toggleAll}
               aria-label="Select all cart courses"
-              className="size-5 rounded-none border-[#DADDE6] text-[#564FFD] focus:ring-[#564FFD]"
+              className="size-5 rounded-[6px] border-[#DADDE6] text-[#564FFD] focus:ring-[#564FFD]"
             />
           </label>
           <span>Course</span>
@@ -88,11 +88,11 @@ export function CartSelectableContent({ items }: { items: CartItemResponse[] }) 
                       checked={isSelected}
                       onChange={() => toggleItem(itemId)}
                       aria-label={`Select ${title}`}
-                      className="size-5 rounded-none border-[#DADDE6] text-[#564FFD] focus:ring-[#564FFD]"
+                      className="size-5 rounded-[6px] border-[#DADDE6] text-[#564FFD] focus:ring-[#564FFD]"
                     />
                   </label>
                   <div className="flex gap-5">
-                    <Link href={`/courses/${courseId}`} className="relative h-[100px] w-[134px] shrink-0 overflow-hidden bg-[#F5F7FA] sm:h-[120px] sm:w-[160px]">
+                    <Link href={`/courses/${courseId}`} className="relative h-[100px] w-[134px] shrink-0 overflow-hidden rounded-[18px] bg-[#F5F7FA] sm:h-[120px] sm:w-[160px]">
                       <Image src={image} alt={title} fill sizes="160px" className="object-cover transition hover:scale-105" />
                     </Link>
                     <div className="flex min-w-0 flex-col justify-between">

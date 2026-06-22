@@ -8,8 +8,6 @@ const topLinks = [
   { label: "Home", href: "/" },
   { label: "Courses", href: "/courses" },
   { label: "My Learning", href: "/my-learning" },
-  { label: "Contact", href: "/#faq" },
-  { label: "Become an Instructor", href: "/register" },
 ];
 
 function isActivePath(pathname: string, href: string) {

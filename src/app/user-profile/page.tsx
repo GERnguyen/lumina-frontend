@@ -86,7 +86,8 @@ export default async function Page() {
     : { data: [] };
   const relatedCourses = relatedCoursesRes.data || [];
 
-  const hydratedWishlist = wishlistItems.map((item, index) => {
+  const purchasedCourseIds = new Set([...enrolledIds, ...Array.from(orderCourseIds)]);
+  const hydratedWishlist = wishlistItems.filter((item) => !item.courseId || !purchasedCourseIds.has(item.courseId)).map((item, index) => {
     const course = relatedCourses.find((candidate) => candidate.id === item.courseId);
     const mock = mockProfileWishlist[index % mockProfileWishlist.length];
     const price = course?.discountedPrice ?? course?.price;
@@ -165,7 +166,7 @@ export default async function Page() {
         learningCourses={mappedCourses.length ? mappedCourses.slice(0, 4) : mockUserProfileDashboard.learningCourses}
         courses={mappedCourses.length ? mappedCourses : mockProfileCourses}
         courseFilters={{ sort: "latest", status: "all", teacher: "all", page: 1 }}
-        wishlistItems={hydratedWishlist.length ? hydratedWishlist : mockProfileWishlist}
+        wishlistItems={hydratedWishlist}
         purchases={mappedPurchases.length ? mappedPurchases : mockProfilePurchaseHistory}
         settings={settings}
       />

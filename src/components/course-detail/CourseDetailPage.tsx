@@ -7,7 +7,7 @@ import { CourseHeroMedia } from "./CourseHeroMedia";
 import { CourseInstructorSection } from "./CourseInstructorSection";
 import { CourseOverview } from "./CourseOverview";
 import { CoursePurchaseCard } from "./CoursePurchaseCard";
-import { CourseReviews } from "./CourseReviews";
+import { CourseSocialPanel } from "./CourseSocialPanel";
 import type {
   CourseResponse,
   CourseCurriculumResponse,
@@ -51,7 +51,13 @@ export function CourseDetailPage({
             <CourseOverview course={course} />
             <CourseCurriculum curriculum={curriculum} duration={course.duration} />
             <CourseInstructorSection course={course} />
-            <CourseReviews reviews={reviews} reviewStats={reviewStats} />
+            <CourseSocialPanel
+              courseId={course.id || ""}
+              initialReviews={reviews}
+              initialReviewStats={reviewStats}
+              isAuthenticated={isAuthenticated}
+              isEnrolled={isEnrolled}
+            />
           </div>
 
           <CoursePurchaseCard

@@ -27,6 +27,15 @@ const ratingOptions = [
   { label: "2 Star & Up", value: "2" },
 ];
 
+const statusOptions = [
+  { label: "All Status", value: "" },
+  { label: "Published", value: "published" },
+  { label: "Draft", value: "draft" },
+  { label: "Pending review", value: "pending" },
+  { label: "Rejected", value: "rejected" },
+  { label: "Archived", value: "archived" },
+];
+
 function cleanParams(params: URLSearchParams) {
   Array.from(params.entries()).forEach(([key, value]) => {
     if (!value) params.delete(key);
@@ -45,6 +54,7 @@ export function InstructorCoursesFilters({ filters, categories }: InstructorCour
     if (filters.sort) params.set("sort", filters.sort);
     if (filters.rating) params.set("rating", String(filters.rating));
     if (filters.categoryId) params.set("categoryId", filters.categoryId);
+    if (filters.status) params.set("status", filters.status);
     return params;
   }, [filters]);
 
@@ -69,7 +79,7 @@ export function InstructorCoursesFilters({ filters, categories }: InstructorCour
   }
 
   return (
-    <section className="grid gap-5 lg:grid-cols-[minmax(260px,528px)_240px_240px_240px]">
+    <section className="grid gap-5 lg:grid-cols-[minmax(260px,528px)_200px_200px_200px_200px]">
       <form onSubmit={handleSubmit} className="flex min-w-0 flex-col gap-2">
         <label htmlFor="instructor-course-search" className="text-xs leading-4 text-[#6E7485]">
           Search:
@@ -135,6 +145,21 @@ export function InstructorCoursesFilters({ filters, categories }: InstructorCour
           className="h-12 rounded-[18px] border-0 bg-white px-[18px] text-sm text-[#4E5566] focus:ring-2 focus:ring-[#564FFD]/20"
         >
           {ratingOptions.map((option) => (
+            <option key={option.label} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="flex flex-col gap-2">
+        <span className="text-xs leading-4 text-[#6E7485]">Status</span>
+        <select
+          value={filters.status || ""}
+          onChange={(event) => pushWith({ status: event.target.value })}
+          className="h-12 rounded-[18px] border-0 bg-white px-[18px] text-sm text-[#4E5566] focus:ring-2 focus:ring-[#564FFD]/20"
+        >
+          {statusOptions.map((option) => (
             <option key={option.label} value={option.value}>
               {option.label}
             </option>

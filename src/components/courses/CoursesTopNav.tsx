@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { Bell, Heart, Search, ShoppingCart } from "lucide-react";
+import { Heart, Search, ShoppingCart } from "lucide-react";
 import type { UserDto } from "@/types";
 import { CoursesUserMenu } from "@/components/courses/CoursesUserMenu";
 import { TopNavLinks } from "@/components/courses/TopNavLinks";
+import { InstructorNotifications } from "@/components/instructor/InstructorNotifications";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { API_BASE_URL } from "@/lib/api-base";
 import { authHeaders } from "@/lib/server-auth";
@@ -54,7 +55,13 @@ export async function CoursesTopNav() {
           </div>
 
           <div className="flex items-center gap-6">
-            <Bell className="hidden size-6 text-[#1D2026] md:block" />
+            {user ? (
+              <InstructorNotifications
+                emptyDescription="Learning updates, payment messages, Q&A replies, and certificates will appear here."
+                buttonClassName="hidden size-6 rounded-none bg-transparent text-[#1D2026] hover:bg-transparent hover:text-[#7872FD] md:flex"
+                iconClassName="size-6"
+              />
+            ) : null}
             <Link href="/user-profile/wishlist" aria-label="Wishlist" className="relative hidden text-[#1D2026] transition hover:text-[#7872FD] md:block">
               <Heart className="size-6" />
               {counts.wishlistCount > 0 ? (

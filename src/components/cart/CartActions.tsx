@@ -56,7 +56,7 @@ export function CartActions({ itemId, courseId }: CartActionsProps) {
         type="button"
         onClick={() => void moveToWishlist()}
         disabled={Boolean(pendingAction)}
-        className="inline-flex h-10 items-center justify-center text-sm font-semibold text-[#564FFD] transition hover:text-[#453FCA] disabled:opacity-60"
+        className="inline-flex h-10 items-center justify-center rounded-[18px] bg-[#EBEBFF] px-4 text-sm font-semibold text-[#564FFD] transition hover:bg-[#DEDDFF] disabled:opacity-60"
       >
         {pendingAction === "wishlist" ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
         Move to Wishlist
@@ -65,7 +65,7 @@ export function CartActions({ itemId, courseId }: CartActionsProps) {
         type="button"
         onClick={() => void removeFromCart()}
         disabled={Boolean(pendingAction)}
-        className="inline-flex items-center gap-2 text-xs font-medium text-[#8C94A3] transition hover:text-[#D92D20] disabled:opacity-60"
+        className="inline-flex h-9 items-center gap-2 rounded-[18px] px-3 text-xs font-medium text-[#8C94A3] transition hover:bg-[#FFF0F0] hover:text-[#D92D20] disabled:opacity-60"
       >
         {pendingAction === "remove" ? <Loader2 className="size-4 animate-spin" /> : <XCircle className="size-4" />}
         Remove

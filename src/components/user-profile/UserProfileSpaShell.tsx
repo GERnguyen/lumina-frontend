@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, ArrowRightIcon, CheckSquare, PlayCircle, Trophy, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckSquare, PlayCircle, Trophy, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type {
   ProfileCourseFilter,
@@ -82,10 +82,6 @@ export function UserProfileSpaShell({
               </div>
             </div>
 
-            <button type="button" className="inline-flex h-14 items-center justify-center gap-3 rounded-[18px] bg-[#EBEBFF] px-8 text-lg font-semibold text-[#564FFD] transition hover:bg-[#DEDDFF]">
-              Become Instructor
-              <ArrowRightIcon className="size-6" />
-            </button>
           </div>
 
           <nav className="border-t border-[#E9EAF0]" aria-label="Profile tabs">
@@ -164,20 +160,50 @@ function DashboardTab({
   );
 }
 
+function applyCourseFilters(courses: ProfileCourseItem[], filters: ProfileCourseFilter) {
+  const query = filters.query?.trim().toLowerCase();
+  let next = courses.filter((course) => {
+    if (query) {
+      const haystack = `${course.title} ${course.teacher} ${course.lesson}`.toLowerCase();
+      if (!haystack.includes(query)) return false;
+    }
+    if (filters.status && filters.status !== "all" && course.status !== filters.status) return false;
+    if (filters.teacher && filters.teacher !== "all" && course.teacher !== filters.teacher) return false;
+    return true;
+  });
+
+  if (filters.sort === "progress") {
+    next = [...next].sort((a, b) => (b.progress || 0) - (a.progress || 0));
+  } else if (filters.sort === "title") {
+    next = [...next].sort((a, b) => a.title.localeCompare(b.title));
+  }
+
+  return next;
+}
+
 function CoursesTab({ courses, filters }: { courses: ProfileCourseItem[]; filters: ProfileCourseFilter }) {
+  const [activeFilters, setActiveFilters] = useState<ProfileCourseFilter>(filters);
+  const filteredCourses = useMemo(() => applyCourseFilters(courses, activeFilters), [activeFilters, courses]);
+
   return (
     <>
       <h2 className="text-2xl font-semibold tracking-normal text-[#1D2026]">
-        Courses <span className="font-normal">({courses.length})</span>
+        Courses <span className="font-normal">({filteredCourses.length})</span>
       </h2>
       <div className="mt-6">
-        <UserProfileCourseFilters filters={filters} courses={courses} />
+        <UserProfileCourseFilters filters={activeFilters} courses={courses} onChange={setActiveFilters} />
       </div>
       <div className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        {courses.map((course) => (
+        {filteredCourses.map((course) => (
           <UserProfileCourseCard key={course.id} course={course} />
         ))}
       </div>
+      {!filteredCourses.length ? (
+        <div className="mt-8 rounded-[18px] border border-dashed border-[#D8D6FF] bg-white px-6 py-12 text-center">
+          <p className="text-base font-semibold text-[#1D2026]">No courses match your filters.</p>
+          <p className="mt-2 text-sm text-[#6E7485]">Try a different keyword, status, or instructor.</p>
+        </div>
+      ) : null}
     </>
   );
 }

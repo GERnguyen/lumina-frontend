@@ -20,7 +20,7 @@ type InstructorDashboardPageProps = {
 
 export function InstructorDashboardPage({ data }: InstructorDashboardPageProps) {
   return (
-    <div className="min-h-screen bg-[#F5F7FA] text-[#1D2026]">
+    <div className="instructor-shell min-h-screen bg-[#F5F7FA] text-[#1D2026]">
       <div className="flex min-h-screen">
         <InstructorSidebar activeItem="dashboard" />
 

@@ -1,9 +1,9 @@
 "use server";
 
-import { AssignmentApi, DailyGoalApi, LearningProgressApi, QuizSessionApi, VideoNoteApi } from "@/services/api/learning-api";
-import { CourseApi } from "@/services/api/course-api";
+import { AssignmentApi, DailyGoalApi, LearningProgressApi, QuizSessionApi, VideoNoteApi, VideoTrackingApi } from "@/services/api/learning-api";
+import { CourseApi, VideoQuestionApi } from "@/services/api/course-api";
 import { EnrollmentApi } from "@/services/api/enrollment-api";
-import type { CreateAssignmentSubmissionRequest, CreateVideoNoteRequest, ChooseQuizAnswerRequest, SetDailyGoalRequest, SubmitQuizSessionRequest, UpdateVideoNoteRequest } from "@/types";
+import type { CreateAssignmentSubmissionRequest, CreateVideoNoteRequest, ChooseQuizAnswerRequest, SetDailyGoalRequest, SubmitQuizSessionRequest, SubmitVideoQuestionRequest, TrackingVideoLessonRequest, UpdateVideoNoteRequest } from "@/types";
 import { revalidatePath } from "next/cache";
 
 export async function setDailyGoalAction(body: SetDailyGoalRequest) {
@@ -191,5 +191,41 @@ export async function deleteVideoNoteAction(noteId: string) {
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error?.message || "Failed to delete video note" };
+  }
+}
+
+export async function getVideoQuestionsAction(courseId: string, lessonId: string) {
+  try {
+    const res = await VideoQuestionApi.getQuestionsByLessonId(courseId, lessonId);
+    return { success: true, data: res.data || [] };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to load video checkpoints" };
+  }
+}
+
+export async function getVideoQuestionSubmissionsAction(courseId: string, lessonId: string) {
+  try {
+    const res = await VideoTrackingApi.getVideoQuestionSubmissions(courseId, lessonId);
+    return { success: true, data: res.data || [] };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to load video checkpoint submissions" };
+  }
+}
+
+export async function trackVideoProgressAction(courseId: string, lessonId: string, body: TrackingVideoLessonRequest) {
+  try {
+    const res = await VideoTrackingApi.trackVideoProgress(courseId, lessonId, body);
+    return { success: true, data: res.data };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to track video progress" };
+  }
+}
+
+export async function submitVideoQuestionAnswerAction(courseId: string, lessonId: string, body: SubmitVideoQuestionRequest) {
+  try {
+    const res = await VideoTrackingApi.submitVideoQuestionAnswer(courseId, lessonId, body);
+    return { success: true, data: res.data };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Incorrect answer. Please try again." };
   }
 }

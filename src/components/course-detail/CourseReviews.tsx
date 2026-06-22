@@ -1,14 +1,31 @@
-import Image from "next/image";
 import type { ReviewResponse, ReviewStatisticsResponse } from "@/types";
 import { CourseRatingStars } from "./CourseRatingStars";
-import { getCourseRating, fullNumber } from "@/lib/format";
+import { getCourseRating, fullNumber, getProfileAvatar } from "@/lib/format";
+
+type ReviewUserMeta = {
+  name: string;
+  avatarUrl?: string;
+};
+
+function getInitials(name: string) {
+  const words = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (!words.length) return "L";
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase();
+}
 
 export function CourseReviews({
   reviews,
   reviewStats,
+  userProfiles,
 }: {
   reviews: ReviewResponse[];
   reviewStats?: ReviewStatisticsResponse;
+  userProfiles?: Record<string, ReviewUserMeta>;
 }) {
   const ratingText = getCourseRating(reviewStats?.averageRating);
   const ratingValue = reviewStats?.averageRating || 0;
@@ -66,11 +83,21 @@ export function CourseReviews({
       <div className="mt-5 overflow-hidden rounded-[18px] border border-[#E9EAF0] bg-white divide-y divide-[#E9EAF0]">
         {reviews.length ? (
           reviews.map((review, index) => {
-            const reviewerName = review.userId ? `Learner ${review.userId.slice(0, 8)}` : "Lumina learner";
-            const avatar = `/course-detail/person-${(index % 6) + 3}.png`;
+            const reviewer = review.userId ? userProfiles?.[review.userId] : undefined;
+            const reviewerName = reviewer?.name || "Lumina learner";
+            const avatar = reviewer?.avatarUrl ? getProfileAvatar({ avatarUrl: reviewer.avatarUrl, name: reviewerName }, reviewerName) : undefined;
             return (
               <article key={review.id || index} className="flex gap-4 p-5">
-                <Image src={avatar} alt={reviewerName} width={48} height={48} className="size-12 shrink-0 rounded-full object-cover" />
+                {avatar ? (
+                  <img src={avatar} alt={reviewerName} className="size-12 shrink-0 rounded-full object-cover ring-1 ring-[#D8D6FF]" />
+                ) : (
+                  <div
+                    aria-label={reviewerName}
+                    className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#EBEBFF] text-sm font-bold text-[#564FFD] ring-1 ring-[#D8D6FF]"
+                  >
+                    {getInitials(reviewerName)}
+                  </div>
+                )}
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <h3 className="text-sm font-semibold text-[#1D2026]">{reviewerName}</h3>

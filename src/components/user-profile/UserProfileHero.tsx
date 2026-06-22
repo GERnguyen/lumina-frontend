@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import type { ProfileTab, UserProfileDashboardData } from "@/data/user-profile";
 
 type UserProfileHeroData = Pick<UserProfileDashboardData, "user"> & {
@@ -22,10 +21,6 @@ export function UserProfileHero({ dashboard }: { dashboard: UserProfileHeroData 
             </div>
           </div>
 
-          <Link href="#" className="inline-flex h-14 items-center justify-center gap-3 rounded-[18px] bg-[#EBEBFF] px-8 text-lg font-semibold text-[#564FFD] transition hover:bg-[#DEDDFF]">
-            Become Instructor
-            <ArrowRight className="size-6" />
-          </Link>
         </div>
 
         <nav className="border-t border-[#E9EAF0]">
