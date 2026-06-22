@@ -22,6 +22,14 @@ function formatCount(value: number) {
   return new Intl.NumberFormat("en-US").format(value);
 }
 
+const statusToneClass: Record<InstructorCourseCardData["statusTone"], string> = {
+  published: "bg-[#E8F8EE] text-[#159947]",
+  draft: "bg-[#F5F7FA] text-[#4E5566]",
+  waiting: "bg-[#FFF4E5] text-[#B4690E]",
+  rejected: "bg-[#FFF0F0] text-[#E34444]",
+  archived: "bg-[#F0F1F5] text-[#6E7485]",
+};
+
 export function InstructorCourseCard({ course }: InstructorCourseCardProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const ratingText = course.rating ? course.rating.toFixed(1) : "No rating";
@@ -41,9 +49,14 @@ export function InstructorCourseCard({ course }: InstructorCourseCardProps) {
 
       <div className="flex flex-1 flex-col gap-4 px-[18px] pt-4">
         <div className="space-y-2">
-          <span className="inline-flex bg-[#EBEBFF] px-1.5 py-1 text-[10px] font-medium uppercase leading-3 text-[#342F98]">
-            {course.category}
-          </span>
+          <div className="flex flex-col items-start gap-1.5">
+            <span className="inline-flex rounded-full bg-[#EBEBFF] px-2.5 py-1 text-[10px] font-bold uppercase leading-3 text-[#342F98]">
+              {course.category}
+            </span>
+            <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase leading-3 ${statusToneClass[course.statusTone]}`}>
+              {course.statusLabel}
+            </span>
+          </div>
           <Link href={`/instructor/courses/${course.id}`} className="line-clamp-2 min-h-11 text-base font-medium leading-[22px] text-[#1D2026] transition hover:text-[#564FFD]">
             {course.title}
           </Link>

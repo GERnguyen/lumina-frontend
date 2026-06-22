@@ -1,6 +1,7 @@
 "use client";
 
 import { InstructorCourseOverviewChart, InstructorCourseRevenueChart } from "@/components/instructor/InstructorCourseDetailCharts";
+import { InstructorCourseEngagementPanels } from "@/components/instructor/InstructorCourseEngagementPanels";
 import {
   InstructorCourseBreadcrumb,
   InstructorCourseFacts,
@@ -14,7 +15,7 @@ import type { InstructorCourseDetailData } from "@/services/instructor-course-de
 
 export function InstructorCourseDetailPage({ data }: { data: InstructorCourseDetailData }) {
   return (
-    <div className="min-h-screen bg-[#F5F7FA] text-[#1D2026]">
+    <div className="instructor-shell min-h-screen bg-[#F5F7FA] text-[#1D2026]">
       <div className="flex min-h-screen">
         <InstructorSidebar activeItem="courses" />
 
@@ -34,6 +35,8 @@ export function InstructorCourseDetailPage({ data }: { data: InstructorCourseDet
               <InstructorCourseRevenueChart series={data.revenueSeries} />
               <InstructorCourseOverviewChart comments={data.overviewSeries.comments} views={data.overviewSeries.views} />
             </section>
+
+            <InstructorCourseEngagementPanels courseId={data.course.id} />
 
             <InstructorFooter />
           </div>

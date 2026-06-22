@@ -1,5 +1,6 @@
 "use client";
 
+import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -97,6 +98,7 @@ type CourseBasics = {
 type LessonContent = {
   videoFile?: File;
   videoFileKey?: string;
+  videoUrl?: string;
   videoFileName?: string;
   videoFileSize?: string;
   videoFileType?: string;
@@ -104,15 +106,18 @@ type LessonContent = {
   videoQuestions?: VideoCheckpointQuestion[];
   articleFile?: File;
   articleFileKey?: string;
+  articleUrl?: string;
   articleFileName?: string;
   articleFileSize?: number;
   articleFileType?: string;
   quizQuestions?: QuizQuestion[];
+  questionsPerAttempt?: number;
   passingScore?: number;
   assignmentInstructions?: string;
   assignmentDueDays?: number;
   assignmentAttachmentFile?: File;
   assignmentAttachmentFileKey?: string;
+  assignmentAttachmentUrl?: string;
   assignmentAttachment?: string;
   assignmentAttachmentType?: string;
   assignmentAttachmentSize?: number;
@@ -891,6 +896,10 @@ function parseSizeLabel(size: string | undefined) {
   return Math.round(value * 1024);
 }
 
+function clampNumber(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
 function getApiData<T>(response: { data?: T }, fallbackMessage: string): T {
   if (!response.data) throw new Error(fallbackMessage);
   return response.data;
@@ -926,7 +935,7 @@ function isNotFoundError(error: unknown) {
 function hasMeaningfulLessonContent(lesson: Lesson) {
   const content = lesson.content;
   if (!content) return false;
-  if (lesson.type === "VIDEO") return Boolean(content.videoFile || content.videoFileKey);
+  if (lesson.type === "VIDEO") return Boolean(content.videoFile || content.videoFileKey || content.videoQuestions?.length);
   if (lesson.type === "ARTICLE") return Boolean(content.articleFile || content.articleFileKey);
   if (lesson.type === "QUIZ") return Boolean(content.quizQuestions?.length);
   return Boolean(content.assignmentInstructions?.trim() || content.assignmentAttachmentFile || content.assignmentAttachmentFileKey);
@@ -1036,7 +1045,12 @@ async function upsertVideoLessonContent(courseId: string, lesson: Lesson, lesson
     fileKey = await uploadFileWithPresignedUrl(file);
   }
 
-  if (!fileKey || !content.videoFileName) return;
+  if (!fileKey || !content.videoFileName) {
+    if (isExistingLesson) {
+      await syncVideoCheckpointQuestions(courseId, lessonId, content.videoQuestions || []);
+    }
+    return;
+  }
 
   const body = {
     fileKey,
@@ -1166,8 +1180,10 @@ async function syncExistingQuizQuestions(courseId: string, lessonId: string, que
 async function upsertQuizLessonContent(courseId: string, lesson: Lesson, lessonId: string, isExistingLesson: boolean) {
   const content = getLessonContent(lesson);
   const questions = content.quizQuestions?.length ? content.quizQuestions : defaultQuizQuestions;
+  const questionCount = Math.max(1, questions.length);
+  const questionsPerAttempt = clampNumber(Number(content.questionsPerAttempt) || questionCount, 1, questionCount);
   const settings = {
-    numberOfQuestionPerQuizSession: Math.max(1, questions.length),
+    numberOfQuestionPerQuizSession: questionsPerAttempt,
     maxAttempt: 3,
     duration: lesson.duration,
     isReviewAllowed: true,
@@ -1179,8 +1195,18 @@ async function upsertQuizLessonContent(courseId: string, lesson: Lesson, lessonI
 
   if (isExistingLesson) {
     try {
-      await QuizLessonService.updateQuizSettings({ courseId, lessonId, body: settings });
+      await QuizLessonService.updateQuizSettings({
+        courseId,
+        lessonId,
+        body: {
+          ...settings,
+          numberOfQuestionPerQuizSession: 1,
+        },
+      }).catch((error) => {
+        if (!String(getErrorMessage(error, "")).includes("cannot exceed current question count")) throw error;
+      });
       await syncExistingQuizQuestions(courseId, lessonId, questions);
+      await QuizLessonService.updateQuizSettings({ courseId, lessonId, body: settings });
       await QuizLessonService.syncQuiz({
         courseId,
         lessonId,
@@ -1223,7 +1249,7 @@ async function upsertAssignmentLessonContent(courseId: string, lesson: Lesson, l
 
   const body = {
     description: content.assignmentInstructions || "Assignment instructions",
-    attachments,
+    ...(attachments.length ? { attachments } : {}),
   };
 
   if (isExistingLesson) {
@@ -1293,8 +1319,26 @@ function LessonTypePicker({ lesson, patchLesson }: { lesson: Lesson; patchLesson
   );
 }
 
+function LocalFilePreviewUrl({ file, children }: { file?: File; children: (url?: string) => React.ReactNode }) {
+  const [url, setUrl] = useState<string | undefined>();
+
+  useEffect(() => {
+    if (!file) {
+      setUrl(undefined);
+      return;
+    }
+
+    const nextUrl = URL.createObjectURL(file);
+    setUrl(nextUrl);
+    return () => URL.revokeObjectURL(nextUrl);
+  }, [file]);
+
+  return <>{children(url)}</>;
+}
+
 function VideoLessonEditor({ content, patchContent }: { content: LessonContent; patchContent: (patch: Partial<LessonContent>) => void }) {
   const videoQuestions = content.videoQuestions || [];
+  const [recentCheckpointId, setRecentCheckpointId] = useState<string | undefined>();
 
   function patchVideoQuestions(nextQuestions: VideoCheckpointQuestion[]) {
     patchContent({ videoQuestions: nextQuestions });
@@ -1323,9 +1367,52 @@ function VideoLessonEditor({ content, patchContent }: { content: LessonContent; 
     });
   }
 
+  function addVideoCheckpoint() {
+    const checkpoint = createVideoCheckpointQuestion();
+    patchVideoQuestions([...videoQuestions, checkpoint]);
+    setRecentCheckpointId(checkpoint.id);
+    window.setTimeout(() => setRecentCheckpointId(undefined), 1100);
+  }
+
   return (
     <div className="space-y-5">
-      <label className="flex min-h-[520px] cursor-pointer flex-col items-center justify-center rounded-[18px] border border-dashed border-[#C6CAD1] bg-[#FCFCFD] p-10 text-center transition hover:border-[#564FFD] hover:bg-[#F8F8FF]">
+      <LocalFilePreviewUrl file={content.videoFile}>
+        {(localVideoUrl) => {
+          const previewUrl = localVideoUrl || content.videoUrl;
+          return previewUrl ? (
+            <div className="overflow-hidden rounded-[18px] border border-[#E9EAF0] bg-[#111033]">
+              <video src={previewUrl} controls className="aspect-video w-full bg-black object-contain" />
+              <div className="flex flex-col gap-4 bg-white p-5 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-[#1D2026]">{content.videoFileName || "Current lesson video"}</p>
+                  <p className="mt-1 text-xs text-[#8C94A3]">{content.videoFileSize || "Uploaded video is ready for preview."}</p>
+                </div>
+                <label className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-[16px] bg-[#564FFD] px-5 text-sm font-semibold text-white transition hover:bg-[#453FCA]">
+                  <UploadCloud className="size-4" />
+                  Replace video
+                  <input
+                    type="file"
+                    accept="video/*,.m3u8"
+                    className="sr-only"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      event.target.value = "";
+                      if (!file) return;
+                      patchContent({
+                        videoFile: file,
+                        videoFileKey: undefined,
+                        videoUrl: undefined,
+                        videoFileName: file.name,
+                        videoFileSize: formatBytes(file.size),
+                        videoFileType: file.type || "video/mp4",
+                      });
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+          ) : (
+            <label className="flex min-h-[520px] cursor-pointer flex-col items-center justify-center rounded-[18px] border border-dashed border-[#C6CAD1] bg-[#FCFCFD] p-10 text-center transition hover:border-[#564FFD] hover:bg-[#F8F8FF]">
         <input
           type="file"
           accept="video/*,.m3u8"
@@ -1336,6 +1423,7 @@ function VideoLessonEditor({ content, patchContent }: { content: LessonContent; 
             patchContent({
               videoFile: file,
               videoFileKey: undefined,
+              videoUrl: undefined,
               videoFileName: file.name,
               videoFileSize: formatBytes(file.size),
               videoFileType: file.type || "video/mp4",
@@ -1353,6 +1441,9 @@ function VideoLessonEditor({ content, patchContent }: { content: LessonContent; 
         </p>
         {content.videoFileSize ? <span className="mt-4 rounded-full bg-[#EBEBFF] px-3 py-1 text-xs font-medium text-[#564FFD]">{content.videoFileSize}</span> : null}
       </label>
+          );
+        }}
+      </LocalFilePreviewUrl>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
         <EditableField
@@ -1368,25 +1459,36 @@ function VideoLessonEditor({ content, patchContent }: { content: LessonContent; 
         </div>
       </div>
 
-      <div className="rounded-[18px] border border-[#E9EAF0] bg-white p-5">
+      <div className="rounded-[18px] border border-[#D8D6FF] bg-white p-5 shadow-[0_16px_40px_rgba(86,79,253,0.08)]">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h4 className="text-lg font-semibold text-[#1D2026]">Video checkpoint quizzes</h4>
-            <p className="mt-1 text-sm text-[#6E7485]">Pause the video at a timestamp until learners answer correctly.</p>
+            <span className="inline-flex rounded-full bg-[#EBEBFF] px-3 py-1 text-xs font-bold uppercase tracking-[0.08em] text-[#564FFD]">
+              In-video quiz
+            </span>
+            <h4 className="mt-3 text-lg font-semibold text-[#1D2026]">Checkpoint questions</h4>
+            <p className="mt-1 text-sm text-[#6E7485]">
+              Pause the video at an exact second. Learners must answer correctly before the video continues.
+            </p>
           </div>
           <button
             type="button"
-            onClick={() => patchVideoQuestions([...videoQuestions, createVideoCheckpointQuestion()])}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-[14px] bg-[#564FFD] px-4 text-sm font-semibold text-white"
+            onClick={addVideoCheckpoint}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-[14px] bg-[#564FFD] px-4 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#453FCA] active:scale-[0.98]"
           >
             <Plus className="size-4" />
-            Add checkpoint
+            {recentCheckpointId ? "Checkpoint added" : "Add video quiz"}
           </button>
         </div>
 
         <div className="mt-5 grid gap-4">
-          {videoQuestions.map((question, questionIndex) => (
-            <article key={question.id} className="rounded-[16px] border border-[#E9EAF0] bg-[#FCFCFD] p-4">
+          {videoQuestions.length ? videoQuestions.map((question, questionIndex) => (
+            <article
+              key={question.id}
+              className={cn(
+                "rounded-[16px] border border-[#E9EAF0] bg-[#FCFCFD] p-4 transition",
+                recentCheckpointId === question.id && "animate-note-pop border-[#564FFD] bg-[#F8F8FF] shadow-[0_16px_36px_rgba(86,79,253,0.14)]",
+              )}
+            >
               <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_160px_180px_auto]">
                 <input
                   value={question.prompt}
@@ -1449,13 +1551,27 @@ function VideoLessonEditor({ content, patchContent }: { content: LessonContent; 
               <button
                 type="button"
                 onClick={() => patchVideoQuestion(question.id, { options: [...question.options, createVideoCheckpointOption(`Option ${question.options.length + 1}`, question.options.length)] })}
-                className="mt-3 inline-flex h-10 items-center gap-2 rounded-[14px] border border-[#D8D6FF] px-4 text-sm font-semibold text-[#564FFD]"
+                className="mt-3 inline-flex h-10 items-center gap-2 rounded-[14px] border border-[#D8D6FF] px-4 text-sm font-semibold text-[#564FFD] transition hover:-translate-y-0.5 hover:bg-[#F7F7FF] active:scale-[0.98]"
               >
                 <Plus className="size-4" />
                 Add option
               </button>
             </article>
-          ))}
+          )) : (
+            <button
+              type="button"
+              onClick={addVideoCheckpoint}
+              className="flex min-h-[150px] flex-col items-center justify-center rounded-[16px] border border-dashed border-[#D8D6FF] bg-[#F8F8FF] px-5 text-center transition hover:-translate-y-0.5 hover:border-[#564FFD] active:scale-[0.99]"
+            >
+              <span className="flex size-12 items-center justify-center rounded-full bg-white text-[#564FFD] shadow-[0_12px_24px_rgba(86,79,253,0.12)]">
+                <Plus className="size-5" />
+              </span>
+              <span className="mt-3 text-sm font-bold text-[#1D2026]">Create the first video quiz</span>
+              <span className="mt-1 max-w-[460px] text-xs leading-5 text-[#6E7485]">
+                Supports single choice and multiple choice checkpoints only.
+              </span>
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -1474,43 +1590,89 @@ function ArticleLessonEditor({
 
   return (
     <div className="grid min-h-[620px] gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <label
-        className={cn(
-          "flex cursor-pointer flex-col items-center justify-center rounded-[18px] border border-dashed bg-white px-8 py-12 text-center transition hover:border-[#564FFD] hover:bg-[#F7F7FF]",
-          hasArticleFile ? "border-[#564FFD] bg-[#F7F7FF]" : "border-[#DADDE7]",
-        )}
-      >
-        <input
-          type="file"
-          accept="application/pdf,.pdf"
-          className="sr-only"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            event.target.value = "";
-            if (!file) return;
-            const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-            if (!isPdf) return;
+      <LocalFilePreviewUrl file={content.articleFile}>
+        {(localArticleUrl) => {
+          const previewUrl = localArticleUrl || content.articleUrl;
+          return (
+            <div className="overflow-hidden rounded-[18px] border border-[#E9EAF0] bg-white">
+              {previewUrl ? (
+                <iframe src={previewUrl} title={content.articleFileName || "Article PDF preview"} className="h-[520px] w-full bg-[#F5F7FA]" />
+              ) : (
+                <label
+                  className={cn(
+                    "flex h-full min-h-[520px] cursor-pointer flex-col items-center justify-center border border-dashed bg-white px-8 py-12 text-center transition hover:border-[#564FFD] hover:bg-[#F7F7FF]",
+                    hasArticleFile ? "border-[#564FFD] bg-[#F7F7FF]" : "border-[#DADDE7]",
+                  )}
+                >
+                  <input
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    className="sr-only"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      event.target.value = "";
+                      if (!file) return;
+                      const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+                      if (!isPdf) return;
 
-            patchContent({
-              articleFile: file,
-              articleFileKey: undefined,
-              articleFileName: file.name,
-              articleFileSize: file.size,
-              articleFileType: "application/pdf",
-            });
-          }}
-        />
-        <span className="flex size-20 items-center justify-center rounded-[26px] bg-[#EBEBFF] text-[#564FFD]">
-          {hasArticleFile ? <FileText className="size-9" /> : <UploadCloud className="size-9" />}
-        </span>
-        <h4 className="mt-6 max-w-[680px] text-xl font-semibold text-[#1D2026]">
-          {content.articleFileName || "Upload article PDF"}
-        </h4>
-        <p className="mt-3 max-w-[560px] text-sm leading-6 text-[#6E7485]">
-          Attach a prepared PDF for this article lesson. Learners will read this file inside the learning page.
-        </p>
-        {articleFileSize ? <span className="mt-5 rounded-full bg-white px-4 py-2 text-xs font-semibold text-[#564FFD]">{articleFileSize}</span> : null}
-      </label>
+                      patchContent({
+                        articleFile: file,
+                        articleFileKey: undefined,
+                        articleUrl: undefined,
+                        articleFileName: file.name,
+                        articleFileSize: file.size,
+                        articleFileType: "application/pdf",
+                      });
+                    }}
+                  />
+                  <span className="flex size-20 items-center justify-center rounded-[26px] bg-[#EBEBFF] text-[#564FFD]">
+                    {hasArticleFile ? <FileText className="size-9" /> : <UploadCloud className="size-9" />}
+                  </span>
+                  <h4 className="mt-6 max-w-[680px] text-xl font-semibold text-[#1D2026]">
+                    {content.articleFileName || "Upload article PDF"}
+                  </h4>
+                  <p className="mt-3 max-w-[560px] text-sm leading-6 text-[#6E7485]">
+                    Attach a prepared PDF for this article lesson. Learners will read this file inside the learning page.
+                  </p>
+                  {articleFileSize ? <span className="mt-5 rounded-full bg-white px-4 py-2 text-xs font-semibold text-[#564FFD]">{articleFileSize}</span> : null}
+                </label>
+              )}
+              {previewUrl ? (
+                <div className="flex flex-col gap-4 border-t border-[#E9EAF0] p-5 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-[#1D2026]">{content.articleFileName || "Article PDF"}</p>
+                    <p className="mt-1 text-xs text-[#8C94A3]">{articleFileSize || "Uploaded PDF is ready for preview."}</p>
+                  </div>
+                  <label className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-[16px] bg-[#564FFD] px-5 text-sm font-semibold text-white transition hover:bg-[#453FCA]">
+                    <UploadCloud className="size-4" />
+                    Replace PDF
+                    <input
+                      type="file"
+                      accept="application/pdf,.pdf"
+                      className="sr-only"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.target.value = "";
+                        if (!file) return;
+                        const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+                        if (!isPdf) return;
+                        patchContent({
+                          articleFile: file,
+                          articleFileKey: undefined,
+                          articleUrl: undefined,
+                          articleFileName: file.name,
+                          articleFileSize: file.size,
+                          articleFileType: "application/pdf",
+                        });
+                      }}
+                    />
+                  </label>
+                </div>
+              ) : null}
+            </div>
+          );
+        }}
+      </LocalFilePreviewUrl>
 
       <aside className="rounded-[18px] bg-[#111033] p-5 text-white">
         <p className="text-sm text-white/65">PDF article lesson</p>
@@ -1525,6 +1687,7 @@ function ArticleLessonEditor({
               patchContent({
                 articleFile: undefined,
                 articleFileKey: undefined,
+                articleUrl: undefined,
                 articleFileName: undefined,
                 articleFileSize: undefined,
                 articleFileType: undefined,
@@ -1542,6 +1705,9 @@ function ArticleLessonEditor({
 
 function QuizLessonEditor({ content, patchContent }: { content: LessonContent; patchContent: (patch: Partial<LessonContent>) => void }) {
   const questions = content.quizQuestions?.length ? content.quizQuestions : defaultQuizQuestions;
+  const [recentQuestionId, setRecentQuestionId] = useState<string | undefined>();
+  const questionCount = Math.max(1, questions.length);
+  const questionsPerAttempt = clampNumber(Number(content.questionsPerAttempt) || questionCount, 1, questionCount);
   const quizTypes: Array<{ value: QuizQuestionType; label: string }> = [
     { value: "SINGLE_CHOICE", label: "Single choice" },
     { value: "MULTI_CHOICE", label: "Multiple choice" },
@@ -1549,6 +1715,23 @@ function QuizLessonEditor({ content, patchContent }: { content: LessonContent; p
     { value: "ORDERING", label: "Ordering" },
     { value: "SHORT_TEXT", label: "Short answer" },
   ];
+  const scoringOptions: Partial<Record<QuizQuestionType, Array<{ value: QuizScoringMethod; label: string }>>> = {
+    SINGLE_CHOICE: [{ value: "ALL_OR_NOTHING", label: "All or nothing" }],
+    MULTI_CHOICE: [
+      { value: "ALL_OR_NOTHING", label: "All or nothing" },
+      { value: "PARTIAL_CREDIT", label: "Partial credit" },
+      { value: "NEGATIVE_MARK", label: "Negative mark" },
+    ],
+    ORDERING: [
+      { value: "ALL_OR_NOTHING", label: "All or nothing" },
+      { value: "PARTIAL_CREDIT", label: "Partial credit" },
+    ],
+    MATCHING: [
+      { value: "ALL_OR_NOTHING", label: "All or nothing" },
+      { value: "PARTIAL_CREDIT", label: "Partial credit" },
+      { value: "NEGATIVE_MARK", label: "Negative mark" },
+    ],
+  };
 
   function patchQuestion(questionId: string, patch: Partial<QuizQuestion>) {
     patchContent({ quizQuestions: questions.map((question) => (question.id === questionId ? { ...question, ...patch } : question)) });
@@ -1583,7 +1766,15 @@ function QuizLessonEditor({ content, patchContent }: { content: LessonContent; p
 
   function addOption(question: QuizQuestion) {
     patchQuestion(question.id, {
-      options: [...question.options, createQuizOption(`Option ${question.options.length + 1}`, question.options.length, question.questionType === "MATCHING", question.questionType === "MATCHING" ? `Match ${question.options.length + 1}` : undefined)],
+      options: [
+        ...question.options,
+        createQuizOption(
+          question.questionType === "SHORT_TEXT" ? "Accepted answer" : `Option ${question.options.length + 1}`,
+          question.options.length,
+          question.questionType === "MATCHING" || question.questionType === "SHORT_TEXT",
+          question.questionType === "MATCHING" ? `Match ${question.options.length + 1}` : undefined,
+        ),
+      ],
     });
   }
 
@@ -1593,30 +1784,63 @@ function QuizLessonEditor({ content, patchContent }: { content: LessonContent; p
   }
 
   function addQuestion() {
-    patchContent({ quizQuestions: [...questions, createQuizQuestion("SINGLE_CHOICE")] });
+    const question = createQuizQuestion("SINGLE_CHOICE");
+    const nextQuestions = [...questions, question];
+    const shouldUseFullPool = content.questionsPerAttempt === undefined || content.questionsPerAttempt >= questions.length;
+    patchContent({
+      quizQuestions: nextQuestions,
+      questionsPerAttempt: shouldUseFullPool ? nextQuestions.length : content.questionsPerAttempt,
+    });
+    setRecentQuestionId(question.id);
+    window.setTimeout(() => setRecentQuestionId(undefined), 1100);
   }
 
   function deleteQuestion(questionId: string) {
-    patchContent({ quizQuestions: questions.filter((question) => question.id !== questionId) });
+    const nextQuestions = questions.filter((question) => question.id !== questionId);
+    const nextCount = Math.max(1, nextQuestions.length);
+    patchContent({
+      quizQuestions: nextQuestions,
+      questionsPerAttempt: clampNumber(Number(content.questionsPerAttempt) || nextCount, 1, nextCount),
+    });
   }
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-3 rounded-[18px] bg-[#FCFCFD] p-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="grid gap-4 rounded-[18px] bg-[#FCFCFD] p-4 md:grid-cols-2">
         <EditableField
           label="Passing score"
           value={String(content.passingScore || 70)}
           onChange={(passingScore) => patchContent({ passingScore: Number(passingScore) || 0 })}
           helper="Percentage required to pass this quiz."
         />
-        <button type="button" onClick={addQuestion} className="inline-flex h-12 items-center justify-center gap-2 rounded-[16px] bg-[#564FFD] px-5 text-sm font-semibold text-white">
-          <Plus className="size-4" />
-          Add question
-        </button>
+        <label className="block">
+          <span className="text-sm font-medium text-[#4E5566]">Questions per attempt</span>
+          <input
+            type="number"
+            min={1}
+            max={questionCount}
+            value={questionsPerAttempt}
+            onChange={(event) =>
+              patchContent({
+                questionsPerAttempt: clampNumber(Number(event.target.value) || 1, 1, questionCount),
+              })
+            }
+            className="mt-2 h-12 w-full rounded-[14px] border border-[#E9EAF0] bg-white px-4 text-sm text-[#1D2026] transition focus:border-[#564FFD] focus:ring-0"
+          />
+          <span className="mt-2 block text-xs leading-5 text-[#8C94A3]">
+            Learners receive {questionsPerAttempt} of {questionCount} questions per quiz attempt.
+          </span>
+        </label>
       </div>
 
       {questions.map((question, questionIndex) => (
-        <article key={question.id} className="rounded-[18px] border border-[#E9EAF0] bg-white p-5">
+        <article
+          key={question.id}
+          className={cn(
+            "rounded-[18px] border border-[#E9EAF0] bg-white p-5 transition",
+            recentQuestionId === question.id && "animate-note-pop border-[#564FFD] bg-[#F8F8FF] shadow-[0_16px_36px_rgba(86,79,253,0.14)]",
+          )}
+        >
           <div className="flex items-start justify-between gap-3">
             <EditableField
               label={`Question ${questionIndex + 1}`}
@@ -1634,7 +1858,7 @@ function QuizLessonEditor({ content, patchContent }: { content: LessonContent; p
             </button>
           </div>
 
-          <div className="mt-4 grid gap-3 lg:grid-cols-[220px_220px_minmax(0,1fr)]">
+          <div className={cn("mt-4 grid gap-3", question.questionType === "SHORT_TEXT" ? "lg:grid-cols-[220px_minmax(0,1fr)]" : "lg:grid-cols-[220px_220px_minmax(0,1fr)]")}>
             <label className="block">
               <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[#8C94A3]">Question type</span>
               <select
@@ -1649,32 +1873,36 @@ function QuizLessonEditor({ content, patchContent }: { content: LessonContent; p
                 ))}
               </select>
             </label>
-            <label className="block">
-              <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[#8C94A3]">Scoring</span>
-              <select
-                value={question.scoringMethod}
-                onChange={(event) => patchQuestion(question.id, { scoringMethod: event.target.value as QuizScoringMethod })}
-                className="mt-2 h-12 w-full rounded-[14px] border border-[#E9EAF0] bg-white px-3 text-sm font-semibold text-[#1D2026] outline-none transition focus:border-[#564FFD]"
-              >
-                <option value="ALL_OR_NOTHING">All or nothing</option>
-                <option value="PARTIAL_CREDIT">Partial credit</option>
-                <option value="NEGATIVE_MARK">Negative mark</option>
-              </select>
-            </label>
+            {question.questionType !== "SHORT_TEXT" ? (
+              <label className="block">
+                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[#8C94A3]">Scoring</span>
+                <select
+                  value={question.scoringMethod}
+                  onChange={(event) => patchQuestion(question.id, { scoringMethod: event.target.value as QuizScoringMethod })}
+                  className="mt-2 h-12 w-full rounded-[14px] border border-[#E9EAF0] bg-white px-3 text-sm font-semibold text-[#1D2026] outline-none transition focus:border-[#564FFD]"
+                >
+                  {(scoringOptions[question.questionType] || scoringOptions.SINGLE_CHOICE || []).map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             <div className="rounded-[14px] bg-[#FCFCFD] px-4 py-3 text-sm leading-6 text-[#6E7485]">
               {question.questionType === "MATCHING"
                 ? "Learners pair each left item with the matching text."
                 : question.questionType === "ORDERING"
                   ? "Learners arrange these options in the order shown here."
                   : question.questionType === "SHORT_TEXT"
-                    ? "Each option is an accepted text answer."
+                    ? "Add one or more accepted answers. Learners pass if their text matches any accepted answer."
                     : "Mark the correct option choices below."}
             </div>
           </div>
 
           <div className="mt-4 grid gap-3">
             {question.options.map((option, optionIndex) => {
-              const lockedCorrect = question.questionType === "MATCHING" || question.questionType === "ORDERING";
+              const lockedCorrect = question.questionType === "MATCHING" || question.questionType === "ORDERING" || question.questionType === "SHORT_TEXT";
               const correct = lockedCorrect || option.isCorrect;
 
               return (
@@ -1682,11 +1910,15 @@ function QuizLessonEditor({ content, patchContent }: { content: LessonContent; p
                   key={option.id}
                   className={cn(
                     "grid gap-3 rounded-[14px] border bg-[#FCFCFD] p-3 transition focus-within:border-[#564FFD] focus-within:bg-white",
-                    question.questionType === "MATCHING" ? "md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" : "md:grid-cols-[auto_minmax(0,1fr)_auto]",
+                    question.questionType === "MATCHING"
+                      ? "md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+                      : question.questionType === "SHORT_TEXT"
+                        ? "md:grid-cols-[minmax(0,1fr)_auto]"
+                        : "md:grid-cols-[auto_minmax(0,1fr)_auto]",
                     correct ? "border-[#D8D6FF]" : "border-[#E9EAF0]",
                   )}
                 >
-                  {question.questionType !== "MATCHING" ? (
+                  {question.questionType !== "MATCHING" && question.questionType !== "SHORT_TEXT" ? (
                     <button
                       type="button"
                       onClick={() => !lockedCorrect && toggleCorrect(question, option.id)}
@@ -1701,9 +1933,14 @@ function QuizLessonEditor({ content, patchContent }: { content: LessonContent; p
                   ) : null}
                   <input
                     value={option.text}
-                    onChange={(event) => patchOption(question.id, option.id, { text: event.target.value })}
+                    onChange={(event) => patchOption(question.id, option.id, { text: event.target.value, isCorrect: question.questionType === "SHORT_TEXT" ? true : option.isCorrect })}
                     placeholder={question.questionType === "SHORT_TEXT" ? "Accepted answer" : `Option ${optionIndex + 1}`}
-                    className="min-w-0 rounded-[12px] border border-transparent bg-transparent px-3 py-2 text-sm font-medium text-[#1D2026] outline-none transition focus:border-[#D8D6FF] focus:bg-white"
+                    className={cn(
+                      "min-w-0 rounded-[12px] bg-transparent px-3 py-2 text-sm font-medium text-[#1D2026] outline-none transition",
+                      question.questionType === "SHORT_TEXT"
+                        ? "border-0 focus:bg-transparent focus:ring-0"
+                        : "border border-transparent focus:border-[#D8D6FF] focus:bg-white",
+                    )}
                   />
                   {question.questionType === "MATCHING" ? (
                     <input
@@ -1734,16 +1971,27 @@ function QuizLessonEditor({ content, patchContent }: { content: LessonContent; p
               className="inline-flex h-11 w-fit items-center gap-2 rounded-[14px] border border-[#D8D6FF] px-4 text-sm font-semibold text-[#564FFD] transition hover:bg-[#F7F7FF]"
             >
               <Plus className="size-4" />
-              Add option
+              {question.questionType === "SHORT_TEXT" ? "Add accepted answer" : "Add option"}
             </button>
           </div>
         </article>
       ))}
+
+      <button
+        type="button"
+        onClick={addQuestion}
+        className="inline-flex h-12 w-fit items-center justify-center gap-2 rounded-[16px] bg-[#564FFD] px-5 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(86,79,253,0.22)] transition hover:-translate-y-0.5 hover:bg-[#453FCA] hover:shadow-[0_16px_30px_rgba(86,79,253,0.30)]"
+      >
+        <Plus className="size-4" />
+        {recentQuestionId ? "Question added" : "Add question"}
+      </button>
     </div>
   );
 }
 
 function AssignmentLessonEditor({ content, patchContent }: { content: LessonContent; patchContent: (patch: Partial<LessonContent>) => void }) {
+  const hasAttachment = Boolean(content.assignmentAttachmentFile || content.assignmentAttachment || content.assignmentAttachmentUrl);
+
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
       <label className="block">
@@ -1773,6 +2021,7 @@ function AssignmentLessonEditor({ content, patchContent }: { content: LessonCont
               patchContent({
                 assignmentAttachmentFile: file,
                 assignmentAttachmentFileKey: undefined,
+                assignmentAttachmentUrl: undefined,
                 assignmentAttachment: file.name,
                 assignmentAttachmentType: file.type || "application/octet-stream",
                 assignmentAttachmentSize: file.size,
@@ -1783,6 +2032,47 @@ function AssignmentLessonEditor({ content, patchContent }: { content: LessonCont
           <p className="mt-3 text-sm font-semibold text-[#1D2026]">{content.assignmentAttachment || "Attach rubric/template"}</p>
           <p className="mt-1 text-xs leading-5 text-[#8C94A3]">Optional file metadata for assignment resources.</p>
         </label>
+        {hasAttachment ? (
+          <div className="rounded-[18px] border border-[#E9EAF0] bg-white p-5">
+            <div className="flex items-start gap-3">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-[14px] bg-[#EBEBFF] text-[#564FFD]">
+                <FileText className="size-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-[#1D2026]">{content.assignmentAttachment || "Assignment attachment"}</p>
+                <p className="mt-1 text-xs text-[#8C94A3]">
+                  {content.assignmentAttachmentSize ? formatBytes(content.assignmentAttachmentSize) : "Uploaded resource"}
+                </p>
+                {content.assignmentAttachmentUrl ? (
+                  <a
+                    href={content.assignmentAttachmentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-3 inline-flex h-9 items-center justify-center rounded-[14px] bg-[#EBEBFF] px-3 text-xs font-semibold text-[#564FFD] transition hover:bg-[#DEDDFF]"
+                  >
+                    Preview file
+                  </a>
+                ) : null}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                patchContent({
+                  assignmentAttachmentFile: undefined,
+                  assignmentAttachmentFileKey: undefined,
+                  assignmentAttachmentUrl: undefined,
+                  assignmentAttachment: undefined,
+                  assignmentAttachmentType: undefined,
+                  assignmentAttachmentSize: undefined,
+                })
+              }
+              className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-[14px] border border-[#FFE0D4] bg-[#FFF5F0] text-sm font-semibold text-[#E34444] transition hover:border-[#E34444]"
+            >
+              Remove attachment
+            </button>
+          </div>
+        ) : null}
       </aside>
     </div>
   );
@@ -2295,9 +2585,104 @@ async function hydrateQuizQuestionContent(courseId: string, sections: Section[])
       lessons: await Promise.all(
         section.lessons.map(async (lesson) => {
           if (lesson.type !== "QUIZ" || !lesson.serverId) return lesson;
-          const response = await QuizQuestionService.getQuestions({ courseId, lessonId: lesson.serverId }).catch(() => undefined);
-          const quizQuestions = response?.data ? mapApiQuizQuestions(response.data) : [];
-          return quizQuestions.length ? { ...lesson, content: { ...lesson.content, quizQuestions } } : lesson;
+          const [quizResponse, questionsResponse] = await Promise.all([
+            QuizLessonService.getQuizByLessonId({ courseId, lessonId: lesson.serverId }).catch(() => undefined),
+            QuizQuestionService.getQuestions({ courseId, lessonId: lesson.serverId }).catch(() => undefined),
+          ]);
+          const rawQuestions = questionsResponse?.data?.length ? questionsResponse.data : quizResponse?.data?.questions || [];
+          const quizQuestions = rawQuestions.length ? mapApiQuizQuestions(rawQuestions) : [];
+          return quizQuestions.length
+            ? {
+                ...lesson,
+                duration: quizResponse?.data?.duration || lesson.duration,
+                content: {
+                ...lesson.content,
+                quizQuestions,
+                questionsPerAttempt: quizResponse?.data?.numberOfQuestionPerQuizSession || quizQuestions.length,
+              },
+            }
+            : lesson;
+        }),
+      ),
+    })),
+  );
+}
+
+async function hydrateVideoLessonContent(courseId: string, sections: Section[]) {
+  return Promise.all(
+    sections.map(async (section) => ({
+      ...section,
+      lessons: await Promise.all(
+        section.lessons.map(async (lesson) => {
+          if (lesson.type !== "VIDEO" || !lesson.serverId) return lesson;
+          const response = await VideoLessonService.getVideoByLessonId({ courseId, lessonId: lesson.serverId }).catch(() => undefined);
+          const video = response?.data;
+          if (!video) return lesson;
+          return {
+            ...lesson,
+            duration: video.duration || lesson.duration,
+            content: {
+              ...lesson.content,
+              videoUrl: video.videoUrl,
+              videoFileName: video.fileName || lesson.title,
+              videoFileType: video.fileType || "video/mp4",
+              videoFileSize: typeof video.fileSize === "number" ? formatBytes(video.fileSize) : undefined,
+            },
+          };
+        }),
+      ),
+    })),
+  );
+}
+
+async function hydrateArticleLessonContent(courseId: string, sections: Section[]) {
+  return Promise.all(
+    sections.map(async (section) => ({
+      ...section,
+      lessons: await Promise.all(
+        section.lessons.map(async (lesson) => {
+          if (lesson.type !== "ARTICLE" || !lesson.serverId) return lesson;
+          const response = await ArticleLessonService.getArticleByLessonId({ courseId, lessonId: lesson.serverId }).catch(() => undefined);
+          const article = response?.data;
+          if (!article) return lesson;
+          return {
+            ...lesson,
+            content: {
+              ...lesson.content,
+              articleUrl: article.articleUrl,
+              articleFileName: article.fileName || lesson.title,
+              articleFileType: article.fileType || "application/pdf",
+              articleFileSize: article.fileSize,
+            },
+          };
+        }),
+      ),
+    })),
+  );
+}
+
+async function hydrateAssignmentLessonContent(courseId: string, sections: Section[]) {
+  return Promise.all(
+    sections.map(async (section) => ({
+      ...section,
+      lessons: await Promise.all(
+        section.lessons.map(async (lesson) => {
+          if (lesson.type !== "ASSIGNMENT" || !lesson.serverId) return lesson;
+          const response = await AssignmentLessonService.getAssigmentByLessonId({ courseId, lessonId: lesson.serverId }).catch(() => undefined);
+          const assignment = response?.data;
+          if (!assignment) return lesson;
+          const attachment = assignment.attachments?.[0];
+          return {
+            ...lesson,
+            content: {
+              ...lesson.content,
+              assignmentInstructions: assignment.description || "",
+              assignmentAttachment: attachment?.fileName,
+              assignmentAttachmentType: attachment?.fileType,
+              assignmentAttachmentSize: attachment?.fileSize,
+              assignmentAttachmentUrl: attachment?.attachmentUrl,
+            },
+          };
         }),
       ),
     })),
@@ -2361,6 +2746,8 @@ export function CourseCreateOptionsPage({ mode = "create", courseId }: CourseCre
   const courseImagesRef = useRef<CourseImage[]>([]);
   const [selectedSectionId, setSelectedSectionId] = useState(initialSections[0].id);
   const [selectedLessonId, setSelectedLessonId] = useState(initialSections[0].lessons[0].id);
+  const backgroundSaveTimerRef = useRef<number | undefined>(undefined);
+  const backgroundSavePromiseRef = useRef<Promise<string | undefined> | undefined>(undefined);
   const activeIndex = steps.findIndex((step) => step.id === activeStep);
   const active = useMemo(() => steps[activeIndex] || steps[0], [activeIndex]);
 
@@ -2418,7 +2805,10 @@ export function CourseCreateOptionsPage({ mode = "create", courseId }: CourseCre
         const curriculum = draftCurriculumResponse?.data || readableCurriculumResponse?.data;
         const mappedSections = mapCurriculumSections(curriculum?.sections);
         if (mappedSections.length) {
-          const quizHydratedSections = await hydrateQuizQuestionContent(editableCourseId, mappedSections);
+          const videoContentSections = await hydrateVideoLessonContent(editableCourseId, mappedSections);
+          const articleContentSections = await hydrateArticleLessonContent(editableCourseId, videoContentSections);
+          const assignmentContentSections = await hydrateAssignmentLessonContent(editableCourseId, articleContentSections);
+          const quizHydratedSections = await hydrateQuizQuestionContent(editableCourseId, assignmentContentSections);
           const hydratedSections = await hydrateVideoQuestionContent(editableCourseId, quizHydratedSections);
           if (!isMounted) return;
           setSections(hydratedSections);
@@ -2449,6 +2839,9 @@ export function CourseCreateOptionsPage({ mode = "create", courseId }: CourseCre
 
   useEffect(() => {
   return () => {
+      if (backgroundSaveTimerRef.current) {
+        window.clearTimeout(backgroundSaveTimerRef.current);
+      }
       courseImagesRef.current.forEach((image) => {
         if (image.url.startsWith("blob:")) URL.revokeObjectURL(image.url);
       });
@@ -2461,15 +2854,32 @@ export function CourseCreateOptionsPage({ mode = "create", courseId }: CourseCre
 
   function goNext() {
     setActiveStep(steps[Math.min(steps.length - 1, activeIndex + 1)].id);
+    scheduleBackgroundSave();
   }
 
   function goBack() {
     setActiveStep(steps[Math.max(0, activeIndex - 1)].id);
   }
 
-  async function saveDraft(options?: { silentSuccess?: boolean }) {
-    setSaveState((state) => (state === "submitting" ? state : "saving"));
-    setSaveMessage("");
+  function scheduleBackgroundSave() {
+    if (backgroundSaveTimerRef.current) {
+      window.clearTimeout(backgroundSaveTimerRef.current);
+    }
+
+    backgroundSaveTimerRef.current = window.setTimeout(() => {
+      backgroundSavePromiseRef.current = saveDraft({ silentSuccess: true, background: true })
+        .catch(() => undefined)
+        .finally(() => {
+          backgroundSavePromiseRef.current = undefined;
+        });
+    }, 700);
+  }
+
+  async function saveDraft(options?: { silentSuccess?: boolean; background?: boolean }) {
+    if (!options?.background) {
+      setSaveState((state) => (state === "submitting" ? state : "saving"));
+      setSaveMessage("");
+    }
 
     try {
       const courseBody = createCourseDraftPayload(sections, basics);
@@ -2604,8 +3014,10 @@ export function CourseCreateOptionsPage({ mode = "create", courseId }: CourseCre
       }
       return courseId;
     } catch (error) {
-      setSaveState("error");
-      setSaveMessage(getErrorMessage(error, "Could not save draft."));
+      if (!options?.background) {
+        setSaveState("error");
+        setSaveMessage(getErrorMessage(error, "Could not save draft."));
+      }
       throw error;
     }
   }
@@ -2615,6 +3027,10 @@ export function CourseCreateOptionsPage({ mode = "create", courseId }: CourseCre
     setSaveMessage("");
 
     try {
+      if (backgroundSaveTimerRef.current) {
+        window.clearTimeout(backgroundSaveTimerRef.current);
+      }
+      await backgroundSavePromiseRef.current?.catch(() => undefined);
       const courseId = await saveDraft({ silentSuccess: true });
       await CourseService.submitCourse({ id: courseId });
       setSaveState("submitted");
@@ -2627,7 +3043,7 @@ export function CourseCreateOptionsPage({ mode = "create", courseId }: CourseCre
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA] text-[#1D2026]">
+    <div className="instructor-shell min-h-screen bg-[#F5F7FA] text-[#1D2026]">
       <div className="flex min-h-screen">
         <InstructorSidebar activeItem={isEditMode ? "courses" : "create-course"} />
 

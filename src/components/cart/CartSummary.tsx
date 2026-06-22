@@ -63,7 +63,7 @@ export function CartSummary({
   }
 
   return (
-    <aside className="w-full lg:w-[312px]">
+    <aside className="w-full rounded-[18px] border border-[#E9EAF0] bg-white p-6 shadow-[0_14px_34px_rgba(29,32,38,0.06)] lg:w-[312px]">
       <div className="space-y-4">
         {typeof selectedCount === "number" ? (
           <div className="flex items-center justify-between text-sm tracking-[-0.14px]">
@@ -105,7 +105,7 @@ export function CartSummary({
 
       <div>
         <p className="text-sm font-medium tracking-[-0.14px] text-[#1D2026]">Apply coupon code</p>
-        <div className="mt-4 flex h-12 overflow-hidden rounded-[8px] border border-[#E9EAF0] bg-white">
+        <div className="mt-4 flex h-12 overflow-hidden rounded-[18px] border border-[#E9EAF0] bg-white">
           <input
             value={couponCode}
             onChange={(event) => setCouponCode(event.target.value)}
@@ -116,7 +116,7 @@ export function CartSummary({
             type="button"
             onClick={() => void applyCoupon()}
             disabled={pendingAction === "coupon" || !couponCode.trim()}
-            className="m-1.5 flex items-center justify-center rounded-full bg-[#1D2026] px-4 text-sm font-semibold text-white transition hover:bg-[#2B2F36] disabled:opacity-60"
+            className="m-1.5 flex items-center justify-center rounded-[14px] bg-[#1D2026] px-4 text-sm font-semibold text-white transition hover:bg-[#2B2F36] disabled:opacity-60"
           >
             {pendingAction === "coupon" ? <Loader2 className="size-4 animate-spin" /> : "Apply"}
           </button>

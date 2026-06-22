@@ -17,7 +17,7 @@ type InstructorCoursesPageProps = {
 
 export function InstructorCoursesPage({ data, filters }: InstructorCoursesPageProps) {
   return (
-    <div className="min-h-screen bg-[#F5F7FA] text-[#1D2026]">
+    <div className="instructor-shell min-h-screen bg-[#F5F7FA] text-[#1D2026]">
       <div className="flex min-h-screen">
         <InstructorSidebar activeItem="courses" />
 
@@ -25,11 +25,11 @@ export function InstructorCoursesPage({ data, filters }: InstructorCoursesPagePr
           <InstructorTopbar user={data.user} title="My Courses" />
 
           <div className="mx-auto flex w-full max-w-[1640px] flex-col gap-8 px-5 py-8 sm:px-8 2xl:px-40">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="flex flex-col gap-4">
               <InstructorCoursesFilters filters={filters} categories={data.categories} />
               <Link
                 href="/instructor/courses/new"
-                className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-[18px] bg-[#564FFD] px-5 text-sm font-semibold text-white transition hover:bg-[#453FCA]"
+                className="inline-flex h-12 w-fit shrink-0 items-center justify-center gap-2 rounded-[18px] bg-[#564FFD] px-5 text-sm font-semibold text-white transition hover:bg-[#453FCA]"
               >
                 <PlusCircle className="size-5" />
                 New Course

@@ -6,9 +6,24 @@ import { AlertCircle, CheckCircle2, Loader2, Plus, PlayCircle, Trash2 } from "lu
 import { useEffect, useRef, useState } from "react";
 import type { VideoLessonResponse, VideoQuestionResponse } from "@/types/course";
 import type { VideoNoteDto } from "@/types/learning";
-import { API_BASE_URL } from "@/lib/api-base";
-import { createVideoNoteAction, deleteVideoNoteAction, getVideoNotesByLessonAction, markItemAsCompleteAction, updateVideoNoteAction } from "@/services/actions/learning";
+import {
+  createVideoNoteAction,
+  deleteVideoNoteAction,
+  getVideoNotesByLessonAction,
+  getVideoQuestionsAction,
+  getVideoQuestionSubmissionsAction,
+  markItemAsCompleteAction,
+  submitVideoQuestionAnswerAction,
+  trackVideoProgressAction,
+  updateVideoNoteAction,
+} from "@/services/actions/learning";
 import { cn } from "@/lib/utils";
+
+type HlsQualityLevel = {
+  index: number;
+  label: string;
+  height: number;
+};
 
 type LearningVideoLessonProps = {
   courseId: string;
@@ -44,10 +59,16 @@ export function LearningVideoLesson({
   const [editingNoteContent, setEditingNoteContent] = useState("");
   const [createdNoteId, setCreatedNoteId] = useState<string>();
   const [isCreatingNote, setIsCreatingNote] = useState(false);
+  const [qualityLevels, setQualityLevels] = useState<HlsQualityLevel[]>([]);
+  const [selectedQuality, setSelectedQuality] = useState("-1");
+  const hlsRef = useRef<Hls | null>(null);
 
   useEffect(() => {
     const player = videoRef.current;
     const source = video?.videoUrl;
+
+    hlsRef.current?.destroy();
+    hlsRef.current = null;
 
     if (!player || !source) return undefined;
 
@@ -58,35 +79,71 @@ export function LearningVideoLesson({
 
     if (!Hls.isSupported()) return undefined;
 
-    const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+    const hls = new Hls({
+      enableWorker: true,
+      lowLatencyMode: false,
+      backBufferLength: 30,
+      maxBufferLength: 30,
+      maxMaxBufferLength: 90,
+      startLevel: -1,
+      capLevelToPlayerSize: true,
+    });
+    hlsRef.current = hls;
     hls.loadSource(source);
     hls.attachMedia(player);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      setSelectedQuality("-1");
+      const levels = hls.levels
+        .map((level, index) => ({
+          index,
+          height: level.height || 0,
+          label: level.height ? `${level.height}p` : `${Math.round((level.bitrate || 0) / 1000)} kbps`,
+        }))
+        .filter((level, levelIndex, list) => level.label && list.findIndex((item) => item.label === level.label) === levelIndex)
+        .sort((a, b) => b.height - a.height);
+      setQualityLevels(levels);
+    });
+    hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
+      if (hls.autoLevelEnabled) {
+        setSelectedQuality("-1");
+        return;
+      }
+      setSelectedQuality(String(data.level));
+    });
     hls.on(Hls.Events.ERROR, (_, data) => {
       if (data.fatal) setError("We could not load this video stream.");
     });
 
-    return () => hls.destroy();
+    return () => {
+      hls.destroy();
+      if (hlsRef.current === hls) hlsRef.current = null;
+    };
   }, [video?.videoUrl]);
+
+  function changeQuality(value: string) {
+    setSelectedQuality(value);
+    if (hlsRef.current) {
+      hlsRef.current.currentLevel = Number(value);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadVideoLearningData() {
       const [questionsResponse, submissionsResponse, notesResponse] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/v1/courses/${courseId}/lessons/${lessonId}/videos/questions`, { credentials: "include" }).catch(() => undefined),
-        fetch(`${API_BASE_URL}/api/v1/learning/courses/${courseId}/lessons/${lessonId}/video-tracking/submissions`, { credentials: "include" }).catch(() => undefined),
+        getVideoQuestionsAction(courseId, lessonId),
+        getVideoQuestionSubmissionsAction(courseId, lessonId),
         getVideoNotesByLessonAction(courseId, lessonId),
       ]);
 
       if (cancelled) return;
 
-      if (questionsResponse?.ok) {
-        const payload = await questionsResponse.json().catch(() => undefined);
-        setQuestions((payload?.data || []).sort((a: VideoQuestionResponse, b: VideoQuestionResponse) => (a.timestampSeconds || 0) - (b.timestampSeconds || 0)));
+      if (questionsResponse?.success) {
+        setQuestions((questionsResponse.data || []).sort((a: VideoQuestionResponse, b: VideoQuestionResponse) => (a.timestampSeconds || 0) - (b.timestampSeconds || 0)));
       }
-      if (submissionsResponse?.ok) {
-        const payload = await submissionsResponse.json().catch(() => undefined);
-        setAnsweredQuestionIds(new Set((payload?.data || []).map((item: { videoAssessmentId?: string }) => item.videoAssessmentId).filter(Boolean)));
+      if (submissionsResponse?.success) {
+        setAnsweredQuestionIds(new Set((submissionsResponse.data || []).map((item) => item.videoAssessmentId).filter((id): id is string => Boolean(id))));
       }
       if (notesResponse?.success) {
         setNotes(notesResponse.data || []);
@@ -119,13 +176,7 @@ export function LearningVideoLesson({
     if (player.paused || currentPosition < 1 || currentPosition - lastTrackedSecond.current < 10) return;
 
     lastTrackedSecond.current = currentPosition;
-    fetch(`${API_BASE_URL}/api/v1/learning/courses/${courseId}/lessons/${lessonId}/video-tracking`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPosition }),
-      keepalive: true,
-    }).catch(() => undefined);
+    void trackVideoProgressAction(courseId, lessonId, { currentPosition });
   }
 
   function handleTimeUpdate() {
@@ -163,16 +214,14 @@ export function LearningVideoLesson({
     setIsSubmittingAnswer(true);
     setQuestionMessage(undefined);
 
-    const response = await fetch(`${API_BASE_URL}/api/v1/learning/courses/${courseId}/lessons/${lessonId}/video-tracking/questions/submit`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ videoAssessmentId: activeQuestion.id, userAnswer: encodeVideoAnswer() }),
-    }).catch(() => undefined);
+    const response = await submitVideoQuestionAnswerAction(courseId, lessonId, {
+      videoAssessmentId: activeQuestion.id,
+      userAnswer: encodeVideoAnswer(),
+    });
 
     setIsSubmittingAnswer(false);
-    if (!response?.ok) {
-      setQuestionMessage("That answer is not correct yet. Try again to continue.");
+    if (!response.success) {
+      setQuestionMessage(response.error || "That answer is not correct yet. Try again to continue.");
       return;
     }
 
@@ -220,29 +269,48 @@ export function LearningVideoLesson({
   return (
     <div className="overflow-hidden rounded-[18px] bg-[#111827] shadow-[0_24px_70px_rgba(29,32,38,0.16)]">
       {video?.videoUrl ? (
-        <video
-          ref={videoRef}
-          className="aspect-video w-full bg-black object-contain"
-          controls
-          playsInline
-          preload="metadata"
-          poster={poster}
-          onTimeUpdate={handleTimeUpdate}
-          onEnded={handleEnded}
-        >
-          {video.subtitles
-            ?.filter((track) => track.fileUrl && track.status === "READY")
-            .map((track) => (
-              <track
-                key={`${track.languageCode}-${track.fileUrl}`}
-                kind="subtitles"
-                src={track.fileUrl}
-                srcLang={track.languageCode || "en"}
-                label={track.displayName || track.languageCode || "Subtitle"}
-                default={track.isDefault}
-              />
-            ))}
-        </video>
+        <div className="relative bg-black">
+          <video
+            ref={videoRef}
+            className="aspect-video w-full bg-black object-contain"
+            controls
+            playsInline
+            preload="metadata"
+            poster={poster}
+            onTimeUpdate={handleTimeUpdate}
+            onEnded={handleEnded}
+          >
+            {video.subtitles
+              ?.filter((track) => track.fileUrl && track.status === "READY")
+              .map((track) => (
+                <track
+                  key={`${track.languageCode}-${track.fileUrl}`}
+                  kind="subtitles"
+                  src={track.fileUrl}
+                  srcLang={track.languageCode || "en"}
+                  label={track.displayName || track.languageCode || "Subtitle"}
+                  default={track.isDefault}
+                />
+              ))}
+          </video>
+          {qualityLevels.length > 1 ? (
+            <label className="absolute right-4 top-4 flex items-center gap-2 rounded-full bg-black/70 px-3 py-2 text-xs font-bold text-white shadow-[0_12px_30px_rgba(0,0,0,0.25)] backdrop-blur">
+              Quality
+              <select
+                value={selectedQuality}
+                onChange={(event) => changeQuality(event.target.value)}
+                className="rounded-full border border-white/15 bg-white/10 px-2 py-1 text-xs font-bold text-white outline-none"
+              >
+                <option value="-1" className="text-[#1D2026]">Auto</option>
+                {qualityLevels.map((level) => (
+                  <option key={level.index} value={level.index} className="text-[#1D2026]">
+                    {level.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+        </div>
       ) : (
         <div className="relative aspect-video w-full overflow-hidden">
           {poster ? <Image src={poster} alt={lessonTitle} fill sizes="(min-width: 1024px) 960px, 100vw" className="object-cover opacity-70" /> : null}

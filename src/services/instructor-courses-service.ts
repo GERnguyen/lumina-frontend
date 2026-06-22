@@ -16,6 +16,7 @@ export type InstructorCoursesFilters = {
   sort?: string;
   rating?: number;
   categoryId?: string;
+  status?: string;
 };
 
 export type InstructorCourseCardData = {
@@ -29,6 +30,8 @@ export type InstructorCourseCardData = {
   students: number;
   status?: CourseResponse["status"];
   publishStatus?: CourseResponse["publishStatus"];
+  statusLabel: string;
+  statusTone: "published" | "draft" | "waiting" | "rejected" | "archived";
 };
 
 export type InstructorCoursesData = {
@@ -107,6 +110,22 @@ function imageFor(course: CourseResponse, index: number) {
   return fallbackImages[index % fallbackImages.length];
 }
 
+function statusFor(course: CourseResponse): Pick<InstructorCourseCardData, "statusLabel" | "statusTone"> {
+  if (course.publishStatus === "WAITING_APPROVAL") {
+    return { statusLabel: "Pending review", statusTone: "waiting" };
+  }
+  if (course.publishStatus === "REJECTED") {
+    return { statusLabel: "Rejected", statusTone: "rejected" };
+  }
+  if (course.status === "PUBLISHED" || course.publishStatus === "PUBLISHED") {
+    return { statusLabel: "Published", statusTone: "published" };
+  }
+  if (course.status === "ARCHIVED") {
+    return { statusLabel: "Archived", statusTone: "archived" };
+  }
+  return { statusLabel: "Draft", statusTone: "draft" };
+}
+
 function mapCourse(course: CourseResponse, index: number): InstructorCourseCardData {
   const discountedPrice = course.discountedPrice ?? course.price ?? 0;
   const originalPrice = course.discountedPrice !== undefined && course.price !== undefined && course.discountedPrice < course.price
@@ -124,10 +143,29 @@ function mapCourse(course: CourseResponse, index: number): InstructorCourseCardD
     students: course.enrollmentCount || 0,
     status: course.status,
     publishStatus: course.publishStatus,
+    ...statusFor(course),
   };
 }
 
+function statusParams(status?: string) {
+  switch (status) {
+    case "published":
+      return { status: "PUBLISHED", publishStatus: "PUBLISHED" };
+    case "draft":
+      return { status: "DRAFT", publishStatus: undefined };
+    case "pending":
+      return { status: undefined, publishStatus: "WAITING_APPROVAL" };
+    case "rejected":
+      return { status: undefined, publishStatus: "REJECTED" };
+    case "archived":
+      return { status: "ARCHIVED", publishStatus: undefined };
+    default:
+      return { status: undefined, publishStatus: undefined };
+  }
+}
+
 export async function getInstructorCoursesData(filters: InstructorCoursesFilters): Promise<InstructorCoursesData> {
+  const courseStatus = statusParams(filters.status);
   const [userPayload, coursesPayload, categoriesPayload] = await Promise.all([
     fetchJson<ApiPayload<UserDto>>("/api/v1/users/me"),
     fetchJson<ApiPayload<CourseResponse[]>>("/api/v1/courses/mine", {
@@ -137,6 +175,8 @@ export async function getInstructorCoursesData(filters: InstructorCoursesFilters
       sort: filters.sort,
       rating: filters.rating,
       categoryId: filters.categoryId,
+      status: courseStatus.status,
+      publishStatus: courseStatus.publishStatus,
     }),
     fetchJson<ApiPayload<CategoryResponse[]> | CategoryResponse[]>("/api/v1/categories"),
   ]);

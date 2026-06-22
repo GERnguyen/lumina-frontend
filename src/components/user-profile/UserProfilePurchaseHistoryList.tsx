@@ -1,7 +1,92 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronDown, CreditCard, DollarSign, PlayCircle, Star } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ChevronDown, CreditCard, DollarSign, PlayCircle, Search, Star } from "lucide-react";
 import type { ProfilePurchaseCourse, ProfilePurchaseHistoryItem } from "@/data/user-profile";
+
+type PurchaseSort = "latest" | "oldest" | "highest" | "lowest";
+
+function SelectField({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: Array<{ label: string; value: string }>;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="flex min-w-0 flex-col gap-2">
+      <span className="text-xs leading-4 text-[#6E7485]">{label}</span>
+      <span className="relative block">
+        <select
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-12 w-full appearance-none rounded-[18px] border border-[#E9EAF0] bg-white px-4 pr-10 text-base text-[#4E5566] outline-none transition focus:border-[#564FFD]"
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-[#4E5566]" />
+      </span>
+    </label>
+  );
+}
+
+function parseMoneyValue(value: string) {
+  const numeric = value.replace(/[^\d]/g, "");
+  return numeric ? Number(numeric) : 0;
+}
+
+function parsePurchaseDate(value: string) {
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function filterPurchases(
+  purchases: ProfilePurchaseHistoryItem[],
+  filters: { query: string; status: string; paymentMethod: string; sort: PurchaseSort },
+) {
+  const query = filters.query.trim().toLowerCase();
+  let next = purchases.filter((purchase) => {
+    if (query) {
+      const haystack = [
+        purchase.id,
+        purchase.purchasedAt,
+        purchase.total,
+        purchase.paymentMethod,
+        purchase.status,
+        ...purchase.courses.flatMap((course) => [course.title, course.instructor]),
+      ]
+        .join(" ")
+        .toLowerCase();
+      if (!haystack.includes(query)) return false;
+    }
+
+    if (filters.status !== "all" && purchase.status !== filters.status) return false;
+    if (filters.paymentMethod !== "all" && purchase.paymentMethod !== filters.paymentMethod) return false;
+    return true;
+  });
+
+  if (filters.sort === "oldest") {
+    next = [...next].sort((a, b) => parsePurchaseDate(a.purchasedAt) - parsePurchaseDate(b.purchasedAt));
+  } else if (filters.sort === "highest") {
+    next = [...next].sort((a, b) => parseMoneyValue(b.total) - parseMoneyValue(a.total));
+  } else if (filters.sort === "lowest") {
+    next = [...next].sort((a, b) => parseMoneyValue(a.total) - parseMoneyValue(b.total));
+  } else {
+    next = [...next].sort((a, b) => parsePurchaseDate(b.purchasedAt) - parsePurchaseDate(a.purchasedAt));
+  }
+
+  return next;
+}
 
 function PurchaseMeta({ purchase }: { purchase: ProfilePurchaseHistoryItem }) {
   return (
@@ -110,11 +195,68 @@ function PurchaseHistoryItem({ purchase, defaultOpen }: { purchase: ProfilePurch
 }
 
 export function UserProfilePurchaseHistoryList({ purchases }: { purchases: ProfilePurchaseHistoryItem[] }) {
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("all");
+  const [paymentMethod, setPaymentMethod] = useState("all");
+  const [sort, setSort] = useState<PurchaseSort>("latest");
+
+  const paymentOptions = useMemo(() => {
+    const methods = Array.from(new Set(purchases.map((purchase) => purchase.paymentMethod).filter(Boolean)));
+    return [{ label: "All methods", value: "all" }, ...methods.map((method) => ({ label: method, value: method }))];
+  }, [purchases]);
+
+  const statusOptions = useMemo(() => {
+    const statuses = Array.from(new Set(purchases.map((purchase) => purchase.status).filter(Boolean)));
+    return [{ label: "All statuses", value: "all" }, ...statuses.map((item) => ({ label: item, value: item }))];
+  }, [purchases]);
+
+  const filteredPurchases = useMemo(
+    () => filterPurchases(purchases, { query, status, paymentMethod, sort }),
+    [paymentMethod, purchases, query, sort, status],
+  );
+
   return (
-    <div className="space-y-4">
-      {purchases.map((purchase, index) => (
-        <PurchaseHistoryItem key={purchase.id} purchase={purchase} defaultOpen={index === 0} />
-      ))}
+    <div>
+      <div className="mb-6 grid gap-6 lg:grid-cols-[minmax(280px,528px)_repeat(3,minmax(180px,240px))]">
+        <label className="flex min-w-0 flex-col gap-2">
+          <span className="text-xs leading-4 text-[#6E7485]">Search:</span>
+          <span className="flex h-12 items-center gap-3 rounded-[18px] border border-[#E9EAF0] bg-white px-4 transition focus-within:border-[#564FFD]">
+            <Search className="size-6 text-[#8C94A3]" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className="w-full border-0 p-0 text-base text-[#1D2026] placeholder:text-[#8C94A3] focus:ring-0"
+              placeholder="Search orders or courses..."
+            />
+          </span>
+        </label>
+        <SelectField
+          label="Sort by:"
+          value={sort}
+          onChange={(value) => setSort(value as PurchaseSort)}
+          options={[
+            { label: "Latest", value: "latest" },
+            { label: "Oldest", value: "oldest" },
+            { label: "Highest total", value: "highest" },
+            { label: "Lowest total", value: "lowest" },
+          ]}
+        />
+        <SelectField label="Status:" value={status} onChange={setStatus} options={statusOptions} />
+        <SelectField label="Payment:" value={paymentMethod} onChange={setPaymentMethod} options={paymentOptions} />
+      </div>
+
+      <div className="space-y-4">
+        {filteredPurchases.map((purchase, index) => (
+          <PurchaseHistoryItem key={purchase.id} purchase={purchase} defaultOpen={index === 0} />
+        ))}
+      </div>
+
+      {!filteredPurchases.length ? (
+        <div className="rounded-[18px] border border-dashed border-[#D8D6FF] bg-white px-6 py-12 text-center">
+          <p className="text-base font-semibold text-[#1D2026]">No purchases match your filters.</p>
+          <p className="mt-2 text-sm text-[#6E7485]">Try another keyword, status, or payment method.</p>
+        </div>
+      ) : null}
     </div>
   );
 }
