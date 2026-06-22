@@ -941,6 +941,31 @@ function hasMeaningfulLessonContent(lesson: Lesson) {
   return Boolean(content.assignmentInstructions?.trim() || content.assignmentAttachmentFile || content.assignmentAttachmentFileKey);
 }
 
+async function syncDeletedCurriculumItems(courseId: string, sections: Section[]) {
+  const currentSectionIds = new Set(sections.map((section) => section.serverId).filter(Boolean));
+  const currentLessonIds = new Set(sections.flatMap((section) => section.lessons.map((lesson) => lesson.serverId)).filter(Boolean));
+  const response = await CourseService.getEditableDraftCurriculum({ id: courseId }).catch(() => undefined);
+  const serverSections = response?.data?.sections || [];
+
+  for (const serverSection of serverSections) {
+    if (!serverSection.id) continue;
+    if (!currentSectionIds.has(serverSection.id)) {
+      await SectionService.deleteSection({ courseId, sectionId: serverSection.id });
+      continue;
+    }
+
+    for (const serverLesson of serverSection.lessons || []) {
+      if (serverLesson.id && !currentLessonIds.has(serverLesson.id)) {
+        await LessonService.deleteLesson({
+          courseId,
+          sectionId: serverSection.id,
+          lessonId: serverLesson.id,
+        });
+      }
+    }
+  }
+}
+
 async function uploadFileWithPresignedUrl(file: File) {
   try {
     const contentType = file.type || "application/octet-stream";
@@ -998,6 +1023,14 @@ function normalizeVideoCheckpointQuestion(question: VideoCheckpointQuestion) {
   };
 }
 
+function toCreateVideoCheckpointQuestionBody(question: VideoCheckpointQuestion) {
+  const body = normalizeVideoCheckpointQuestion(question);
+  return {
+    ...body,
+    options: body.options.map(({ optionText, isCorrect }) => ({ optionText, isCorrect })),
+  };
+}
+
 async function syncVideoCheckpointQuestions(courseId: string, lessonId: string, questions: VideoCheckpointQuestion[]) {
   const existingResponse = await VideoQuestionService.getQuestionsByLessonId({ courseId, lessonId }).catch(() => undefined);
   const existingQuestions = existingResponse?.data || [];
@@ -1010,29 +1043,14 @@ async function syncVideoCheckpointQuestions(courseId: string, lessonId: string, 
   }
 
   for (const question of questions) {
-    const body = normalizeVideoCheckpointQuestion(question);
+    const body = toCreateVideoCheckpointQuestionBody(question);
     if (!question.serverId) {
       await VideoQuestionService.createQuestion({ courseId, lessonId, body });
       continue;
     }
 
-    const existing = existingQuestions.find((item) => item.id === question.serverId);
-    if (existing?.questionType && existing.questionType !== question.questionType) {
-      await VideoQuestionService.deleteQuestion({ courseId, lessonId, id: question.serverId }).catch(() => undefined);
-      await VideoQuestionService.createQuestion({ courseId, lessonId, body });
-      continue;
-    }
-
-    await VideoQuestionService.updateQuestion({
-      courseId,
-      lessonId,
-      id: question.serverId,
-      body: {
-        questionText: body.questionText,
-        timestampSeconds: body.timestampSeconds,
-        options: body.options,
-      },
-    });
+    await VideoQuestionService.deleteQuestion({ courseId, lessonId, id: question.serverId }).catch(() => undefined);
+    await VideoQuestionService.createQuestion({ courseId, lessonId, body });
   }
 }
 
@@ -2890,6 +2908,8 @@ export function CourseCreateOptionsPage({ mode = "create", courseId }: CourseCre
 
       if (!courseId) throw new Error("Course draft was saved but no course id was returned.");
       setDraftCourseId(courseId);
+
+      await syncDeletedCurriculumItems(courseId, sections);
 
       const nextSections: Section[] = [];
 

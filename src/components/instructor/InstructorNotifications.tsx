@@ -58,6 +58,15 @@ function countUnreadFromItems(items: UserNotificationResponse[]) {
   return items.filter((item) => item.isRead === false).length;
 }
 
+function mergeNotifications(current: UserNotificationResponse[], incoming: UserNotificationResponse[]) {
+  const merged = new Map<string, UserNotificationResponse>();
+  [...current, ...incoming].forEach((item, index) => {
+    const key = item.id || `${item.title || "notification"}-${item.message || ""}-${index}`;
+    merged.set(key, { ...merged.get(key), ...item });
+  });
+  return [...merged.values()].slice(0, 80);
+}
+
 export function InstructorNotifications({
   emptyDescription = "Course reviews and approval updates will appear here.",
   buttonClassName,
@@ -73,6 +82,7 @@ export function InstructorNotifications({
   const [isLoading, setIsLoading] = useState(true);
   const [isShowingAll, setIsShowingAll] = useState(false);
   const [socketStatus, setSocketStatus] = useState<SocketStatus>("connecting");
+  const [loadError, setLoadError] = useState("");
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<number | undefined>(undefined);
 
@@ -83,14 +93,21 @@ export function InstructorNotifications({
     if (!options?.silent) {
       setIsLoading(true);
     }
+    setLoadError("");
+    const countPayload = await NotificationService.countUnreadNotifications().catch(() => undefined);
+    const serverUnreadCount = typeof countPayload?.data === "number" ? countPayload.data : undefined;
     const notifications = await NotificationService.getNotifications({
       page: 1,
       size: 50,
-      sort: '{"createdAt":"DESC"}',
     }).catch(() => undefined);
     const nextItems = notifications?.data || [];
-    setItems(nextItems);
-    setUnreadCount(countUnreadFromItems(nextItems));
+    if (!notifications?.success && serverUnreadCount && !nextItems.length) {
+      setLoadError("Could not load notification history. Please try again.");
+    }
+    if (notifications?.success || nextItems.length) {
+      setItems((current) => mergeNotifications(current, nextItems));
+    }
+    setUnreadCount(serverUnreadCount ?? countUnreadFromItems(nextItems));
     setIsLoading(false);
   }
 
@@ -181,7 +198,7 @@ export function InstructorNotifications({
 
   async function openNotifications() {
     setIsOpen((value) => !value);
-    if (!isOpen) {
+    if (!isOpen && !items.length) {
       await loadNotifications({ silent: true });
     }
   }
@@ -235,6 +252,18 @@ export function InstructorNotifications({
             {isLoading ? (
               <div className="flex h-32 items-center justify-center text-[#564FFD]">
                 <Loader2 className="size-5 animate-spin" />
+              </div>
+            ) : loadError && !visibleItems.length ? (
+              <div className="px-5 py-10 text-center">
+                <p className="text-sm font-bold text-[#1D2026]">Could not load notifications</p>
+                <p className="mt-1 text-xs leading-5 text-[#8C94A3]">{loadError}</p>
+                <button
+                  type="button"
+                  onClick={() => loadNotifications({ silent: true })}
+                  className="mt-4 rounded-full bg-[#EBEBFF] px-4 py-2 text-xs font-bold text-[#564FFD] transition hover:bg-[#DEDFFF]"
+                >
+                  Retry
+                </button>
               </div>
             ) : visibleItems.length ? (
               visibleItems.map((item) => (

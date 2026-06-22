@@ -1,6 +1,6 @@
 "use server";
 
-import { AssignmentApi, DailyGoalApi, LearningProgressApi, QuizSessionApi, VideoNoteApi, VideoTrackingApi } from "@/services/api/learning-api";
+import { AssignmentApi, CertificateApi, DailyGoalApi, LearningProgressApi, QuizSessionApi, VideoNoteApi, VideoTrackingApi } from "@/services/api/learning-api";
 import { CourseApi, VideoQuestionApi } from "@/services/api/course-api";
 import { EnrollmentApi } from "@/services/api/enrollment-api";
 import type { CreateAssignmentSubmissionRequest, CreateVideoNoteRequest, ChooseQuizAnswerRequest, SetDailyGoalRequest, SubmitQuizSessionRequest, SubmitVideoQuestionRequest, TrackingVideoLessonRequest, UpdateVideoNoteRequest } from "@/types";
@@ -59,6 +59,15 @@ export async function getCourseProgressByCourseIdsAction(courseIds: string) {
   try {
     const res = await LearningProgressApi.getCourseProgressByCourseIds(courseIds);
     return { success: true, data: res.data || [] };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to fetch course progress" };
+  }
+}
+
+export async function getMyCourseProgressAction(courseId: string) {
+  try {
+    const res = await LearningProgressApi.getMyCourseProgress(courseId);
+    return { success: true, data: res.data };
   } catch (error: any) {
     return { success: false, error: error?.message || "Failed to fetch course progress" };
   }
@@ -155,6 +164,25 @@ export async function submitAssignmentAction(assignmentId: string, body: CreateA
     return { success: true, data: res.data };
   } catch (error: any) {
     return { success: false, error: error?.message || "Failed to submit assignment" };
+  }
+}
+
+export async function getAssignmentSubmissionAction(assignmentId: string) {
+  try {
+    const res = await AssignmentApi.getAssignmentSubmission({ assignmentId });
+    return { success: true, data: res.data };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to load assignment submission" };
+  }
+}
+
+export async function applyForCertificateAction(courseId: string) {
+  try {
+    const res = await CertificateApi.applyForCertificate(courseId);
+    revalidatePath(`/learning/${courseId}`);
+    return { success: true, data: res.data };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to request certificate" };
   }
 }
 

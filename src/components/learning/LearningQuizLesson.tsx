@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CheckCircle2, HelpCircle, Loader2, Send, Trophy, X } from "lucide-react";
+import { CheckCircle2, GripVertical, HelpCircle, Loader2, Send, Trophy, X } from "lucide-react";
 import type { QuizLessonResponse } from "@/types/course";
 import type { QuizSessionQuestionResponse, QuizSessionResponse } from "@/types/learning";
 import {
@@ -23,6 +23,15 @@ type LearningQuizLessonProps = {
 type MatchingAnswer = Array<{ optionId: string; matchText: string }>;
 type QuizAnswerValue = string | string[] | MatchingAnswer;
 
+function shuffleValues<T>(items: T[]) {
+  const next = [...items];
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+  }
+  return next;
+}
+
 export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: LearningQuizLessonProps) {
   const [session, setSession] = useState<QuizSessionResponse>();
   const [questions, setQuestions] = useState<QuizSessionQuestionResponse[]>([]);
@@ -36,7 +45,7 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
   }
 
   function getDefaultAnswer(question: QuizSessionQuestionResponse): QuizAnswerValue {
-    if (question.questionType === "ORDERING") return (question.options || []).map((option) => option.id || option.optionText || "").filter(Boolean);
+    if (question.questionType === "ORDERING") return shuffleValues((question.options || []).map((option) => option.id || option.optionText || "").filter(Boolean));
     if (question.questionType === "MULTI_CHOICE") return [];
     if (question.questionType === "MATCHING") return [];
     return "";
@@ -184,6 +193,15 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
     setAnswer(question, next);
   }
 
+  function moveOrderAnswerTo(question: QuizSessionQuestionResponse, fromIndex: number, toIndex: number) {
+    const current = arrayAnswer(question);
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= current.length || toIndex >= current.length) return;
+    const next = [...current];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved);
+    setAnswer(question, next);
+  }
+
   return (
     <section className="rounded-[18px] border border-[#E9EAF0] bg-white p-6 shadow-[0_18px_48px_rgba(29,32,38,0.06)] lg:p-8">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -258,7 +276,21 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
                   {arrayAnswer(question).map((optionId, optionIndex) => {
                     const option = (question.options || []).find((item) => (item.id || item.optionText) === optionId);
                     return (
-                      <div key={`${optionId}-${optionIndex}`} className="flex items-center gap-3 rounded-[16px] border border-[#E9EAF0] p-3">
+                      <div
+                        key={`${optionId}-${optionIndex}`}
+                        draggable
+                        onDragStart={(event) => {
+                          event.dataTransfer.setData("text/plain", String(optionIndex));
+                          event.dataTransfer.effectAllowed = "move";
+                        }}
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          moveOrderAnswerTo(question, Number(event.dataTransfer.getData("text/plain")), optionIndex);
+                        }}
+                        className="flex cursor-grab items-center gap-3 rounded-[16px] border border-[#E9EAF0] bg-white p-3 transition hover:border-[#D8D6FF] hover:bg-[#F9FAFB] active:cursor-grabbing"
+                      >
+                        <GripVertical className="size-5 shrink-0 text-[#8C94A3]" />
                         <span className="inline-flex size-9 items-center justify-center rounded-full bg-[#EBEBFF] text-sm font-black text-[#564FFD]">{optionIndex + 1}</span>
                         <p className="min-w-0 flex-1 text-sm font-semibold text-[#1D2026]">{option?.optionText || optionId}</p>
                         <button type="button" onClick={() => moveOrderAnswer(question, optionIndex, -1)} className="rounded-full px-3 py-2 text-xs font-bold text-[#564FFD] hover:bg-[#F7F7FF]">
@@ -277,16 +309,27 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
                     const value = option.id || option.optionText || "";
                     const requestQuestionId = getRequestQuestionId(question);
                     const isSelected = question.questionType === "MULTI_CHOICE" ? arrayAnswer(question).includes(value) : answers[requestQuestionId] === value;
+                    const isMultiple = question.questionType === "MULTI_CHOICE";
                     return (
                       <button
                         key={value}
                         type="button"
                         onClick={() => (question.questionType === "MULTI_CHOICE" ? toggleMultiAnswer(question, value) : setAnswer(question, value))}
                         className={cn(
-                          "rounded-[16px] border px-4 py-3 text-left text-sm font-semibold transition",
+                          "flex items-center gap-3 rounded-[16px] border px-4 py-3 text-left text-sm font-semibold transition",
                           isSelected ? "border-[#564FFD] bg-[#EBEBFF] text-[#1D2026]" : "border-[#E9EAF0] text-[#4E5566] hover:border-[#D8D6FF] hover:bg-[#F9FAFB]"
                         )}
                       >
+                        <span
+                          className={cn(
+                            "flex size-5 shrink-0 items-center justify-center border transition",
+                            isMultiple ? "rounded-[6px]" : "rounded-full",
+                            isSelected ? "border-[#564FFD] bg-[#564FFD]" : "border-[#C6CAD1] bg-white",
+                          )}
+                          aria-hidden="true"
+                        >
+                          {isSelected ? <span className={cn("bg-white", isMultiple ? "h-2.5 w-2.5 rounded-[3px]" : "size-2 rounded-full")} /> : null}
+                        </span>
                         {option.optionText || value}
                       </button>
                     );

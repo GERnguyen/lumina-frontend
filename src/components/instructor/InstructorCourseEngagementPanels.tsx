@@ -76,6 +76,7 @@ export function InstructorCourseEngagementPanels({ courseId }: Props) {
 
     const nextReviews = reviewsRes?.data || [];
     const nextQuestions = questionsRes?.data || [];
+
     setReviews(nextReviews);
     setQuestions(nextQuestions);
     setCertificates(certsRes?.data || []);

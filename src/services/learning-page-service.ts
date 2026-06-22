@@ -10,6 +10,7 @@ import {
 } from "@/services/api/course-api";
 import {
   AssignmentApi,
+  CertificateApi,
   LearningProgressApi,
   VideoTrackingApi,
 } from "@/services/api/learning-api";
@@ -149,6 +150,9 @@ export const getLearningPageData = cache(async (courseId: string, lessonId?: str
   const completedItems = progressPayload.data?.completedItems || completedIds.size;
   const progressPercent = totalItems ? Math.round((completedItems / totalItems) * 100) : 0;
   const content = await getLessonContent(courseId, currentLessonPayload as LessonResponse & { id: string });
+  const certificatePayload = course.hasCertificate
+    ? await CertificateApi.getMyCertificate(courseId).catch(() => undefined)
+    : undefined;
 
   return {
     courseId,
@@ -156,6 +160,11 @@ export const getLearningPageData = cache(async (courseId: string, lessonId?: str
     courseDescription: course.description,
     coverUrl: getCourseImage(course),
     instructorName: getCourseInstructorName(course),
+    hasCertificate: Boolean(course.hasCertificate),
+    certificateTitle: course.certificateTitle,
+    certificate: certificatePayload?.data,
+    isCourseCompleted: Boolean(progressPayload.data?.isCompleted),
+    isCoursePassed: Boolean(progressPayload.data?.isPassed),
     progressPercent,
     completedItems,
     totalItems,

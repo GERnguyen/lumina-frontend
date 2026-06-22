@@ -2,8 +2,7 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, CheckSquare, PlayCircle, Trophy, Users } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import type {
   ProfileCourseFilter,
   ProfileCourseItem,
@@ -17,7 +16,6 @@ import { UserProfileCourseFilters } from "./UserProfileCourseFilters";
 import { UserProfileLearningCard } from "./UserProfileLearningCard";
 import { UserProfilePurchaseHistoryList } from "./UserProfilePurchaseHistoryList";
 import { UserProfileSettingsForm } from "./UserProfileSettingsForm";
-import { UserProfileStatCard } from "./UserProfileStatCard";
 import { UserProfileWishlistTable } from "./UserProfileWishlistTable";
 
 type ProfileTabKey = "dashboard" | "courses" | "wishlist" | "purchase-history" | "settings";
@@ -45,9 +43,6 @@ const tabs: Array<{ key: ProfileTabKey; label: string }> = [
 
 export function UserProfileSpaShell({
   user,
-  totalEnrolled,
-  activeCourses,
-  completedCourses,
   learningCourses,
   courses,
   courseFilters,
@@ -56,16 +51,6 @@ export function UserProfileSpaShell({
   settings,
 }: UserProfileSpaShellProps) {
   const [activeTab, setActiveTab] = useState<ProfileTabKey>("dashboard");
-
-  const stats = useMemo(
-    () => [
-      { label: "Enrolled Courses", value: String(totalEnrolled), icon: PlayCircle, tone: "purple" as const },
-      { label: "Active Courses", value: String(activeCourses), icon: CheckSquare, tone: "purple" as const },
-      { label: "Completed Courses", value: String(completedCourses), icon: Trophy, tone: "green" as const },
-      { label: "Course Instructors", value: "0", icon: Users, tone: "orange" as const },
-    ],
-    [activeCourses, completedCourses, totalEnrolled],
-  );
 
   return (
     <>
@@ -107,7 +92,7 @@ export function UserProfileSpaShell({
       <section className="px-6 py-10 lg:px-8">
         <div className="mx-auto max-w-[1320px] animate-[fadeIn_180ms_ease-out]">
           {activeTab === "dashboard" ? (
-            <DashboardTab user={user} stats={stats} learningCourses={learningCourses} />
+            <DashboardTab user={user} learningCourses={learningCourses} />
           ) : null}
           {activeTab === "courses" ? <CoursesTab courses={courses} filters={courseFilters} /> : null}
           {activeTab === "wishlist" ? <WishlistTab items={wishlistItems} /> : null}
@@ -121,23 +106,16 @@ export function UserProfileSpaShell({
 
 function DashboardTab({
   user,
-  stats,
   learningCourses,
 }: {
   user: UserProfileDashboardData["user"];
-  stats: Array<{ label: string; value: string; icon: LucideIcon; tone: "purple" | "green" | "orange" }>;
   learningCourses: UserProfileDashboardData["learningCourses"];
 }) {
   return (
     <>
       <h2 className="text-2xl font-semibold tracking-normal text-[#1D2026]">Dashboard</h2>
-      <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat) => (
-          <UserProfileStatCard key={stat.label} stat={stat} />
-        ))}
-      </div>
 
-      <div className="mt-11 flex items-center justify-between gap-4">
+      <div className="mt-6 flex items-center justify-between gap-4">
         <h2 className="text-2xl font-semibold tracking-normal text-[#1D2026]">
           Let’s start learning, {user.name.split(" ")[0]}
         </h2>

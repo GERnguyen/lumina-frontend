@@ -2,7 +2,7 @@
 
 import Hls from "hls.js";
 import Image from "next/image";
-import { AlertCircle, CheckCircle2, Loader2, Plus, PlayCircle, Trash2 } from "lucide-react";
+import { AlertCircle, Loader2, Maximize2, Minimize2, Pause, Play, PlayCircle, Plus, Trash2, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { VideoLessonResponse, VideoQuestionResponse } from "@/types/course";
 import type { VideoNoteDto } from "@/types/learning";
@@ -12,7 +12,6 @@ import {
   getVideoNotesByLessonAction,
   getVideoQuestionsAction,
   getVideoQuestionSubmissionsAction,
-  markItemAsCompleteAction,
   submitVideoQuestionAnswerAction,
   trackVideoProgressAction,
   updateVideoNoteAction,
@@ -24,6 +23,20 @@ type HlsQualityLevel = {
   label: string;
   height: number;
 };
+
+function formatVideoTime(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "0:00";
+  const totalSeconds = Math.floor(value);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
 
 type LearningVideoLessonProps = {
   courseId: string;
@@ -44,8 +57,11 @@ export function LearningVideoLesson({
   resumePosition,
   onComplete,
 }: LearningVideoLessonProps) {
+  const playerShellRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastTrackedSecond = useRef(0);
+  const passedQuestionIdsThisRunRef = useRef<Set<string>>(new Set());
+  const hasMarkedNearCompleteRef = useRef(false);
   const [error, setError] = useState<string>();
   const [questions, setQuestions] = useState<VideoQuestionResponse[]>([]);
   const [answeredQuestionIds, setAnsweredQuestionIds] = useState<Set<string>>(new Set());
@@ -61,6 +77,12 @@ export function LearningVideoLesson({
   const [isCreatingNote, setIsCreatingNote] = useState(false);
   const [qualityLevels, setQualityLevels] = useState<HlsQualityLevel[]>([]);
   const [selectedQuality, setSelectedQuality] = useState("-1");
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const hlsRef = useRef<Hls | null>(null);
 
   useEffect(() => {
@@ -127,8 +149,17 @@ export function LearningVideoLesson({
     }
   }
 
+  function syncVideoDuration() {
+    const player = videoRef.current;
+    if (!player || !Number.isFinite(player.duration)) return;
+    setDuration(player.duration);
+    setCurrentTime(player.currentTime || 0);
+  }
+
   useEffect(() => {
     let cancelled = false;
+    passedQuestionIdsThisRunRef.current = new Set();
+    hasMarkedNearCompleteRef.current = false;
 
     async function loadVideoLearningData() {
       const [questionsResponse, submissionsResponse, notesResponse] = await Promise.all([
@@ -157,37 +188,87 @@ export function LearningVideoLesson({
   }, [courseId, lessonId]);
 
   useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === playerShellRef.current);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  useEffect(() => {
     const player = videoRef.current;
     if (!player || !resumePosition || resumePosition <= 0) return;
 
     const handleLoaded = () => {
       player.currentTime = resumePosition;
+      setCurrentTime(resumePosition);
     };
+
+    if (player.readyState >= 1) {
+      handleLoaded();
+      return;
+    }
 
     player.addEventListener("loadedmetadata", handleLoaded, { once: true });
     return () => player.removeEventListener("loadedmetadata", handleLoaded);
   }, [resumePosition]);
 
-  function trackProgress() {
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        trackProgress(true);
+      }
+    };
+
+    window.addEventListener("pagehide", handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.removeEventListener("pagehide", handleVisibilityChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [courseId, lessonId]);
+
+  function trackProgress(force = false) {
     const player = videoRef.current;
     if (!player) return;
 
     const currentPosition = Math.floor(player.currentTime);
-    if (player.paused || currentPosition < 1 || currentPosition - lastTrackedSecond.current < 10) return;
+    if (currentPosition < 1) return;
+    if (!force && (player.paused || currentPosition - lastTrackedSecond.current < 10)) return;
 
     lastTrackedSecond.current = currentPosition;
     void trackVideoProgressAction(courseId, lessonId, { currentPosition });
   }
 
   function handleTimeUpdate() {
-    trackProgress();
     const player = videoRef.current;
+    if (player) setCurrentTime(player.currentTime);
+    trackProgress();
     if (!player || activeQuestion) return;
 
     const currentPosition = Math.floor(player.currentTime);
+    if (!hasMarkedNearCompleteRef.current && duration > 0 && currentPosition >= Math.floor(duration * 0.95)) {
+      hasMarkedNearCompleteRef.current = true;
+      onComplete(lessonId);
+      trackProgress(true);
+    }
+
+    const passedIds = passedQuestionIdsThisRunRef.current;
+    let changedPassedIds = false;
+    questions.forEach((question) => {
+      if (!question.id || typeof question.timestampSeconds !== "number") return;
+      if (currentPosition <= question.timestampSeconds - 1 && passedIds.delete(question.id)) {
+        changedPassedIds = true;
+      }
+    });
+    if (changedPassedIds) {
+      passedQuestionIdsThisRunRef.current = new Set(passedIds);
+    }
+
     const nextQuestion = questions.find((question) => {
       const timestamp = question.timestampSeconds ?? -1;
-      return question.id && timestamp >= 0 && currentPosition >= timestamp && !answeredQuestionIds.has(question.id);
+      return question.id && timestamp >= 0 && currentPosition >= timestamp && !passedQuestionIdsThisRunRef.current.has(question.id);
     });
 
     if (!nextQuestion) return;
@@ -195,6 +276,108 @@ export function LearningVideoLesson({
     setActiveQuestion(nextQuestion);
     setSelectedAnswers([]);
     setQuestionMessage(undefined);
+  }
+
+  function handleSeeked() {
+    const player = videoRef.current;
+    if (!player) return;
+    setCurrentTime(player.currentTime);
+    trackProgress(true);
+    handleTimeUpdate();
+  }
+
+  function jumpToCheckpoint(timestamp?: number) {
+    const player = videoRef.current;
+    if (!player || typeof timestamp !== "number") return;
+    player.currentTime = Math.max(0, timestamp - 1);
+    player.play().catch(() => undefined);
+  }
+
+  function seekFromPointer(event: React.PointerEvent<HTMLDivElement>) {
+    const player = videoRef.current;
+    if (!player || duration <= 0) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+    player.currentTime = ratio * duration;
+    setCurrentTime(player.currentTime);
+  }
+
+  function seekBy(deltaSeconds: number) {
+    const player = videoRef.current;
+    if (!player || activeQuestion) return;
+    player.currentTime = Math.min(duration || Number.MAX_SAFE_INTEGER, Math.max(0, player.currentTime + deltaSeconds));
+    setCurrentTime(player.currentTime);
+    handleTimeUpdate();
+  }
+
+  function togglePlayback() {
+    const player = videoRef.current;
+    if (!player || activeQuestion) return;
+    if (player.paused) {
+      player.play().catch(() => undefined);
+    } else {
+      player.pause();
+    }
+  }
+
+  function toggleMute() {
+    const player = videoRef.current;
+    if (!player) return;
+    player.muted = !player.muted;
+    setIsMuted(player.muted);
+  }
+
+  function changeVolume(value: number) {
+    const player = videoRef.current;
+    if (!player) return;
+    player.volume = value;
+    player.muted = value === 0;
+    setVolume(value);
+    setIsMuted(player.muted);
+  }
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => undefined);
+      return;
+    }
+
+    playerShellRef.current?.requestFullscreen?.().catch(() => undefined);
+  }
+
+  function handlePlayerKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    const target = event.target as HTMLElement | null;
+    if (target && ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName)) return;
+    if (activeQuestion) return;
+
+    if (event.code === "Space" || event.key === "k" || event.key === "K") {
+      event.preventDefault();
+      togglePlayback();
+      return;
+    }
+
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      seekBy(-10);
+      return;
+    }
+
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      seekBy(10);
+      return;
+    }
+
+    if (event.key === "m" || event.key === "M") {
+      event.preventDefault();
+      toggleMute();
+      return;
+    }
+
+    if (event.key === "f" || event.key === "F") {
+      event.preventDefault();
+      toggleFullscreen();
+    }
   }
 
   function toggleVideoAnswer(optionId: string) {
@@ -226,6 +409,7 @@ export function LearningVideoLesson({
     }
 
     setAnsweredQuestionIds((current) => new Set(current).add(activeQuestion.id!));
+    passedQuestionIdsThisRunRef.current = new Set(passedQuestionIdsThisRunRef.current).add(activeQuestion.id!);
     setActiveQuestion(undefined);
     setSelectedAnswers([]);
     videoRef.current?.play().catch(() => undefined);
@@ -262,22 +446,41 @@ export function LearningVideoLesson({
   }
 
   async function handleEnded() {
+    trackProgress(true);
     onComplete(lessonId);
-    await markItemAsCompleteAction(lessonId);
   }
 
   return (
     <div className="overflow-hidden rounded-[18px] bg-[#111827] shadow-[0_24px_70px_rgba(29,32,38,0.16)]">
       {video?.videoUrl ? (
-        <div className="relative bg-black">
+        <div
+          ref={playerShellRef}
+          tabIndex={0}
+          onKeyDown={handlePlayerKeyDown}
+          onPointerDown={(event) => {
+            const target = event.target as HTMLElement | null;
+            if (target && ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName)) return;
+            playerShellRef.current?.focus();
+          }}
+          className="relative bg-black outline-none"
+          aria-label="Video player"
+        >
           <video
             ref={videoRef}
             className="aspect-video w-full bg-black object-contain"
-            controls
             playsInline
             preload="metadata"
             poster={poster}
+            onLoadedMetadata={syncVideoDuration}
+            onDurationChange={syncVideoDuration}
             onTimeUpdate={handleTimeUpdate}
+            onSeeked={handleSeeked}
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => {
+              setIsPlaying(false);
+              trackProgress(true);
+            }}
+            onClick={togglePlayback}
             onEnded={handleEnded}
           >
             {video.subtitles
@@ -310,6 +513,73 @@ export function LearningVideoLesson({
               </select>
             </label>
           ) : null}
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-5 pb-4 pt-12">
+            <div
+              role="slider"
+              aria-label="Video progress"
+              aria-valuemin={0}
+              aria-valuemax={Math.floor(duration || 0)}
+              aria-valuenow={Math.floor(currentTime || 0)}
+              tabIndex={0}
+              onPointerDown={seekFromPointer}
+              className="relative h-5 cursor-pointer touch-none"
+            >
+              <div className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-white/25">
+                <div className="h-full rounded-full bg-[#7872FD]" style={{ width: `${duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0}%` }} />
+              </div>
+              {duration > 0 && questions.length ? questions
+                .filter((question) => typeof question.timestampSeconds === "number")
+                .map((question, index) => {
+                  const timestamp = Math.max(0, question.timestampSeconds || 0);
+                  const left = Math.min(100, Math.max(0, (timestamp / duration) * 100));
+                  const isAnswered = question.id ? answeredQuestionIds.has(question.id) : false;
+                  return (
+                    <button
+                      key={question.id || `${timestamp}-${index}`}
+                      type="button"
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={() => jumpToCheckpoint(timestamp)}
+                      aria-label={`Jump to quiz checkpoint at ${formatVideoTime(timestamp)}`}
+                      title={`${question.questionText || "Video quiz"} - ${formatVideoTime(timestamp)}`}
+                      className={cn(
+                        "absolute top-1/2 flex size-4 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white shadow-[0_8px_18px_rgba(0,0,0,0.32)] transition hover:scale-125",
+                        isAnswered ? "bg-[#22C55E]" : "bg-[#7872FD]",
+                      )}
+                      style={{ left: `${left}%` }}
+                    >
+                      <span className="size-1.5 rounded-full bg-white" />
+                    </button>
+                  );
+                }) : null}
+            </div>
+
+            <div className="mt-2 flex items-center gap-3 text-white">
+              <button type="button" onClick={togglePlayback} className="flex size-9 items-center justify-center rounded-full bg-white/15 transition hover:bg-white/25" aria-label={isPlaying ? "Pause video" : "Play video"}>
+                {isPlaying ? <Pause className="size-4 fill-white" /> : <Play className="size-4 fill-white" />}
+              </button>
+              <span className="min-w-[92px] text-xs font-bold tabular-nums text-white/90">
+                {formatVideoTime(currentTime)} / {formatVideoTime(duration)}
+              </span>
+              <div className="ml-auto flex items-center gap-2">
+                <button type="button" onClick={toggleMute} className="flex size-9 items-center justify-center rounded-full bg-white/15 transition hover:bg-white/25" aria-label={isMuted ? "Unmute video" : "Mute video"}>
+                  {isMuted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
+                </button>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={isMuted ? 0 : volume}
+                  onChange={(event) => changeVolume(Number(event.target.value))}
+                  className="hidden h-1 w-20 accent-[#7872FD] sm:block"
+                  aria-label="Volume"
+                />
+                <button type="button" onClick={toggleFullscreen} className="flex size-9 items-center justify-center rounded-full bg-white/15 transition hover:bg-white/25" aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}>
+                  {isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="relative aspect-video w-full overflow-hidden">
@@ -339,6 +609,7 @@ export function LearningVideoLesson({
               {(activeQuestion.options || []).map((option) => {
                 const optionId = option.id || option.optionText || "";
                 const selected = selectedAnswers.includes(optionId);
+                const isMultiple = activeQuestion.questionType === "MULTI_CHOICE";
                 return (
                   <button
                     key={optionId}
@@ -349,8 +620,14 @@ export function LearningVideoLesson({
                       selected ? "border-[#7872FD] bg-[#EBEBFF] text-[#1D2026]" : "border-[#E9EAF0] text-[#4E5566] hover:border-[#D8D6FF]",
                     )}
                   >
-                    <span className={cn("flex size-6 items-center justify-center rounded-full border", selected ? "border-[#7872FD] bg-[#7872FD] text-white" : "border-[#CED1D9]")}>
-                      {selected ? <CheckCircle2 className="size-4" /> : null}
+                    <span
+                      className={cn(
+                        "flex size-6 items-center justify-center border transition",
+                        isMultiple ? "rounded-[7px]" : "rounded-full",
+                        selected ? "border-[#7872FD] bg-[#7872FD] text-white" : "border-[#CED1D9] bg-white",
+                      )}
+                    >
+                      {selected ? <span className={cn("bg-white", isMultiple ? "h-3 w-3 rounded-[3px]" : "size-2.5 rounded-full")} /> : null}
                     </span>
                     {option.optionText || optionId}
                   </button>

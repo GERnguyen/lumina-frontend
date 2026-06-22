@@ -34,7 +34,7 @@ export async function UserProfileTopNav({ avatar }: { avatar: string }) {
 
           <div className="flex items-center gap-6">
             <InstructorNotifications
-              emptyDescription="Learning updates, payment messages, Q&A replies, and certificates will appear here."
+              emptyDescription="Learning updates, payment messages, and certificates will appear here."
               buttonClassName="hidden size-6 rounded-none bg-transparent text-[#1D2026] hover:bg-transparent hover:text-[#7872FD] md:flex"
               iconClassName="size-6"
             />

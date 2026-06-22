@@ -159,6 +159,12 @@ export function InstructorCourseHero({ course }: { course: Course }) {
 
           <div className="flex items-center gap-3">
             <Link
+              href={`/instructor/courses/${course.id}/assignments`}
+              className="inline-flex h-12 items-center justify-center rounded-[18px] bg-[#EBEBFF] px-6 text-base font-semibold capitalize tracking-[-0.128px] text-[#564FFD] transition hover:bg-[#DEDFFF]"
+            >
+              Grade assignments
+            </Link>
+            <Link
               href={`/instructor/courses/${course.id}/earning`}
               className="inline-flex h-12 items-center justify-center rounded-[18px] bg-[#564FFD] px-6 text-base font-semibold capitalize tracking-[-0.128px] text-white transition hover:bg-[#453FCA]"
             >
