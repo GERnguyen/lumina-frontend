@@ -14,6 +14,10 @@ export const UserApi = {
     return apiClient.get(`/api/v1/users/${id}`, { auth: false });
   },
 
+  async getUsersByIds(ids: string): Promise<ApiResponse<UserDto[]>> {
+    return apiClient.get("/api/v1/users/ids", { params: { ids }, auth: false });
+  },
+
   async updateUser(id: string, body: UpdateProfileRequest): Promise<ApiResponse<UserDto>> {
     return apiClient.put(`/api/v1/users/${id}`, body);
   },
