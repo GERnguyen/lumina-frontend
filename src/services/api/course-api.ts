@@ -365,3 +365,11 @@ export const CourseStatisticsApi = {
     return apiClient.get("/api/v1/courses/mine/statistics/overview", { params });
   },
 };
+
+// ── CoursePresignedUrlApi ──────────────────────────────────────────────
+export const CoursePresignedUrlApi = {
+  async getPresignedUrl(params: { fileName: string; contentType: string }): Promise<ApiResponse<PresignedUrlResponse>> {
+    return apiClient.get("/api/v1/courses/upload/presigned-url", { params });
+  },
+};
+

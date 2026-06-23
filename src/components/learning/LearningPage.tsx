@@ -108,7 +108,7 @@ export function LearningPage({ data }: LearningPageProps) {
 
   async function handleComplete(lessonId: string) {
     const lesson = data.sections.flatMap((section) => section.lessons).find((item) => item.id === lessonId);
-    if (lesson?.type === "ASSIGNMENT") {
+    if (lesson?.type === "ASSIGNMENT" || lesson?.type === "VIDEO") {
       router.refresh();
       return;
     }
@@ -116,7 +116,10 @@ export function LearningPage({ data }: LearningPageProps) {
     // Persist to server (only once per lesson per session, even if video fires multiple times)
     if (!serverPersistedRef.current.has(lessonId)) {
       serverPersistedRef.current.add(lessonId);
-      await markItemAsCompleteAction(lessonId);
+      const res = await markItemAsCompleteAction(lessonId);
+      if (!res.success) {
+        serverPersistedRef.current.delete(lessonId);
+      }
     }
 
     // Refresh server component — completedIds will sync from fresh data.sections
@@ -204,8 +207,18 @@ export function LearningPage({ data }: LearningPageProps) {
             </button>
             {/* Mark Complete button: only for ARTICLE lessons (manual completion) */}
             {data.currentLesson.type === "ARTICLE" ? (
-              <button type="button" onClick={markCurrentComplete} className="h-12 rounded-[18px] bg-white px-6 text-sm font-semibold text-[#7872FD] transition hover:bg-[#EBEBFF]">
-                Mark Complete
+              <button
+                type="button"
+                onClick={markCurrentComplete}
+                disabled={completedIds.has(data.currentLesson.id)}
+                className={cn(
+                  "h-12 rounded-[18px] px-6 text-sm font-semibold transition",
+                  completedIds.has(data.currentLesson.id)
+                    ? "cursor-not-allowed bg-[#F5F7FA] text-[#8C94A3]"
+                    : "bg-white text-[#7872FD] hover:bg-[#EBEBFF]"
+                )}
+              >
+                {completedIds.has(data.currentLesson.id) ? "Completed ✓" : "Mark Complete"}
               </button>
             ) : null}
             {data.hasCertificate ? (
@@ -251,7 +264,12 @@ export function LearningPage({ data }: LearningPageProps) {
               ) : null}
 
               {currentContent.type === "ARTICLE" ? (
-                <LearningArticleLesson lessonId={data.currentLesson.id} article={currentContent.article} onComplete={handleComplete} />
+                <LearningArticleLesson
+                  lessonId={data.currentLesson.id}
+                  article={currentContent.article}
+                  onComplete={handleComplete}
+                  isCompleted={completedIds.has(data.currentLesson.id)}
+                />
               ) : null}
 
               {currentContent.type === "QUIZ" ? (

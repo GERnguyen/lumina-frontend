@@ -160,6 +160,18 @@ export interface UserStreakResponse {
   lastActivityDate?: string;
 }
 
+export interface PresignedUrlResponse {
+  fileKey?: string;
+  presignedUrl?: string;
+}
+
+export interface PaginatedMetadata {
+  page?: number;
+  limit?: number;
+  totalElements?: number;
+  totalPages?: number;
+}
+
 export interface QuizSessionOptionResponse {
   id?: string;
   optionText?: string;

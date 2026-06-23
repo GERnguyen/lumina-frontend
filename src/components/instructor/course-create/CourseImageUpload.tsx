@@ -49,6 +49,7 @@ export default function CourseImageUpload({
       const fileKey = await uploadFileWithPresignedUrl(file, {
         prepareError: "Could not retrieve upload slot from S3.",
         uploadError: "Failed to upload image to S3 storage bucket.",
+        serviceType: "course",
       });
 
       // 2. Link image to course

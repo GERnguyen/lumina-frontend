@@ -308,7 +308,7 @@ export function LearningVideoLesson({
     };
   }, [courseId, lessonId]);
 
-  function trackProgress(force = false) {
+  async function trackProgress(force = false) {
     const player = videoRef.current;
     if (!player) return;
 
@@ -324,7 +324,7 @@ export function LearningVideoLesson({
         console.error(e);
       }
     }
-    void trackVideoProgressAction(courseId, lessonId, { currentPosition });
+    await trackVideoProgressAction(courseId, lessonId, { currentPosition });
   }
 
   function handleTimeUpdate() {
@@ -336,8 +336,9 @@ export function LearningVideoLesson({
     const currentPosition = Math.floor(player.currentTime);
     if (!hasMarkedNearCompleteRef.current && duration > 0 && currentPosition >= Math.floor(duration * 0.95)) {
       hasMarkedNearCompleteRef.current = true;
-      onComplete(lessonId);
-      trackProgress(true);
+      trackProgress(true).then(() => {
+        onComplete(lessonId);
+      });
     }
 
     const passedIds = passedQuestionIdsThisRunRef.current;
@@ -532,7 +533,7 @@ export function LearningVideoLesson({
   }
 
   async function handleEnded() {
-    trackProgress(true);
+    await trackProgress(true);
     onComplete(lessonId);
   }
 
@@ -711,6 +712,53 @@ export function LearningVideoLesson({
               </div>
             </div>
           </div>
+          {activeQuestion ? (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#111033]/60 px-4 backdrop-blur-sm">
+              <div className="w-full max-w-[560px] rounded-[28px] bg-white p-7 shadow-[0_28px_90px_rgba(17,16,51,0.28)]">
+                <p className="text-sm font-bold uppercase tracking-[0.12em] text-[#7872FD]">Video checkpoint</p>
+                <h3 className="mt-3 text-2xl font-black text-[#1D2026]">{activeQuestion.questionText || "Answer to continue"}</h3>
+                <div className="mt-6 grid gap-3">
+                  {(activeQuestion.options || []).map((option) => {
+                    const optionId = option.id || option.optionText || "";
+                    const selected = selectedAnswers.includes(optionId);
+                    const isMultiple = activeQuestion.questionType === "MULTI_CHOICE";
+                    return (
+                      <button
+                        key={optionId}
+                        type="button"
+                        onClick={() => toggleVideoAnswer(optionId)}
+                        className={cn(
+                          "flex items-center gap-3 rounded-[18px] border px-4 py-3 text-left text-sm font-semibold transition",
+                          selected ? "border-[#7872FD] bg-[#EBEBFF] text-[#1D2026]" : "border-[#E9EAF0] text-[#4E5566] hover:border-[#D8D6FF]",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "flex size-6 items-center justify-center border transition",
+                            isMultiple ? "rounded-[7px]" : "rounded-full",
+                            selected ? "border-[#7872FD] bg-[#7872FD] text-white" : "border-[#CED1D9] bg-white",
+                          )}
+                        >
+                          {selected ? <span className={cn("bg-white", isMultiple ? "h-3 w-3 rounded-[3px]" : "size-2.5 rounded-full")} /> : null}
+                        </span>
+                        {option.optionText || optionId}
+                      </button>
+                    );
+                  })}
+                </div>
+                {questionMessage ? <p className="mt-4 rounded-[14px] bg-[#FFF4E5] px-4 py-3 text-sm font-semibold text-[#9A5B00]">{questionMessage}</p> : null}
+                <button
+                  type="button"
+                  onClick={submitVideoAnswer}
+                  disabled={isSubmittingAnswer || selectedAnswers.length === 0}
+                  className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#7872FD] px-6 text-sm font-bold text-white transition hover:bg-[#635BFF] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSubmittingAnswer ? <Loader2 className="size-4 animate-spin" /> : null}
+                  Submit answer
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : (
         <div className="relative aspect-video w-full overflow-hidden">
@@ -728,54 +776,6 @@ export function LearningVideoLesson({
         <div className="flex items-center gap-2 bg-[#FFF4E5] px-5 py-3 text-sm font-semibold text-[#9A5B00]">
           <AlertCircle className="size-4" />
           {error}
-        </div>
-      ) : null}
-
-      {activeQuestion ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111033]/60 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-[560px] rounded-[28px] bg-white p-7 shadow-[0_28px_90px_rgba(17,16,51,0.28)]">
-            <p className="text-sm font-bold uppercase tracking-[0.12em] text-[#7872FD]">Video checkpoint</p>
-            <h3 className="mt-3 text-2xl font-black text-[#1D2026]">{activeQuestion.questionText || "Answer to continue"}</h3>
-            <div className="mt-6 grid gap-3">
-              {(activeQuestion.options || []).map((option) => {
-                const optionId = option.id || option.optionText || "";
-                const selected = selectedAnswers.includes(optionId);
-                const isMultiple = activeQuestion.questionType === "MULTI_CHOICE";
-                return (
-                  <button
-                    key={optionId}
-                    type="button"
-                    onClick={() => toggleVideoAnswer(optionId)}
-                    className={cn(
-                      "flex items-center gap-3 rounded-[18px] border px-4 py-3 text-left text-sm font-semibold transition",
-                      selected ? "border-[#7872FD] bg-[#EBEBFF] text-[#1D2026]" : "border-[#E9EAF0] text-[#4E5566] hover:border-[#D8D6FF]",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "flex size-6 items-center justify-center border transition",
-                        isMultiple ? "rounded-[7px]" : "rounded-full",
-                        selected ? "border-[#7872FD] bg-[#7872FD] text-white" : "border-[#CED1D9] bg-white",
-                      )}
-                    >
-                      {selected ? <span className={cn("bg-white", isMultiple ? "h-3 w-3 rounded-[3px]" : "size-2.5 rounded-full")} /> : null}
-                    </span>
-                    {option.optionText || optionId}
-                  </button>
-                );
-              })}
-            </div>
-            {questionMessage ? <p className="mt-4 rounded-[14px] bg-[#FFF4E5] px-4 py-3 text-sm font-semibold text-[#9A5B00]">{questionMessage}</p> : null}
-            <button
-              type="button"
-              onClick={submitVideoAnswer}
-              disabled={isSubmittingAnswer || selectedAnswers.length === 0}
-              className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#7872FD] px-6 text-sm font-bold text-white transition hover:bg-[#635BFF] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSubmittingAnswer ? <Loader2 className="size-4 animate-spin" /> : null}
-              Submit answer
-            </button>
-          </div>
         </div>
       ) : null}
 

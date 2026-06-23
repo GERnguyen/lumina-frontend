@@ -7,11 +7,18 @@ export class ApiError extends Error {
   body: unknown;
 
   constructor(status: number, statusText: string, body: unknown) {
-    const message = typeof body === "object" && body !== null && "message" in body && typeof body.message === "string"
-      ? body.message
-      : typeof body === "object" && body !== null && "detail" in body && typeof body.detail === "string"
-        ? body.detail
-        : `API request failed with status ${status}`;
+    const message =
+      typeof body === "object" &&
+      body !== null &&
+      "message" in body &&
+      typeof body.message === "string"
+        ? body.message
+        : typeof body === "object" &&
+            body !== null &&
+            "detail" in body &&
+            typeof body.detail === "string"
+          ? body.detail
+          : `API request failed with status ${status}`;
 
     super(message);
     this.name = "ApiError";
@@ -23,7 +30,10 @@ export class ApiError extends Error {
 
 export interface FetchOptions extends Omit<RequestInit, "body"> {
   auth?: boolean;
-  params?: Record<string, string | number | boolean | undefined | null | (string | number | boolean)[]>;
+  params?: Record<
+    string,
+    string | number | boolean | undefined | null | (string | number | boolean)[]
+  >;
   body?: unknown;
 }
 
@@ -36,9 +46,13 @@ async function getAuthToken() {
     return cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
   }
 
-  const response = await fetch("/api/auth/session", { cache: "no-store" }).catch(() => undefined);
+  const response = await fetch("/api/auth/session", {
+    cache: "no-store",
+  }).catch(() => undefined);
   if (!response?.ok) return undefined;
-  const session = await response.json().catch(() => undefined) as { accessToken?: string } | undefined;
+  const session = (await response.json().catch(() => undefined)) as
+    | { accessToken?: string }
+    | undefined;
   return session?.accessToken;
 }
 
@@ -53,11 +67,15 @@ async function refreshAuthToken() {
   })
     .then(async (response) => {
       if (!response.ok) {
-        await fetch("/api/auth/session", { method: "DELETE" }).catch(() => undefined);
+        await fetch("/api/auth/session", { method: "DELETE" }).catch(
+          () => undefined,
+        );
         return undefined;
       }
 
-      const session = (await response.json().catch(() => undefined)) as { accessToken?: string } | undefined;
+      const session = (await response.json().catch(() => undefined)) as
+        | { accessToken?: string }
+        | undefined;
       return session?.accessToken;
     })
     .finally(() => {
@@ -69,9 +87,13 @@ async function refreshAuthToken() {
 
 async function redirectToLogin(): Promise<never> {
   if (typeof window !== "undefined") {
-    await fetch("/api/auth/session", { method: "DELETE" }).catch(() => undefined);
+    await fetch("/api/auth/session", { method: "DELETE" }).catch(
+      () => undefined,
+    );
     window.location.replace("/login");
-    throw new ApiError(401, "Unauthorized", { message: "Redirecting to login" });
+    throw new ApiError(401, "Unauthorized", {
+      message: "Redirecting to login",
+    });
   }
 
   const { redirect } = await import("next/navigation");
@@ -80,7 +102,12 @@ async function redirectToLogin(): Promise<never> {
 }
 
 function isDynamicServerUsage(error: unknown) {
-  return typeof error === "object" && error !== null && "digest" in error && error.digest === "DYNAMIC_SERVER_USAGE";
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    error.digest === "DYNAMIC_SERVER_USAGE"
+  );
 }
 
 async function parseErrorResponse(response: Response) {
@@ -108,8 +135,17 @@ async function parseSuccessResponse<T>(response: Response): Promise<T> {
   return (await response.text()) as unknown as T;
 }
 
-export async function fetchClient<T>(path: string, options: FetchOptions = {}): Promise<T> {
-  const { auth = true, params, body, headers: customHeaders, ...fetchOpts } = options;
+export async function fetchClient<T>(
+  path: string,
+  options: FetchOptions = {},
+): Promise<T> {
+  const {
+    auth = true,
+    params,
+    body,
+    headers: customHeaders,
+    ...fetchOpts
+  } = options;
 
   // Build URL with search parameters
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
@@ -133,7 +169,7 @@ export async function fetchClient<T>(path: string, options: FetchOptions = {}): 
 
   // Build Headers
   const headers = new Headers(customHeaders);
-  
+
   if (body && !(body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
@@ -158,8 +194,10 @@ export async function fetchClient<T>(path: string, options: FetchOptions = {}): 
   const requestInit: RequestInit = {
     ...fetchOpts,
     headers,
-    body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
+    body:
+      body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
   };
+  console.log(url.toString());
 
   let response: Response;
   try {
@@ -168,14 +206,18 @@ export async function fetchClient<T>(path: string, options: FetchOptions = {}): 
     if (isDev) {
       const duration = Date.now() - startTime;
       const message = error instanceof Error ? error.message : String(error);
-      console.error(`[api-client] ${fetchOpts.method || "GET"} ${url.pathname}${url.search} - FAILED: ${message} (${duration}ms)`);
+      console.error(
+        `[api-client] ${fetchOpts.method || "GET"} ${url.pathname}${url.search} - FAILED: ${message} (${duration}ms)`,
+      );
     }
     throw error;
   }
 
   if (isDev) {
     const duration = Date.now() - startTime;
-    console.log(`[api-client] ${fetchOpts.method || "GET"} ${url.pathname}${url.search} - Status: ${response.status} (${duration}ms)`);
+    console.log(
+      `[api-client] ${fetchOpts.method || "GET"} ${url.pathname}${url.search} - Status: ${response.status} (${duration}ms)`,
+    );
   }
 
   if (auth && response.status === 401) {
@@ -190,7 +232,9 @@ export async function fetchClient<T>(path: string, options: FetchOptions = {}): 
 
     if (isDev) {
       const duration = Date.now() - startTime;
-      console.log(`[api-client] ${fetchOpts.method || "GET"} ${url.pathname}${url.search} - Retry status: ${response.status} (${duration}ms)`);
+      console.log(
+        `[api-client] ${fetchOpts.method || "GET"} ${url.pathname}${url.search} - Retry status: ${response.status} (${duration}ms)`,
+      );
     }
 
     if (response.status === 401) {
@@ -209,12 +253,21 @@ export async function fetchClient<T>(path: string, options: FetchOptions = {}): 
 export const apiClient = {
   get: <T>(path: string, options?: Omit<FetchOptions, "method" | "body">) =>
     fetchClient<T>(path, { ...options, method: "GET" }),
-  post: <T>(path: string, body?: unknown, options?: Omit<FetchOptions, "method" | "body">) =>
-    fetchClient<T>(path, { ...options, method: "POST", body }),
-  put: <T>(path: string, body?: unknown, options?: Omit<FetchOptions, "method" | "body">) =>
-    fetchClient<T>(path, { ...options, method: "PUT", body }),
-  patch: <T>(path: string, body?: unknown, options?: Omit<FetchOptions, "method" | "body">) =>
-    fetchClient<T>(path, { ...options, method: "PATCH", body }),
+  post: <T>(
+    path: string,
+    body?: unknown,
+    options?: Omit<FetchOptions, "method" | "body">,
+  ) => fetchClient<T>(path, { ...options, method: "POST", body }),
+  put: <T>(
+    path: string,
+    body?: unknown,
+    options?: Omit<FetchOptions, "method" | "body">,
+  ) => fetchClient<T>(path, { ...options, method: "PUT", body }),
+  patch: <T>(
+    path: string,
+    body?: unknown,
+    options?: Omit<FetchOptions, "method" | "body">,
+  ) => fetchClient<T>(path, { ...options, method: "PATCH", body }),
   delete: <T>(path: string, options?: Omit<FetchOptions, "method" | "body">) =>
     fetchClient<T>(path, { ...options, method: "DELETE" }),
 };

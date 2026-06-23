@@ -54,6 +54,25 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
     { optionText: "", isCorrect: false },
   ]);
 
+  const initializeDefaultQuiz = async () => {
+    const defaultPayload = {
+      numberOfQuestionPerQuizSession: 5,
+      maxAttempt: undefined,
+      duration: undefined,
+      isReviewAllowed: true,
+      isShowAnswersOnReview: true,
+      shuffleQuestions: false,
+      shuffleOptions: false,
+      scoringMode: "HIGHEST" as const,
+      questions: [],
+    };
+    try {
+      await QuizLessonApi.createQuizLesson(courseId, lessonId, defaultPayload);
+    } catch (e) {
+      console.warn("Quiz initialization fallback warning:", e);
+    }
+  };
+
   const fetchQuizDetails = async () => {
     setLoading(true);
     setError(null);
@@ -63,17 +82,39 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
         setNumberOfQuestionPerQuizSession(res.data.numberOfQuestionPerQuizSession || 5);
         setMaxAttempt(res.data.maxAttempt);
         setDuration(res.data.duration);
-        setIsReviewAllowed(res.data.isReviewAllowed || false);
-        setIsShowAnswersOnReview(res.data.isShowAnswersOnReview || false);
+        setIsReviewAllowed(res.data.isReviewAllowed ?? true);
+        setIsShowAnswersOnReview(res.data.isShowAnswersOnReview ?? true);
         setShuffleQuestions(res.data.shuffleQuestions || false);
         setShuffleOptions(res.data.shuffleOptions || false);
         setScoringMode(res.data.scoringMode || "HIGHEST");
         setQuestions(res.data.questions || []);
       } else {
-        setQuestions([]);
+        await initializeDefaultQuiz();
+        const retryRes = await QuizLessonApi.getQuizByLessonId(courseId, lessonId).catch(() => null);
+        if (retryRes?.data) {
+          setQuestions(retryRes.data.questions || []);
+        }
       }
     } catch (err: any) {
-      console.error("Failed to load quiz details:", err);
+      console.error("Failed to load quiz details, trying to auto-initialize:", err);
+      try {
+        await initializeDefaultQuiz();
+        const retryRes = await QuizLessonApi.getQuizByLessonId(courseId, lessonId);
+        if (retryRes?.data) {
+          setNumberOfQuestionPerQuizSession(retryRes.data.numberOfQuestionPerQuizSession || 5);
+          setMaxAttempt(retryRes.data.maxAttempt);
+          setDuration(retryRes.data.duration);
+          setIsReviewAllowed(retryRes.data.isReviewAllowed ?? true);
+          setIsShowAnswersOnReview(retryRes.data.isShowAnswersOnReview ?? true);
+          setShuffleQuestions(retryRes.data.shuffleQuestions || false);
+          setShuffleOptions(retryRes.data.shuffleOptions || false);
+          setScoringMode(retryRes.data.scoringMode || "HIGHEST");
+          setQuestions(retryRes.data.questions || []);
+        }
+      } catch (initErr: any) {
+        console.error("Failed to auto-initialize quiz:", initErr);
+        setQuestions([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -95,7 +136,6 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
       maxAttempt: maxAttempt || undefined,
       duration: duration || undefined,
       isReviewAllowed,
-      setIsShowAnswersOnReview,
       isShowAnswersOnReview,
       shuffleQuestions,
       shuffleOptions,
@@ -217,7 +257,17 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
         await QuizQuestionApi.updateQuestion(courseId, lessonId, editingQuestionId, body);
         setSuccessMsg("Quiz question updated.");
       } else {
-        await QuizQuestionApi.addQuestion(courseId, lessonId, body);
+        try {
+          await QuizQuestionApi.addQuestion(courseId, lessonId, body);
+        } catch (addErr: any) {
+          if (addErr?.message?.includes("Quiz not found") || addErr?.status === 404 || addErr?.status === 400) {
+            console.warn("Quiz not found on saving question, auto-initializing...");
+            await initializeDefaultQuiz();
+            await QuizQuestionApi.addQuestion(courseId, lessonId, body);
+          } else {
+            throw addErr;
+          }
+        }
         setSuccessMsg("Quiz question created.");
       }
       startEditQuestion(); // Reset form

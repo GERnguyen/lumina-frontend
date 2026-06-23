@@ -3,8 +3,6 @@
 // DO NOT EDIT MANUALLY — regenerate from the OpenAPI spec
 // =============================================================
 
-import { CourseResponse } from "./course";
-
 // ── Domain types ───────────────────────────────────────────────
 
 export interface UpdateVoucherRequest {
@@ -83,15 +81,60 @@ export interface CartItemDto {
   course: CourseResponse;
 }
 
+export interface CategoryResponse {
+  id?: string;
+  name?: string;
+}
+
+export interface CourseImageResponse {
+  id?: string;
+  imageUrl?: string;
+}
+
+export interface CourseResponse {
+  id?: string;
+  title?: string;
+  description?: string;
+  category?: CategoryResponse;
+  instructor?: InstructorResponse;
+  images?: CourseImageResponse[];
+  price?: number;
+  discountedPrice?: number;
+  discountRate?: number;
+  rating?: number;
+  enrollmentCount?: number;
+  isInSubscription?: boolean;
+  duration?: number;
+  status?: string;
+  publishStatus?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface CreateOrderRequest {
   cartItems: CartItemDto[];
   paymentMethod: "VN_PAY" | "MOMO" | "STRIPE";
   voucherCode?: string;
 }
 
+export interface InstructorResponse {
+  id?: string;
+  name?: string;
+  email?: string;
+  bio?: string;
+  profilePictureUrl?: string;
+}
+
 export interface CheckEnrollmentStatus {
   courseId?: string;
   isEnrolled?: boolean;
+}
+
+export interface PaginatedMetadata {
+  page?: number;
+  limit?: number;
+  totalElements?: number;
+  totalPages?: number;
 }
 
 export interface CourseRevenueStats {

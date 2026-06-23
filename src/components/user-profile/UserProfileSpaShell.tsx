@@ -19,8 +19,9 @@ import { UserProfilePurchaseHistoryList } from "./UserProfilePurchaseHistoryList
 import { UserProfileSettingsForm } from "./UserProfileSettingsForm";
 import { UserProfileWishlistTable } from "./UserProfileWishlistTable";
 import { UserProfileNotificationsList } from "./UserProfileNotificationsList";
+import { UserProfileCertificatesList } from "./UserProfileCertificatesList";
 
-type ProfileTabKey = "courses" | "wishlist" | "purchase-history" | "settings" | "notifications";
+type ProfileTabKey = "courses" | "wishlist" | "purchase-history" | "settings" | "notifications" | "certificates";
 
 type UserProfileSpaShellProps = {
   user: UserProfileDashboardData["user"];
@@ -41,6 +42,7 @@ const tabs: Array<{ key: ProfileTabKey; label: string }> = [
   { key: "purchase-history", label: "Purchase History" },
   { key: "settings", label: "Settings" },
   { key: "notifications", label: "Notifications" },
+  { key: "certificates", label: "Certificates" },
 ];
 
 export function UserProfileSpaShell({
@@ -55,14 +57,14 @@ export function UserProfileSpaShell({
   const tabParam = searchParams.get("tab") as ProfileTabKey | null;
 
   const [activeTab, setActiveTab] = useState<ProfileTabKey>(() => {
-    if (tabParam && ["courses", "wishlist", "purchase-history", "settings", "notifications"].includes(tabParam)) {
+    if (tabParam && ["courses", "wishlist", "purchase-history", "settings", "notifications", "certificates"].includes(tabParam)) {
       return tabParam;
     }
     return "courses";
   });
 
   useEffect(() => {
-    if (tabParam && ["courses", "wishlist", "purchase-history", "settings", "notifications"].includes(tabParam)) {
+    if (tabParam && ["courses", "wishlist", "purchase-history", "settings", "notifications", "certificates"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [tabParam]);
@@ -111,6 +113,7 @@ export function UserProfileSpaShell({
           {activeTab === "purchase-history" ? <PurchaseHistoryTab purchases={purchases} /> : null}
           {activeTab === "settings" ? <SettingsTab settings={settings} /> : null}
           {activeTab === "notifications" ? <UserProfileNotificationsList /> : null}
+          {activeTab === "certificates" ? <UserProfileCertificatesList courses={courses} /> : null}
         </div>
       </section>
     </>

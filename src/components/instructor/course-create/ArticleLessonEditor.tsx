@@ -54,6 +54,7 @@ export default function ArticleLessonEditor({ courseId, lessonId }: ArticleLesso
       const fileKey = await uploadFileWithPresignedUrl(file, {
         prepareError: "Could not prepare file upload.",
         uploadError: "Failed to upload document to S3.",
+        serviceType: "course",
       });
 
       // 2. Link S3 metadata to article

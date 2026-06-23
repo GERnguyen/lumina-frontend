@@ -64,3 +64,8 @@ export interface ChangePasswordRequest {
   oldPassword: string;
   newPassword: string;
 }
+
+export interface PresignedUrlResponse {
+  fileKey?: string;
+  presignedUrl?: string;
+}

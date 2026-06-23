@@ -5,7 +5,7 @@ import { ClipboardCheck, ExternalLink, FileText, Loader2, Send, Trash2, UploadCl
 import type { AssignmentLessonResponse } from "@/types/course";
 import type { AssignmentSubmissionResponse } from "@/types/learning";
 import { getAssignmentSubmissionAction, submitAssignmentAction } from "@/services/actions/learning";
-import { PresignedUrlApi } from "@/services/api/user-api";
+import { LearningPresignedUrlApi } from "@/services/api/learning-api";
 
 type LearningAssignmentLessonProps = {
   lessonId: string;
@@ -20,7 +20,7 @@ function isSubmission(value: unknown): value is AssignmentSubmissionResponse {
 
 async function uploadSubmissionFile(file: File) {
   const contentType = file.type || "application/octet-stream";
-  const response = await PresignedUrlApi.getPresignedUrl({
+  const response = await LearningPresignedUrlApi.getPresignedUrl({
     fileName: file.name,
     contentType,
   });
@@ -236,14 +236,23 @@ export function LearningAssignmentLesson({
         <label className="mt-3 flex cursor-pointer flex-col items-center justify-center rounded-[18px] border border-dashed border-[#D8D6FF] bg-[#F8F8FF] px-5 py-8 text-center transition hover:border-[#564FFD] hover:bg-[#F4F3FF]">
           <UploadCloud className="size-8 text-[#564FFD]" />
           <span className="mt-3 text-sm font-bold text-[#1D2026]">Upload assignment files</span>
-          <span className="mt-1 text-xs font-medium text-[#6E7485]">PDF, image, source file, or archive. At least one file is required.</span>
+          <span className="mt-1 text-xs font-medium text-[#6E7485]">Only PDF and image files are accepted. At least one file is required.</span>
           <input
             type="file"
             multiple
+            accept="application/pdf,image/*"
             className="sr-only"
             onChange={(event) => {
               const nextFiles = Array.from(event.target.files || []);
-              setFiles((current) => [...current, ...nextFiles]);
+              const validFiles = nextFiles.filter(
+                (file) => file.type === "application/pdf" || file.type.startsWith("image/"),
+              );
+              if (nextFiles.length !== validFiles.length) {
+                setMessage("Only PDF and image files are accepted.");
+              } else {
+                setMessage(undefined);
+              }
+              setFiles((current) => [...current, ...validFiles]);
               event.currentTarget.value = "";
             }}
           />

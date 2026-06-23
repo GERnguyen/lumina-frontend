@@ -15,6 +15,8 @@ export type LearningLesson = {
   type: LearningLessonType;
   isCompleted: boolean;
   isCurrent: boolean;
+  isPassed?: boolean;
+  score?: number;
 };
 
 export type LearningSection = {
