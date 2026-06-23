@@ -3,8 +3,6 @@
 // DO NOT EDIT MANUALLY — regenerate from the OpenAPI spec
 // =============================================================
 
-import { StatisticsByTimeResponse } from "./course";
-
 // ── Domain types ───────────────────────────────────────────────
 
 export interface UpdateProfileRequest {
@@ -101,6 +99,23 @@ export interface CreatePolicyRequest {
   effectiveAt?: string;
   displayOrder?: number;
   sections: PolicySectionRequest[];
+}
+
+export interface PaginatedMetadata {
+  page?: number;
+  limit?: number;
+  totalElements?: number;
+  totalPages?: number;
+}
+
+export interface PresignedUrlResponse {
+  fileKey?: string;
+  presignedUrl?: string;
+}
+
+export interface StatisticsByTimeResponse {
+  label?: string;
+  value?: number;
 }
 
 export interface UserStatisticsOverviewResponse {

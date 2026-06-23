@@ -11,3 +11,9 @@ export * from "./file";
 export * from "./shared";
 export * from "./custom";
 export * from "./recommendation";
+
+// Resolve conflicts by explicitly re-exporting the authoritative versions
+export type { CourseResponse, CategoryResponse, CourseImageResponse, InstructorResponse } from "./course";
+export type { PresignedUrlResponse } from "./file";
+export type { PaginatedMetadata } from "./shared";
+export type { StatisticsByTimeResponse } from "./course";

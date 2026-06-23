@@ -78,6 +78,7 @@ export default function AssignmentLessonEditor({ courseId, lessonId }: Assignmen
       const fileKey = await uploadFileWithPresignedUrl(file, {
         prepareError: "Could not prepare file upload.",
         uploadError: "Failed to upload attachment file to S3.",
+        serviceType: "course",
       });
 
       // 2. Append to local state list

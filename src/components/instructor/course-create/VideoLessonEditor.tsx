@@ -84,6 +84,7 @@ export default function VideoLessonEditor({ courseId, lessonId }: VideoLessonEdi
       const fileKey = await uploadFileWithPresignedUrl(file, {
         prepareError: "Could not prepare video upload slot.",
         uploadError: "Failed to upload video stream to storage.",
+        serviceType: "course",
       });
 
       // 2. Link file key to video lesson (determine if we create or update)

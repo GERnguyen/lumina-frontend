@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { AlertCircle, CheckCircle2, GripVertical, HelpCircle, Loader2, RefreshCw, Send, Trophy, X } from "lucide-react";
 import type { QuizLessonResponse } from "@/types/course";
 import type { QuizSessionQuestionResponse, QuizSessionResponse } from "@/types/learning";
@@ -33,13 +34,16 @@ function shuffleValues<T>(items: T[]) {
 }
 
 export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: LearningQuizLessonProps) {
+  const router = useRouter();
   const [session, setSession] = useState<QuizSessionResponse>();
   const [questions, setQuestions] = useState<QuizSessionQuestionResponse[]>([]);
   const [answers, setAnswers] = useState<Record<string, QuizAnswerValue>>({});
   const [message, setMessage] = useState<string>();
   const [isResultOpen, setIsResultOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  
   // Attempt tracking from server
+  const [sessions, setSessions] = useState<QuizSessionResponse[]>([]);
   const [attemptCount, setAttemptCount] = useState(0);
   const [isLoadingAttempts, setIsLoadingAttempts] = useState(true);
 
@@ -47,11 +51,29 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
   const attemptsLeft = maxAttempt > 0 ? Math.max(0, maxAttempt - attemptCount) : null;
   const hasAttemptsLeft = attemptsLeft === null || attemptsLeft > 0;
 
-  // Load attempt count from server on mount
+  // Derived properties from quiz sessions
+  const submittedSessions = sessions.filter(
+    (s) => s.status === "SUBMITTED" || s.status === "GRADED" || s.status === "PENDING_GRADE",
+  );
+
+  const bestSession = submittedSessions.reduce<QuizSessionResponse | undefined>((best, current) => {
+    if (!best) return current;
+    const bestScore = best.quizSessionSubmission?.score ?? 0;
+    const currentScore = current.quizSessionSubmission?.score ?? 0;
+    return currentScore > bestScore ? current : best;
+  }, undefined);
+
+  const highestScore = bestSession?.quizSessionSubmission?.score;
+  const isQuizPassed = typeof highestScore === "number" ? highestScore >= 5 : false;
+  const hasAttempted = submittedSessions.length > 0;
+
+  // Load attempts/sessions from server on mount
   useEffect(() => {
+    setIsLoadingAttempts(true);
     getQuizSessionsAction(lessonId)
       .then((payload) => {
         if (payload.success && payload.data) {
+          setSessions(payload.data);
           const submitted = payload.data.filter(
             (s) => s.status === "SUBMITTED" || s.status === "GRADED" || s.status === "PENDING_GRADE",
           );
@@ -173,6 +195,9 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
       setSession(payload.data);
       setIsResultOpen(true);
       setAttemptCount((c) => c + 1);
+      if (payload.data) {
+        setSessions((prev) => [payload.data!, ...prev]);
+      }
 
       const sessionScore = payload.data?.quizSessionSubmission?.score;
       const passed = typeof sessionScore === "number" ? sessionScore >= 5 : false;
@@ -181,6 +206,7 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
       if (passed) {
         await onComplete(lessonId);
       }
+      router.refresh();
     });
   }
 
@@ -265,15 +291,102 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
 
       {/* Pre-quiz start button */}
       {!hasStarted ? (
-        <button
-          type="button"
-          onClick={startQuiz}
-          disabled={isPending || !hasAttemptsLeft}
-          className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#564FFD] px-6 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-[#4338CA] disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isPending ? <Loader2 className="size-4 animate-spin" /> : <HelpCircle className="size-4" />}
-          {hasAttemptsLeft ? "Start quiz" : "No attempts remaining"}
-        </button>
+        <div className="mt-8 space-y-6">
+          {/* Status Banner */}
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-[18px] border border-[#E9EAF0] p-5 bg-[#F9FAFB]">
+              <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#8C94A3]">Quiz Status</p>
+              <div className="mt-2 flex items-center gap-2">
+                {isQuizPassed ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-sm font-bold text-green-700">
+                    <CheckCircle2 className="size-4" /> Passed (Đạt)
+                  </span>
+                ) : hasAttempted ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-sm font-bold text-red-700">
+                    <X className="size-4" /> Failed (Chưa đạt)
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-sm font-bold text-gray-700">
+                    <AlertCircle className="size-4" /> Not Attempted
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-[18px] border border-[#E9EAF0] p-5 bg-[#F9FAFB]">
+              <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#8C94A3]">Highest Score</p>
+              <p className="mt-1 text-2xl font-black text-[#1D2026]">
+                {highestScore !== undefined ? `${highestScore.toFixed(1)} / 10` : "-- / 10"}
+              </p>
+            </div>
+
+            <div className="rounded-[18px] border border-[#E9EAF0] p-5 bg-[#F9FAFB]">
+              <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#8C94A3]">Attempts Taken</p>
+              <p className="mt-1 text-2xl font-black text-[#1D2026]">
+                {attemptCount} / {maxAttempt > 0 ? maxAttempt : "∞"}
+              </p>
+            </div>
+          </div>
+
+          {/* Past Attempts History */}
+          {hasAttempted && (
+            <div className="rounded-[18px] border border-[#E9EAF0] p-5">
+              <h3 className="text-sm font-bold uppercase tracking-[0.08em] text-[#8C94A3] mb-3">Attempt History</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-[#4E5566]">
+                  <thead>
+                    <tr className="border-b border-[#E9EAF0] text-xs font-bold uppercase text-[#8C94A3]">
+                      <th className="py-2.5">Attempt</th>
+                      <th className="py-2.5">Time</th>
+                      <th className="py-2.5">Score</th>
+                      <th className="py-2.5">Result</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E9EAF0]">
+                    {submittedSessions.map((s, idx) => {
+                      const attemptScore = s.quizSessionSubmission?.score;
+                      const attemptPassed = typeof attemptScore === "number" ? attemptScore >= 5 : false;
+                      const dateStr = s.endTime ? new Date(s.endTime).toLocaleString() : s.startTime ? new Date(s.startTime).toLocaleString() : "Unknown";
+
+                      return (
+                        <tr key={s.id || idx} className="hover:bg-gray-50/50">
+                          <td className="py-3 font-semibold text-[#1D2026]">#{submittedSessions.length - idx}</td>
+                          <td className="py-3 text-[#6E7485]">{dateStr}</td>
+                          <td className="py-3 font-bold text-[#1D2026]">
+                            {attemptScore !== undefined ? attemptScore.toFixed(1) : "--"}
+                          </td>
+                          <td className="py-3">
+                            {attemptPassed ? (
+                              <span className="inline-flex items-center gap-1 text-xs font-bold text-green-700">
+                                <CheckCircle2 className="size-3.5" /> Passed
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-xs font-bold text-red-700">
+                                <X className="size-3.5" /> Failed
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          <div>
+            <button
+              type="button"
+              onClick={startQuiz}
+              disabled={isPending || !hasAttemptsLeft}
+              className="inline-flex items-center gap-2 rounded-full bg-[#564FFD] px-6 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-[#4338CA] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isPending ? <Loader2 className="size-4 animate-spin" /> : <HelpCircle className="size-4" />}
+              {hasAttemptsLeft ? "Start quiz" : "No attempts remaining"}
+            </button>
+          </div>
+        </div>
       ) : (
         /* Questions */
         <div className="mt-8 space-y-5">

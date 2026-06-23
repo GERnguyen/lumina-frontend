@@ -8,9 +8,10 @@ type LearningArticleLessonProps = {
   lessonId: string;
   article?: ArticleLessonResponse;
   onComplete: (lessonId: string) => Promise<void> | void;
+  isCompleted?: boolean;
 };
 
-export function LearningArticleLesson({ lessonId, article, onComplete }: LearningArticleLessonProps) {
+export function LearningArticleLesson({ lessonId, article, onComplete, isCompleted }: LearningArticleLessonProps) {
   async function completeArticle() {
     await onComplete(lessonId);
   }
@@ -53,9 +54,14 @@ export function LearningArticleLesson({ lessonId, article, onComplete }: Learnin
       <button
         type="button"
         onClick={completeArticle}
-        className="mt-6 rounded-full bg-[#564FFD] px-6 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-[#4338CA] hover:shadow-[0_12px_28px_rgba(86,79,253,0.28)]"
+        disabled={isCompleted}
+        className={`mt-6 rounded-full px-6 py-3 text-sm font-bold transition duration-200 ${
+          isCompleted
+            ? "cursor-not-allowed bg-gray-100 text-gray-400"
+            : "bg-[#564FFD] text-white hover:-translate-y-0.5 hover:bg-[#4338CA] hover:shadow-[0_12px_28px_rgba(86,79,253,0.28)]"
+        }`}
       >
-        Mark as complete
+        {isCompleted ? "Completed ✓" : "Mark as complete"}
       </button>
     </section>
   );

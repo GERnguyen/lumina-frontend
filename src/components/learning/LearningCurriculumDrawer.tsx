@@ -117,6 +117,23 @@ export function LearningCurriculumDrawer({ courseId, sections, onClose }: Learni
                         <span className={cn("truncate", lesson.isCurrent ? "font-medium text-[#1D2026]" : "text-[#4E5566]")}>
                           {lesson.title}
                         </span>
+                        {lesson.type === "QUIZ" && (
+                          <span className="shrink-0">
+                            {lesson.isPassed ? (
+                              <span className="inline-flex items-center rounded bg-green-50 px-1.5 py-0.5 text-[10px] font-bold text-green-700">
+                                Đạt ({lesson.score?.toFixed(1)})
+                              </span>
+                            ) : lesson.score !== undefined ? (
+                              <span className="inline-flex items-center rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-700">
+                                Trượt ({lesson.score?.toFixed(1)})
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-500">
+                                Chưa làm
+                              </span>
+                            )}
+                          </span>
+                        )}
                       </span>
                       <span className={cn("inline-flex shrink-0 items-center gap-1.5", lesson.isCurrent ? "text-[#1D2026]" : "text-[#A1A5B3]")}>
                         {lesson.isCurrent ? <Pause className="size-4 fill-current" /> : lessonIcon(lesson.type)}

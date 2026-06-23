@@ -3,8 +3,6 @@
 // DO NOT EDIT MANUALLY — regenerate from the OpenAPI spec
 // =============================================================
 
-import { StatisticsByTimeResponse } from "./course";
-
 // ── Domain types ───────────────────────────────────────────────
 
 export interface UpdateReviewRequest {
@@ -97,6 +95,13 @@ export interface WishlistItemResponse {
   courseId?: string;
 }
 
+export interface PaginatedMetadata {
+  page?: number;
+  limit?: number;
+  totalElements?: number;
+  totalPages?: number;
+}
+
 export interface ReviewReactionResponse {
   id?: string;
   userId?: string;
@@ -159,6 +164,11 @@ export interface ReportStatisticsOverviewResponse {
   reportsByType?: Record<string, number>;
   reportsByTime?: StatisticsByTimeResponse[];
   topReportedRefs?: TopReportedRefResponse[];
+}
+
+export interface StatisticsByTimeResponse {
+  label?: string;
+  value?: number;
 }
 
 export interface TopReportedRefResponse {
