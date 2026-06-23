@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { BookOpenCheck, CalendarDays, Sparkles } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getCourseProgressByCourseIdsAction } from "@/services/actions/learning";
@@ -165,6 +166,14 @@ function RoadmapStudio({
           <p className="mt-4 text-base leading-7 text-[#6E7485]">
             This layout emphasizes goals, checkpoints, and your next learning sequence.
           </p>
+          <div className="mt-5">
+            <Link
+              href="/ai-assistant"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-[14px] bg-[#7872FD] px-5 text-sm font-semibold text-white transition hover:bg-[#5F58F0]"
+            >
+              <Sparkles className="size-4" /> Ask AI Career Assistant
+            </Link>
+          </div>
           <div className="mt-6">
             <MiniGoalList goals={goals} />
           </div>

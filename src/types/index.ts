@@ -10,3 +10,4 @@ export * from "./user";
 export * from "./file";
 export * from "./shared";
 export * from "./custom";
+export * from "./recommendation";

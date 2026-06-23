@@ -8,12 +8,16 @@ const topLinks = [
   { label: "Home", href: "/" },
   { label: "Courses", href: "/courses" },
   { label: "My Learning", href: "/my-learning" },
+  { label: "AI Assistant", href: "/ai-assistant" },
+  { label: "Learning Paths", href: "/learning-paths" },
 ];
 
 function isActivePath(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
   if (href === "/courses") return pathname.startsWith("/courses");
   if (href === "/my-learning") return pathname.startsWith("/my-learning");
+  if (href === "/ai-assistant") return pathname.startsWith("/ai-assistant");
+  if (href === "/learning-paths") return pathname.startsWith("/learning-paths");
   return false;
 }
 
