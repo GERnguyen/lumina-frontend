@@ -35,7 +35,9 @@ export default function VideoLessonEditor({ courseId, lessonId }: VideoLessonEdi
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const fetchVideoDetails = async () => {
-    setLoading(true);
+    if (!videoData) {
+      setLoading(true);
+    }
     setError(null);
     try {
       const [videoRes, questionsRes] = await Promise.all([
@@ -190,7 +192,10 @@ export default function VideoLessonEditor({ courseId, lessonId }: VideoLessonEdi
   // Capture current timestamp from video player
   const captureTimestamp = () => {
     if (videoRef.current) {
-      setTimestamp(videoRef.current.currentTime);
+      const newSec = Math.floor(videoRef.current.currentTime);
+      if (Math.floor(timestamp) !== newSec) {
+        setTimestamp(newSec);
+      }
     }
   };
 

@@ -76,21 +76,29 @@ export default function VideoSubtitleEditor({
   // Poll jobs if there are active jobs in progress
   useEffect(() => {
     let intervalId: NodeJS.Timeout | null = null;
+    let active = true;
 
-    const fetchJobs = async () => {
+    const checkJobs = async () => {
       try {
         const res = await SubtitleTrackApi.getSubtitleJobs(courseId, lessonId);
+        if (!active) return;
+
         if (res.success && res.data) {
           setJobs(res.data);
           const hasActiveJobs = res.data.some(
             (job) => job.status === "QUEUED" || job.status === "PROCESSING"
           );
 
-          if (!hasActiveJobs && intervalId) {
-            // Stop polling if there are no more active jobs
-            clearInterval(intervalId);
-            intervalId = null;
-            onRefresh(); // Refresh subtitle track list
+          if (hasActiveJobs) {
+            if (!intervalId) {
+              intervalId = setInterval(checkJobs, 5000);
+            }
+          } else {
+            if (intervalId) {
+              clearInterval(intervalId);
+              intervalId = null;
+              onRefresh(); // Refresh track list since jobs finished
+            }
           }
         }
       } catch (err) {
@@ -98,13 +106,10 @@ export default function VideoSubtitleEditor({
       }
     };
 
-    // Initial check
-    fetchJobs();
-
-    // Setup interval to poll every 5 seconds
-    intervalId = setInterval(fetchJobs, 5000);
+    checkJobs();
 
     return () => {
+      active = false;
       if (intervalId) clearInterval(intervalId);
     };
   }, [courseId, lessonId, isGeneratingAi, isTranslatingAi]);

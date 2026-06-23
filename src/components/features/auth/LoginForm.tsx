@@ -92,7 +92,12 @@ export default function LoginForm() {
         }
       }
 
-      router.push(returnUrl || (role === "INSTRUCTOR" ? "/instructor" : "/"));
+      if (role === "INSTRUCTOR") {
+        const targetUrl = (returnUrl && returnUrl.startsWith("/instructor")) ? returnUrl : "/instructor/dashboard";
+        router.push(targetUrl);
+      } else {
+        router.push(returnUrl || "/");
+      }
       router.refresh();
     },
   });

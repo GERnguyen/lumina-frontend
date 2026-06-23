@@ -133,7 +133,7 @@ export async function fetchClient<T>(path: string, options: FetchOptions = {}): 
 
   // Build Headers
   const headers = new Headers(customHeaders);
-  
+
   if (body && !(body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
