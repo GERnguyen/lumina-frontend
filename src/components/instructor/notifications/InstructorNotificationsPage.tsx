@@ -32,6 +32,40 @@ export function InstructorNotificationsPage({
   const router = useRouter();
   const [notifications, setNotifications] = useState<UserNotificationResponse[]>(initialNotifications);
 
+  React.useEffect(() => {
+    setNotifications(initialNotifications);
+  }, [initialNotifications]);
+
+  // Listen for changes from other components (bell dropdown, ws, etc.)
+  React.useEffect(() => {
+    const handleSync = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { action, id, isRead, notification } = customEvent.detail || {};
+
+      if (action === "mark-all-read") {
+        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      } else if (action === "mark-all-unread") {
+        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: false })));
+      } else if (action === "toggle-read") {
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === id ? { ...n, isRead } : n))
+        );
+      } else if (action === "delete") {
+        setNotifications((prev) => prev.filter((n) => n.id !== id));
+      } else if (action === "new-notification") {
+        setNotifications((prev) => {
+          if (prev.some((n) => n.id === notification.id)) return prev;
+          return [notification, ...prev];
+        });
+      }
+    };
+
+    window.addEventListener("lumina:notifications-changed", handleSync);
+    return () => {
+      window.removeEventListener("lumina:notifications-changed", handleSync);
+    };
+  }, []);
+
   const totalElements = meta.totalElements ?? 0;
   const totalPages = meta.totalPages ?? 1;
   const currentPage = meta.page ?? 1;
@@ -53,26 +87,74 @@ export function InstructorNotificationsPage({
   const handleToggleRead = React.useCallback(async (id: string) => {
     try {
       await NotificationApi.toggleRead(id);
-      setNotifications((prev) =>
-        prev.map((notification) =>
-          notification.id === id ? { ...notification, isRead: !notification.isRead } : notification
-        )
-      );
+      const target = notifications.find((n) => n.id === id);
+      if (target) {
+        window.dispatchEvent(
+          new CustomEvent("lumina:notifications-changed", {
+            detail: {
+              action: "toggle-read",
+              id,
+              isRead: !target.isRead,
+            },
+          })
+        );
+      }
       router.refresh();
     } catch (err) {
       console.error("Failed to toggle read status:", err);
     }
-  }, [router]);
+  }, [notifications, router]);
 
   const handleDelete = React.useCallback(async (id: string) => {
     try {
       await NotificationApi.deleteNotification(id);
-      setNotifications((prev) => prev.filter((notification) => notification.id !== id));
+      window.dispatchEvent(
+        new CustomEvent("lumina:notifications-changed", {
+          detail: {
+            action: "delete",
+            id,
+          },
+        })
+      );
       router.refresh();
     } catch (err) {
       console.error("Failed to delete notification:", err);
     }
   }, [router]);
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await NotificationApi.markAllAsRead();
+      window.dispatchEvent(
+        new CustomEvent("lumina:notifications-changed", {
+          detail: {
+            action: "mark-all-read",
+          },
+        })
+      );
+      router.refresh();
+    } catch (err) {
+      console.error("Failed to mark all as read:", err);
+    }
+  };
+
+  const handleMarkAllAsUnread = async () => {
+    try {
+      await NotificationApi.markAllAsUnread();
+      const countRes = await NotificationApi.countUnreadNotifications();
+      window.dispatchEvent(
+        new CustomEvent("lumina:notifications-changed", {
+          detail: {
+            action: "mark-all-unread",
+            count: countRes?.data ?? 0,
+          },
+        })
+      );
+      router.refresh();
+    } catch (err) {
+      console.error("Failed to mark all as unread:", err);
+    }
+  };
 
   const handleNotificationClick = React.useCallback(async (notification: UserNotificationResponse) => {
     if (!notification.id) return;
@@ -175,6 +257,30 @@ export function InstructorNotificationsPage({
           <p className="mt-1 text-xs text-gray-500">
             Xem tất cả các cập nhật hệ thống, tin nhắn và cảnh báo hoạt động của bạn.
           </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {notifications.length > 0 && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleMarkAllAsRead}
+                className="text-xs font-bold text-primary-600 border-primary-100 hover:bg-primary-50 cursor-pointer"
+              >
+                Đọc tất cả
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleMarkAllAsUnread}
+                className="text-xs font-bold text-gray-600 hover:bg-gray-50 cursor-pointer"
+              >
+                Chưa đọc tất cả
+              </Button>
+            </>
+          )}
         </div>
       </InstructorCard>
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { getServerAccessToken } from "@/lib/server-auth";
@@ -188,18 +189,24 @@ export default async function Page() {
   return (
     <main className="min-h-screen bg-white">
       <UserProfileTopNav avatar={profileUser.avatar} />
-      <UserProfileSpaShell
-        user={profileUser}
-        totalEnrolled={enrolledRes.meta?.totalElements || mappedCourses.length}
-        activeCourses={Math.max(0, mappedCourses.length - completedCourses)}
-        completedCourses={completedCourses}
-        learningCourses={mappedCourses.length ? mappedCourses.slice(0, 4) : mockUserProfileDashboard.learningCourses}
-        courses={mappedCourses.length ? mappedCourses : mockProfileCourses}
-        courseFilters={{ sort: "latest", status: "all", teacher: "all", page: 1 }}
-        wishlistItems={hydratedWishlist}
-        purchases={mappedPurchases.length ? mappedPurchases : mockProfilePurchaseHistory}
-        settings={settings}
-      />
+      <Suspense fallback={
+        <div className="flex h-96 items-center justify-center">
+          <div className="size-8 animate-spin rounded-full border-4 border-[#7872FD] border-t-transparent" />
+        </div>
+      }>
+        <UserProfileSpaShell
+          user={profileUser}
+          totalEnrolled={enrolledRes.meta?.totalElements || mappedCourses.length}
+          activeCourses={Math.max(0, mappedCourses.length - completedCourses)}
+          completedCourses={completedCourses}
+          learningCourses={mappedCourses.length ? mappedCourses.slice(0, 4) : mockUserProfileDashboard.learningCourses}
+          courses={mappedCourses.length ? mappedCourses : mockProfileCourses}
+          courseFilters={{ sort: "latest", status: "all", teacher: "all", page: 1 }}
+          wishlistItems={hydratedWishlist}
+          purchases={mappedPurchases.length ? mappedPurchases : mockProfilePurchaseHistory}
+          settings={settings}
+        />
+      </Suspense>
       <CoursesFooter />
     </main>
   );

@@ -100,6 +100,7 @@ export interface WishlistItemResponse {
 export interface ReviewReactionResponse {
   id?: string;
   userId?: string;
+  user?: UserSummaryResponse;
   reviewId?: string;
   liked?: boolean;
 }
@@ -108,6 +109,7 @@ export interface ReviewReplyDto {
   id?: string;
   reviewId?: string;
   instructorId?: string;
+  instructor?: UserSummaryResponse;
   content?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -116,11 +118,20 @@ export interface ReviewReplyDto {
 export interface ReviewResponse {
   id?: string;
   userId?: string;
+  user?: UserSummaryResponse;
   courseId?: string;
   content?: string;
   rating?: number;
   reply?: ReviewReplyDto;
   reactions?: ReviewReactionResponse[];
+}
+
+export interface UserSummaryResponse {
+  userId?: string;
+  name?: string;
+  email?: string;
+  role?: string;
+  avatarUrl?: string;
 }
 
 export interface ReviewStatisticsResponse {

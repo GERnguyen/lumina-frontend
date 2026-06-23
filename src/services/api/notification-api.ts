@@ -34,4 +34,12 @@ export const NotificationApi = {
   async deleteNotification(notificationId: string): Promise<ApiResponse<Record<string, unknown>>> {
     return apiClient.delete(`/api/v1/notifications/${notificationId}`);
   },
+
+  async markAllAsRead(): Promise<ApiResponse<Record<string, unknown>>> {
+    return apiClient.post("/api/v1/notifications/mark-all-read");
+  },
+
+  async markAllAsUnread(): Promise<ApiResponse<Record<string, unknown>>> {
+    return apiClient.post("/api/v1/notifications/mark-all-unread");
+  },
 };

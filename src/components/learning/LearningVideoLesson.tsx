@@ -2,7 +2,7 @@
 
 import Hls from "hls.js";
 import Image from "next/image";
-import { AlertCircle, Loader2, Maximize2, Minimize2, Pause, Play, PlayCircle, Plus, Trash2, Volume2, VolumeX } from "lucide-react";
+import { AlertCircle, Loader2, Maximize2, Minimize2, Pause, Play, PlayCircle, Plus, Subtitles, Trash2, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { VideoLessonResponse, VideoQuestionResponse } from "@/types/course";
 import type { VideoNoteDto } from "@/types/learning";
@@ -84,6 +84,68 @@ export function LearningVideoLesson({
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const hlsRef = useRef<Hls | null>(null);
+  const [activeSubtitleLang, setActiveSubtitleLang] = useState<string | null>(null);
+  const [showSubtitleMenu, setShowSubtitleMenu] = useState(false);
+  const subtitleMenuRef = useRef<HTMLDivElement>(null);
+
+  const readySubtitles = video?.subtitles?.filter((track) => track.fileUrl && track.status === "READY") || [];
+
+  // Set initial subtitle preference
+  useEffect(() => {
+    if (typeof window !== "undefined" && readySubtitles.length > 0) {
+      const stored = localStorage.getItem("lumina:preferred-subtitle-language");
+      if (stored && readySubtitles.some((s) => s.languageCode === stored)) {
+        setActiveSubtitleLang(stored);
+      } else {
+        const defaultTrack = readySubtitles.find((s) => s.isDefault);
+        if (defaultTrack) {
+          setActiveSubtitleLang(defaultTrack.languageCode || null);
+        } else {
+          setActiveSubtitleLang(null);
+        }
+      }
+    } else {
+      setActiveSubtitleLang(null);
+    }
+  }, [lessonId, readySubtitles.length]);
+
+  // Sync selected subtitle track with the video's actual text tracks
+  useEffect(() => {
+    const player = videoRef.current;
+    if (!player) return;
+    const tracks = player.textTracks;
+    for (let i = 0; i < tracks.length; i++) {
+      const track = tracks[i];
+      if (activeSubtitleLang && track.language === activeSubtitleLang) {
+        track.mode = "showing";
+      } else {
+        track.mode = "disabled";
+      }
+    }
+  }, [activeSubtitleLang, readySubtitles.length]);
+
+  // Handle clicking outside to close subtitles menu
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (subtitleMenuRef.current && !subtitleMenuRef.current.contains(event.target as Node)) {
+        setShowSubtitleMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleSelectSubtitle = (langCode: string | null) => {
+    setActiveSubtitleLang(langCode);
+    if (langCode) {
+      localStorage.setItem("lumina:preferred-subtitle-language", langCode);
+    } else {
+      localStorage.removeItem("lumina:preferred-subtitle-language");
+    }
+    setShowSubtitleMenu(false);
+  };
 
   useEffect(() => {
     const player = videoRef.current;
@@ -598,6 +660,51 @@ export function LearningVideoLesson({
                   className="hidden h-1 w-20 accent-[#7872FD] sm:block"
                   aria-label="Volume"
                 />
+                {readySubtitles.length > 0 ? (
+                  <div className="relative" ref={subtitleMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowSubtitleMenu(!showSubtitleMenu)}
+                      className={cn(
+                        "flex size-9 items-center justify-center rounded-full transition hover:bg-white/25",
+                        activeSubtitleLang ? "bg-[#7872FD] text-white" : "bg-white/15 text-white"
+                      )}
+                      aria-label="Subtitles"
+                      title="Subtitles/CC"
+                    >
+                      <Subtitles className="size-4" />
+                    </button>
+                    {showSubtitleMenu ? (
+                      <div className="absolute bottom-11 right-0 z-[70] min-w-[140px] rounded-xl border border-white/10 bg-[#1D2026]/95 p-1.5 shadow-xl backdrop-blur">
+                        <div className="flex flex-col gap-0.5 max-h-48 overflow-y-auto">
+                          <button
+                            type="button"
+                            onClick={() => handleSelectSubtitle(null)}
+                            className={cn(
+                              "w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold transition hover:bg-white/10",
+                              activeSubtitleLang === null ? "text-[#7872FD]" : "text-white/80"
+                            )}
+                          >
+                            Off
+                          </button>
+                          {readySubtitles.map((track) => (
+                            <button
+                              key={track.id || track.languageCode}
+                              type="button"
+                              onClick={() => handleSelectSubtitle(track.languageCode || null)}
+                              className={cn(
+                                "w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold transition hover:bg-white/10",
+                                activeSubtitleLang === track.languageCode ? "text-[#7872FD]" : "text-white/80"
+                              )}
+                            >
+                              {track.displayName || track.languageCode}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
                 <button type="button" onClick={toggleFullscreen} className="flex size-9 items-center justify-center rounded-full bg-white/15 transition hover:bg-white/25" aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}>
                   {isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
                 </button>

@@ -36,25 +36,67 @@ export function InstructorNotifications({
     }, 5000);
   };
 
+  const loadNotifications = async () => {
+    try {
+      const [listRes, countRes] = await Promise.all([
+        NotificationApi.getNotifications({ page: 1, size: 10 }),
+        NotificationApi.countUnreadNotifications(),
+      ]);
+      if (listRes?.data) setNotifications(listRes.data);
+      if (countRes?.data !== undefined) setUnreadCount(countRes.data);
+    } catch (err) {
+      console.error("Failed to load notifications:", err);
+    }
+  };
+
   // Fetch initial notifications
   useEffect(() => {
-    async function loadNotifications() {
-      try {
-        const [listRes, countRes] = await Promise.all([
-          NotificationApi.getNotifications({ page: 1, size: 10 }),
-          NotificationApi.countUnreadNotifications(),
-        ]);
-        if (listRes?.data) setNotifications(listRes.data);
-        if (countRes?.data !== undefined) setUnreadCount(countRes.data);
-      } catch (err) {
-        console.error("Failed to load notifications:", err);
-      }
-    }
-
     loadNotifications();
     // Refresh notifications fallback every 60 seconds
     const interval = setInterval(loadNotifications, 60000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Listen for changes from other components
+  useEffect(() => {
+    const handleSync = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { action, id, isRead, notification, count } = customEvent.detail || {};
+
+      if (action === "mark-all-read") {
+        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+        setUnreadCount(0);
+      } else if (action === "mark-all-unread") {
+        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: false })));
+        if (count !== undefined) setUnreadCount(count);
+      } else if (action === "toggle-read") {
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === id ? { ...n, isRead } : n))
+        );
+        setUnreadCount((prev) => (isRead ? Math.max(0, prev - 1) : prev + 1));
+      } else if (action === "delete") {
+        setNotifications((prev) => {
+          const target = prev.find((n) => n.id === id);
+          if (target && !target.isRead) {
+            setUnreadCount((c) => Math.max(0, c - 1));
+          }
+          return prev.filter((n) => n.id !== id);
+        });
+      } else if (action === "new-notification") {
+        setNotifications((prev) => {
+          if (prev.some((n) => n.id === notification.id)) return prev;
+          return [notification, ...prev].slice(0, 10);
+        });
+        setUnreadCount((prev) => prev + 1);
+      } else if (action === "refresh") {
+        loadNotifications();
+      }
+    };
+
+    window.addEventListener("lumina:notifications-changed", handleSync);
+    return () => {
+      window.removeEventListener("lumina:notifications-changed", handleSync);
+    };
   }, []);
 
   // WebSocket Connection
@@ -105,8 +147,14 @@ export function InstructorNotifications({
                   isRead: false,
                 };
 
-                setNotifications((prev) => [newNotification, ...prev].slice(0, 10));
-                setUnreadCount((prev) => prev + 1);
+                window.dispatchEvent(
+                  new CustomEvent("lumina:notifications-changed", {
+                    detail: {
+                      action: "new-notification",
+                      notification: newNotification,
+                    },
+                  })
+                );
 
                 // Resolve display content for toast
                 const { displayTitle, displayMessage } = getNotificationHelper(newNotification);
@@ -142,14 +190,17 @@ export function InstructorNotifications({
   const handleToggleRead = async (id: string) => {
     try {
       await NotificationApi.toggleRead(id);
-      // Toggle locally
-      setNotifications(prev =>
-        prev.map(n => (n.id === id ? { ...n, isRead: !n.isRead } : n))
-      );
-      // Recalculate unread count
-      const updated = notifications.find(n => n.id === id);
-      if (updated) {
-        setUnreadCount(prev => (updated.isRead ? prev + 1 : Math.max(0, prev - 1)));
+      const target = notifications.find((n) => n.id === id);
+      if (target) {
+        window.dispatchEvent(
+          new CustomEvent("lumina:notifications-changed", {
+            detail: {
+              action: "toggle-read",
+              id,
+              isRead: !target.isRead,
+            },
+          })
+        );
       }
     } catch (err) {
       console.error("Failed to toggle read state:", err);
@@ -159,13 +210,48 @@ export function InstructorNotifications({
   const handleDelete = async (id: string) => {
     try {
       await NotificationApi.deleteNotification(id);
-      const target = notifications.find(n => n.id === id);
-      if (target && !target.isRead) {
-        setUnreadCount(prev => Math.max(0, prev - 1));
-      }
-      setNotifications(prev => prev.filter(n => n.id !== id));
+      window.dispatchEvent(
+        new CustomEvent("lumina:notifications-changed", {
+          detail: {
+            action: "delete",
+            id,
+          },
+        })
+      );
     } catch (err) {
       console.error("Failed to delete notification:", err);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await NotificationApi.markAllAsRead();
+      window.dispatchEvent(
+        new CustomEvent("lumina:notifications-changed", {
+          detail: {
+            action: "mark-all-read",
+          },
+        })
+      );
+    } catch (err) {
+      console.error("Failed to mark all as read:", err);
+    }
+  };
+
+  const handleMarkAllAsUnread = async () => {
+    try {
+      await NotificationApi.markAllAsUnread();
+      const countRes = await NotificationApi.countUnreadNotifications();
+      window.dispatchEvent(
+        new CustomEvent("lumina:notifications-changed", {
+          detail: {
+            action: "mark-all-unread",
+            count: countRes?.data ?? 0,
+          },
+        })
+      );
+    } catch (err) {
+      console.error("Failed to mark all as unread:", err);
     }
   };
 
@@ -210,11 +296,30 @@ export function InstructorNotifications({
           <div className="absolute right-0 mt-2.5 w-80 bg-white border border-gray-200 rounded-lg shadow-[0_12px_32px_rgba(0,0,0,0.12)] z-50 overflow-hidden text-left animate-note-pop">
             <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
               <span className="text-xs font-bold text-gray-900">Thông báo</span>
-              {unreadCount > 0 && (
-                <span className="rounded-md bg-primary-50 px-2 py-0.5 text-[9px] font-bold text-primary-600">
-                  {unreadCount} mới
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 ? (
+                  <button
+                    type="button"
+                    onClick={handleMarkAllAsRead}
+                    className="text-[10px] font-bold text-primary-600 hover:underline cursor-pointer"
+                  >
+                    Đọc tất cả
+                  </button>
+                ) : notifications.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={handleMarkAllAsUnread}
+                    className="text-[10px] font-bold text-gray-500 hover:underline cursor-pointer"
+                  >
+                    Chưa đọc tất cả
+                  </button>
+                ) : null}
+                {unreadCount > 0 && (
+                  <span className="rounded-md bg-primary-50 px-2 py-0.5 text-[9px] font-bold text-primary-600">
+                    {unreadCount} mới
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="max-h-[300px] overflow-y-auto divide-y divide-gray-50">

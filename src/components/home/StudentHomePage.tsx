@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { BookOpenCheck, CalendarDays, Sparkles } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getCourseProgressByCourseIdsAction } from "@/services/actions/learning";
@@ -49,6 +50,34 @@ export function StudentHomePage({
 }: StudentHomePageProps) {
   const welcomeName = user?.name ? user.name.split(" ")[0] : "Learner";
 
+  const [localUnreadCount, setLocalUnreadCount] = useState(unreadNotificationsCount);
+
+  useEffect(() => {
+    setLocalUnreadCount(unreadNotificationsCount);
+  }, [unreadNotificationsCount]);
+
+  useEffect(() => {
+    const handleSync = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { action, isRead, count } = customEvent.detail || {};
+
+      if (action === "mark-all-read") {
+        setLocalUnreadCount(0);
+      } else if (action === "mark-all-unread") {
+        if (count !== undefined) setLocalUnreadCount(count);
+      } else if (action === "toggle-read") {
+        setLocalUnreadCount((prev) => (isRead ? Math.max(0, prev - 1) : prev + 1));
+      } else if (action === "new-notification") {
+        setLocalUnreadCount((prev) => prev + 1);
+      }
+    };
+
+    window.addEventListener("lumina:notifications-changed", handleSync);
+    return () => {
+      window.removeEventListener("lumina:notifications-changed", handleSync);
+    };
+  }, []);
+
   const courseIds = enrolledCourses.map((c) => c.id).filter(Boolean) as string[];
 
   // Fetch course progress client-side using React Query
@@ -79,7 +108,7 @@ export function StudentHomePage({
             activeCourses: enrolledCourses.length - courseProgresses.filter((p) => p.isCompleted).length,
             completedCourses: courseProgresses.filter((p) => p.isCompleted).length,
             currentStreak: streak?.currentStreak || 0,
-            unreadNotifications: unreadNotificationsCount,
+            unreadNotifications: localUnreadCount,
           }}
           isLoading={isLoading}
         />

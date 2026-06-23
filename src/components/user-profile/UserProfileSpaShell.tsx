@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import type {
   ProfileCourseFilter,
@@ -17,8 +18,9 @@ import { UserProfileLearningCard } from "./UserProfileLearningCard";
 import { UserProfilePurchaseHistoryList } from "./UserProfilePurchaseHistoryList";
 import { UserProfileSettingsForm } from "./UserProfileSettingsForm";
 import { UserProfileWishlistTable } from "./UserProfileWishlistTable";
+import { UserProfileNotificationsList } from "./UserProfileNotificationsList";
 
-type ProfileTabKey = "courses" | "wishlist" | "purchase-history" | "settings";
+type ProfileTabKey = "courses" | "wishlist" | "purchase-history" | "settings" | "notifications";
 
 type UserProfileSpaShellProps = {
   user: UserProfileDashboardData["user"];
@@ -38,6 +40,7 @@ const tabs: Array<{ key: ProfileTabKey; label: string }> = [
   { key: "wishlist", label: "Wishlist" },
   { key: "purchase-history", label: "Purchase History" },
   { key: "settings", label: "Settings" },
+  { key: "notifications", label: "Notifications" },
 ];
 
 export function UserProfileSpaShell({
@@ -48,7 +51,21 @@ export function UserProfileSpaShell({
   purchases,
   settings,
 }: UserProfileSpaShellProps) {
-  const [activeTab, setActiveTab] = useState<ProfileTabKey>("courses");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab") as ProfileTabKey | null;
+
+  const [activeTab, setActiveTab] = useState<ProfileTabKey>(() => {
+    if (tabParam && ["courses", "wishlist", "purchase-history", "settings", "notifications"].includes(tabParam)) {
+      return tabParam;
+    }
+    return "courses";
+  });
+
+  useEffect(() => {
+    if (tabParam && ["courses", "wishlist", "purchase-history", "settings", "notifications"].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
 
   return (
     <>
@@ -71,7 +88,7 @@ export function UserProfileSpaShell({
             <div className="flex overflow-x-auto px-4 sm:justify-center sm:gap-6 sm:px-0">
               {tabs.map((tab) => (
                 <button
-                  key={tab.key}
+                   key={tab.key}
                   type="button"
                   onClick={() => setActiveTab(tab.key)}
                   className={`relative flex h-[68px] min-w-[168px] items-center justify-center text-center text-base font-semibold transition ${
@@ -93,6 +110,7 @@ export function UserProfileSpaShell({
           {activeTab === "wishlist" ? <WishlistTab items={wishlistItems} /> : null}
           {activeTab === "purchase-history" ? <PurchaseHistoryTab purchases={purchases} /> : null}
           {activeTab === "settings" ? <SettingsTab settings={settings} /> : null}
+          {activeTab === "notifications" ? <UserProfileNotificationsList /> : null}
         </div>
       </section>
     </>

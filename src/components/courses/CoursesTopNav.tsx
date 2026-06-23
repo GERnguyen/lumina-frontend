@@ -58,7 +58,7 @@ export async function CoursesTopNav() {
             {user ? (
               <InstructorNotifications
                 emptyDescription="Learning updates, payment messages, Q&A replies, and certificates will appear here."
-                buttonClassName="hidden size-6 rounded-none bg-transparent text-[#1D2026] hover:bg-transparent hover:text-[#7872FD] md:flex"
+                buttonClassName="hidden text-[#1D2026] hover:text-[#7872FD] md:flex"
                 iconClassName="size-6"
               />
             ) : null}

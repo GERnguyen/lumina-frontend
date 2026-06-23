@@ -36,6 +36,8 @@ export interface UserDto {
   lastAccessAt?: string;
   instructorVerifiedAt?: string;
   partnershipTerminatedAt?: string;
+  partnershipTerminationReasonType?: "POLICY_VIOLATION" | "FRAUD_OR_MISCONDUCT" | "COPYRIGHT_VIOLATION" | "INACTIVE_INSTRUCTOR" | "OTHER";
+  partnershipTerminationReasonDetail?: string;
   isPartnershipTerminated?: boolean;
 }
 
@@ -79,6 +81,11 @@ export interface PolicySectionResponse {
   anchor?: string;
   bodyMarkdown?: string;
   orderIndex?: number;
+}
+
+export interface TerminatePartnershipRequest {
+  reasonType: "POLICY_VIOLATION" | "FRAUD_OR_MISCONDUCT" | "COPYRIGHT_VIOLATION" | "INACTIVE_INSTRUCTOR" | "OTHER";
+  reasonDetail?: string;
 }
 
 export interface DeviceTokenRequest {

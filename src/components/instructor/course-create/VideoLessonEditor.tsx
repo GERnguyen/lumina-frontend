@@ -8,6 +8,7 @@ import { Checkbox, Input } from "@/components/ui/shared";
 import { InstructorSwitch } from "@/components/ui/shared/InstructorSwitch";
 import { Video, Trash2, Plus, Play, Pause, Save, Loader2, FileVideo } from "lucide-react";
 import type { VideoLessonResponse, VideoQuestionResponse, CreateVideoOptionRequest } from "@/types";
+import VideoSubtitleEditor from "./VideoSubtitleEditor";
 
 interface VideoLessonEditorProps {
   courseId: string;
@@ -287,6 +288,16 @@ export default function VideoLessonEditor({ courseId, lessonId }: VideoLessonEdi
           </div>
         )}
       </div>
+
+      {/* Video Subtitles Box */}
+      {videoData?.videoUrl && (
+        <VideoSubtitleEditor
+          courseId={courseId}
+          lessonId={lessonId}
+          subtitles={videoData.subtitles}
+          onRefresh={fetchVideoDetails}
+        />
+      )}
 
       {/* Interactive Questions Box */}
       {videoData?.videoUrl && (
