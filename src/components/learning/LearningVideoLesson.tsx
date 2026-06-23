@@ -45,7 +45,7 @@ type LearningVideoLessonProps = {
   poster?: string;
   video?: VideoLessonResponse;
   resumePosition?: number;
-  onComplete: (lessonId: string) => void;
+  onComplete: (lessonId: string) => Promise<void> | void;
 };
 
 export function LearningVideoLesson({
@@ -160,6 +160,7 @@ export function LearningVideoLesson({
     let cancelled = false;
     passedQuestionIdsThisRunRef.current = new Set();
     hasMarkedNearCompleteRef.current = false;
+    lastTrackedSecond.current = 0;
 
     async function loadVideoLearningData() {
       const [questionsResponse, submissionsResponse, notesResponse] = await Promise.all([
@@ -198,11 +199,27 @@ export function LearningVideoLesson({
 
   useEffect(() => {
     const player = videoRef.current;
-    if (!player || !resumePosition || resumePosition <= 0) return;
+    let initialPosition = resumePosition || 0;
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(`lumina:video-progress:${courseId}:${lessonId}`);
+        if (stored) {
+          const parsed = parseInt(stored, 10);
+          if (!isNaN(parsed) && parsed > 0) {
+            initialPosition = parsed;
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    if (!player || initialPosition <= 0) return;
 
     const handleLoaded = () => {
-      player.currentTime = resumePosition;
-      setCurrentTime(resumePosition);
+      player.currentTime = initialPosition;
+      setCurrentTime(initialPosition);
+      lastTrackedSecond.current = initialPosition;
     };
 
     if (player.readyState >= 1) {
@@ -212,7 +229,7 @@ export function LearningVideoLesson({
 
     player.addEventListener("loadedmetadata", handleLoaded, { once: true });
     return () => player.removeEventListener("loadedmetadata", handleLoaded);
-  }, [resumePosition]);
+  }, [courseId, lessonId, resumePosition]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -238,6 +255,13 @@ export function LearningVideoLesson({
     if (!force && (player.paused || currentPosition - lastTrackedSecond.current < 10)) return;
 
     lastTrackedSecond.current = currentPosition;
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(`lumina:video-progress:${courseId}:${lessonId}`, String(currentPosition));
+      } catch (e) {
+        console.error(e);
+      }
+    }
     void trackVideoProgressAction(courseId, lessonId, { currentPosition });
   }
 

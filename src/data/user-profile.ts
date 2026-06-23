@@ -47,6 +47,7 @@ export type ProfileWishlistItem = {
   instructors: string[];
   price: string;
   originalPrice?: string;
+  isPurchased?: boolean;
 };
 
 export type ProfilePurchaseCourse = {
@@ -72,6 +73,8 @@ export type ProfilePurchaseHistoryItem = {
   paymentAccount: string;
   paymentExpiry?: string;
   courses: ProfilePurchaseCourse[];
+  paymentId?: string;
+  rawPaymentMethod?: string;
 };
 
 export type UserProfileDashboardData = {

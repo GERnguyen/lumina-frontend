@@ -49,6 +49,7 @@ export default async function Page({ searchParams }: CoursesRouteProps) {
     priceFrom: numberParam(params.priceFrom),
     priceTo: numberParam(params.priceTo),
     categoryId: firstParam(params.categoryId),
+    excludeEnrolled: firstParam(params.excludeEnrolled) === "true",
   };
 
   return <CoursesPage filters={filters} />;

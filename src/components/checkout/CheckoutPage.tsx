@@ -37,7 +37,7 @@ export function CheckoutPage({
           <div className="mt-8 border border-[#E9EAF0] bg-[#F8F8FF] p-8 text-center">
             <h2 className="text-xl font-semibold text-[#1D2026]">Sign in to checkout</h2>
             <p className="mt-2 text-sm text-[#6E7485]">Your cart and payment options will appear after you sign in.</p>
-            <Link href="/login" className="mt-5 inline-flex h-12 items-center justify-center rounded-[18px] bg-[#564FFD] px-6 text-sm font-semibold text-white">
+            <Link href="/login?returnUrl=%2Fcheckout" className="mt-5 inline-flex h-12 items-center justify-center rounded-[18px] bg-[#564FFD] px-6 text-sm font-semibold text-white">
               Sign In
             </Link>
           </div>

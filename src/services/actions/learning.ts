@@ -243,6 +243,7 @@ export async function getVideoQuestionSubmissionsAction(courseId: string, lesson
 export async function trackVideoProgressAction(courseId: string, lessonId: string, body: TrackingVideoLessonRequest) {
   try {
     const res = await VideoTrackingApi.trackVideoProgress(courseId, lessonId, body);
+    revalidatePath(`/learning/${courseId}`);
     return { success: true, data: res.data };
   } catch (error: any) {
     return { success: false, error: error?.message || "Failed to track video progress" };

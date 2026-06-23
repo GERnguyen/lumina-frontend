@@ -60,10 +60,40 @@ function countUnreadFromItems(items: UserNotificationResponse[]) {
 
 function mergeNotifications(current: UserNotificationResponse[], incoming: UserNotificationResponse[]) {
   const merged = new Map<string, UserNotificationResponse>();
-  [...current, ...incoming].forEach((item, index) => {
-    const key = item.id || `${item.title || "notification"}-${item.message || ""}-${index}`;
-    merged.set(key, { ...merged.get(key), ...item });
+
+  [...current, ...incoming].forEach((item) => {
+    const title = item.title || "";
+    const message = item.message || "";
+    const compositeKey = `${title}:${message}`;
+    const existing = merged.get(compositeKey);
+
+    if (!existing) {
+      merged.set(compositeKey, item);
+    } else {
+      const isExistingRealtime = String(existing.id).startsWith("realtime-");
+      const isNewRealtime = String(item.id).startsWith("realtime-");
+
+      const mergedItem = { ...existing, ...item };
+      if (isExistingRealtime && !isNewRealtime) {
+        mergedItem.id = item.id;
+      } else if (!isExistingRealtime) {
+        mergedItem.id = existing.id;
+      }
+
+      // If one is database and the other is realtime, trust the database item's status.
+      // Otherwise, if both are database items, trust the incoming item (which is from the server).
+      if (isExistingRealtime && !isNewRealtime) {
+        mergedItem.isRead = item.isRead;
+      } else if (!isExistingRealtime && isNewRealtime) {
+        mergedItem.isRead = existing.isRead;
+      } else {
+        mergedItem.isRead = item.isRead;
+      }
+
+      merged.set(compositeKey, mergedItem);
+    }
   });
+
   return [...merged.values()].slice(0, 80);
 }
 
@@ -79,6 +109,7 @@ export function InstructorNotifications({
   const [isOpen, setIsOpen] = useState(false);
   const [items, setItems] = useState<UserNotificationResponse[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isShowingAll, setIsShowingAll] = useState(false);
   const [socketStatus, setSocketStatus] = useState<SocketStatus>("connecting");
@@ -88,6 +119,31 @@ export function InstructorNotifications({
 
   const badgeText = useMemo(() => (unreadCount > 99 ? "99+" : String(unreadCount)), [unreadCount]);
   const visibleItems = useMemo(() => (isShowingAll ? items : items.slice(0, 8)), [isShowingAll, items]);
+
+  // Hydrate from localStorage after mount (cannot do in useState initializer — causes SSR hydration mismatch)
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("lumina:notifications");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setItems(parsed);
+          setUnreadCount(countUnreadFromItems(parsed));
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("lumina:notifications", JSON.stringify(items));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [items]);
+
 
   async function loadNotifications(options?: { silent?: boolean }) {
     if (!options?.silent) {
@@ -123,11 +179,12 @@ export function InstructorNotifications({
   }
 
   useEffect(() => {
-    loadNotifications();
+    loadNotifications({ silent: items.length > 0 });
   }, []);
 
   useEffect(() => {
     let disposed = false;
+    let retryCount = 0;
 
     async function connect() {
       const token = await getAccessToken();
@@ -141,6 +198,7 @@ export function InstructorNotifications({
       socketRef.current = socket;
 
       socket.onopen = () => {
+        retryCount = 0;
         socket.send(encodeFrame("CONNECT", {
           "accept-version": "1.2",
           "heart-beat": "10000,10000",
@@ -170,7 +228,7 @@ export function InstructorNotifications({
           }
           const notification = realtimeNotification(payload);
           if (!notification) return;
-          setItems((current) => [notification, ...current].slice(0, 50));
+          setItems((current) => mergeNotifications([notification], current).slice(0, 50));
           setUnreadCount((current) => current + 1);
         });
       };
@@ -178,7 +236,10 @@ export function InstructorNotifications({
       socket.onclose = () => {
         if (disposed) return;
         setSocketStatus("offline");
-        reconnectTimerRef.current = window.setTimeout(connect, 4000);
+
+        const delay = Math.min(30000, Math.pow(2, retryCount) * 2000);
+        retryCount++;
+        reconnectTimerRef.current = window.setTimeout(connect, delay);
       };
 
       socket.onerror = () => {
@@ -218,6 +279,27 @@ export function InstructorNotifications({
     await NotificationService.toggleRead({ notificationId: notification.id }).catch(() => loadNotifications({ silent: true }));
   }
 
+  async function markAllAsRead() {
+    const unreadDbItems = items.filter((item) => !item.isRead && item.id && !item.id.startsWith("realtime-"));
+
+    setItems((current) => current.map((item) => ({ ...item, isRead: true })));
+    setUnreadCount(0);
+
+    if (unreadDbItems.length === 0) return;
+
+    try {
+      await Promise.all(
+        unreadDbItems.map((item) =>
+          NotificationService.toggleRead({ notificationId: item.id! }).catch((e) => {
+            console.error("Failed to mark notification as read:", item.id, e);
+          })
+        )
+      );
+    } catch (e) {
+      console.error("Error in markAllAsRead:", e);
+    }
+  }
+
   return (
     <div className="relative">
       <button
@@ -231,11 +313,10 @@ export function InstructorNotifications({
         )}
       >
         <Bell className={cn("size-5", iconClassName)} />
-        {unreadCount > 0 ? (
-          <span className="absolute -right-1 -top-1 flex min-w-5 items-center justify-center rounded-full bg-[#564FFD] px-1.5 text-[10px] font-bold leading-5 text-white">
-            {badgeText}
-          </span>
-        ) : null}
+        {/* suppressHydrationWarning: badge count is client-only (localStorage) and will always be 0 on SSR */}
+        <span suppressHydrationWarning className="absolute -right-1 -top-1 flex min-w-5 items-center justify-center rounded-full bg-[#564FFD] px-1.5 text-[10px] font-bold leading-5 text-white" style={{ display: unreadCount > 0 ? undefined : "none" }}>
+          {badgeText}
+        </span>
       </button>
 
       {isOpen ? (
@@ -243,13 +324,27 @@ export function InstructorNotifications({
           <div className="flex items-center justify-between border-b border-[#E9EAF0] px-5 py-4">
             <div>
               <h2 className="text-sm font-bold text-[#1D2026]">Notifications</h2>
-              <p className="mt-0.5 text-xs text-[#8C94A3]">{unreadCount} unread update{unreadCount === 1 ? "" : "s"}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-xs text-[#8C94A3]">{unreadCount} unread update{unreadCount === 1 ? "" : "s"}</p>
+                {unreadCount > 0 && (
+                  <>
+                    <span className="text-[10px] text-[#E9EAF0]">•</span>
+                    <button
+                      type="button"
+                      onClick={markAllAsRead}
+                      className="text-xs font-semibold text-[#564FFD] hover:underline"
+                    >
+                      Mark all as read
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
             <span className={cn("size-2.5 rounded-full", socketStatus === "connected" ? "bg-[#23BD33]" : "bg-[#CED1D9]")} aria-label={socketStatus === "connected" ? "Realtime connected" : "Realtime offline"} />
           </div>
 
           <div className="max-h-[390px] overflow-y-auto p-2">
-            {isLoading ? (
+            {isLoading && !items.length ? (
               <div className="flex h-32 items-center justify-center text-[#564FFD]">
                 <Loader2 className="size-5 animate-spin" />
               </div>

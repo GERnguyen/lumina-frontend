@@ -2,18 +2,17 @@
 
 import { ExternalLink, FileText } from "lucide-react";
 import type { ArticleLessonResponse } from "@/types/course";
-import { markItemAsCompleteAction } from "@/services/actions/learning";
+
 
 type LearningArticleLessonProps = {
   lessonId: string;
   article?: ArticleLessonResponse;
-  onComplete: (lessonId: string) => void;
+  onComplete: (lessonId: string) => Promise<void> | void;
 };
 
 export function LearningArticleLesson({ lessonId, article, onComplete }: LearningArticleLessonProps) {
   async function completeArticle() {
-    onComplete(lessonId);
-    await markItemAsCompleteAction(lessonId);
+    await onComplete(lessonId);
   }
 
   return (

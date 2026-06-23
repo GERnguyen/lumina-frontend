@@ -36,7 +36,7 @@ export default async function Page() {
   }
 
   const enrolledIds = new Set((enrolledRes.data || []).map((course) => course.id).filter(Boolean) as string[]);
-  const wishlistItems = (wishlistRes.data || []).filter((item) => !item.courseId || !enrolledIds.has(item.courseId));
+  const wishlistItems = wishlistRes.data || [];
   const courseIds = wishlistItems.map((item) => item.courseId).filter(Boolean) as string[];
 
   let courses: any[] = [];
@@ -51,6 +51,7 @@ export default async function Page() {
 
     const price = course?.discountedPrice ?? course?.price;
     const originalPrice = course?.discountedPrice && course?.price && course.discountedPrice < course.price ? course.price : undefined;
+    const isPurchased = item.courseId ? enrolledIds.has(item.courseId) : false;
 
     return {
       id: item.id || `${item.courseId}-${index}`,
@@ -62,6 +63,7 @@ export default async function Page() {
       instructors: course ? [getCourseInstructorName(course)] : mock.instructors,
       price: typeof price === "number" ? money(price) : mock.price,
       originalPrice: originalPrice ? money(originalPrice) : undefined,
+      isPurchased,
     };
   });
 

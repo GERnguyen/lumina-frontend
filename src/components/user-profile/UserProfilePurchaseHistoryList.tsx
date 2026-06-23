@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ChevronDown, CreditCard, DollarSign, PlayCircle, Search, Star } from "lucide-react";
 import type { ProfilePurchaseCourse, ProfilePurchaseHistoryItem } from "@/data/user-profile";
+import { OrderService } from "@/services/enrollmentService";
+import { PaymentService } from "@/services/paymentService";
 
 type PurchaseSort = "latest" | "oldest" | "highest" | "lowest";
 
@@ -88,6 +90,24 @@ function filterPurchases(
   return next;
 }
 
+function PurchaseStatusBadge({ status }: { status: string }) {
+  const normalized = status.toUpperCase();
+  let classes = "bg-[#FFF4E5] text-[#B85C00]"; // default PENDING
+  if (normalized === "PAID") {
+    classes = "bg-[#E6FBD9] text-[#1E7E34]";
+  } else if (normalized === "CANCELLED") {
+    classes = "bg-[#FCE8E6] text-[#C5221F]";
+  } else if (normalized === "REFUNDED") {
+    classes = "bg-[#F1F3F4] text-[#5F6368]";
+  }
+
+  return (
+    <span className={`rounded-full px-2.5 py-1 text-xs font-bold leading-5 tracking-wide ${classes}`}>
+      {status}
+    </span>
+  );
+}
+
 function PurchaseMeta({ purchase }: { purchase: ProfilePurchaseHistoryItem }) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm tracking-normal text-[#4E5566]">
@@ -103,9 +123,7 @@ function PurchaseMeta({ purchase }: { purchase: ProfilePurchaseHistoryItem }) {
         <CreditCard className="size-4 text-[#23BD33]" />
         {purchase.paymentMethod}
       </span>
-      {purchase.status !== "PAID" ? (
-        <span className="rounded-full bg-[#FFF4E5] px-2.5 py-1 text-xs font-semibold text-[#B85C00]">{purchase.status}</span>
-      ) : null}
+      <PurchaseStatusBadge status={purchase.status} />
     </div>
   );
 }
@@ -143,6 +161,53 @@ function PurchaseCourseRow({ course }: { course: ProfilePurchaseCourse }) {
 }
 
 function ExpandedPurchaseContent({ purchase }: { purchase: ProfilePurchaseHistoryItem }) {
+  const [isActionPending, setIsActionPending] = useState(false);
+  const [error, setError] = useState<string>();
+  const [selectedMethod, setSelectedMethod] = useState<"MOMO" | "STRIPE">("MOMO");
+  const [showMethodSelect, setShowMethodSelect] = useState(false);
+
+  async function handleCancelOrder() {
+    if (!window.confirm("Are you sure you want to cancel this order?")) return;
+    setIsActionPending(true);
+    setError(undefined);
+    try {
+      const res = await OrderService.cancelOrder({ orderId: purchase.id });
+      if (res.success) {
+        window.location.reload();
+      } else {
+        setError(res.message || "Failed to cancel order");
+      }
+    } catch (e: any) {
+      setError(e.message || "An error occurred while cancelling the order");
+    } finally {
+      setIsActionPending(false);
+    }
+  }
+
+  async function handlePay() {
+    if (!purchase.paymentId) {
+      setError("No payment session associated with this order.");
+      return;
+    }
+    setIsActionPending(true);
+    setError(undefined);
+    try {
+      const res = await PaymentService.createCheckoutLink({
+        paymentId: purchase.paymentId,
+        paymentMethod: selectedMethod,
+      });
+      if (res.success && res.data) {
+        window.location.href = res.data;
+      } else {
+        setError(res.message || "Failed to generate checkout link");
+      }
+    } catch (e: any) {
+      setError(e.message || "An error occurred while initiating payment");
+    } finally {
+      setIsActionPending(false);
+    }
+  }
+
   return (
     <div className="grid border-t border-[#E9EAF0] lg:grid-cols-[minmax(0,1fr)_458px]">
       <div className="space-y-6 p-4 sm:p-6">
@@ -168,6 +233,83 @@ function ExpandedPurchaseContent({ purchase }: { purchase: ProfilePurchaseHistor
           <span className="text-lg leading-6 tracking-normal">{purchase.paymentAccount}</span>
           {purchase.paymentExpiry ? <span className="sm:text-right">{purchase.paymentExpiry}</span> : null}
         </div>
+
+        {error && (
+          <div className="mt-6 rounded-lg bg-danger-50 p-3 text-xs font-semibold text-danger-600 border border-danger-200">
+            {error}
+          </div>
+        )}
+
+        {purchase.status === "PENDING" && (
+          <div className="mt-8 border-t border-[#E9EAF0] pt-6 space-y-4">
+            {showMethodSelect ? (
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-[#6E7485]">Select Payment Method:</p>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 text-sm font-medium text-[#1D2026] cursor-pointer">
+                    <input
+                      type="radio"
+                      name={`payment-method-${purchase.id}`}
+                      value="MOMO"
+                      checked={selectedMethod === "MOMO"}
+                      onChange={() => setSelectedMethod("MOMO")}
+                      className="text-[#564FFD] focus:ring-[#564FFD]"
+                    />
+                    MoMo
+                  </label>
+                  <label className="flex items-center gap-2 text-sm font-medium text-[#1D2026] cursor-pointer">
+                    <input
+                      type="radio"
+                      name={`payment-method-${purchase.id}`}
+                      value="STRIPE"
+                      checked={selectedMethod === "STRIPE"}
+                      onChange={() => setSelectedMethod("STRIPE")}
+                      className="text-[#564FFD] focus:ring-[#564FFD]"
+                    />
+                    Stripe
+                  </label>
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowMethodSelect(false)}
+                    disabled={isActionPending}
+                    className="flex h-9 flex-1 items-center justify-center rounded-xl border border-[#E9EAF0] text-xs font-semibold text-[#4E5566] transition hover:bg-[#F5F7FA]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePay}
+                    disabled={isActionPending}
+                    className="flex h-9 flex-1 items-center justify-center rounded-xl bg-[#564FFD] text-xs font-semibold text-white transition hover:bg-[#433BDB]"
+                  >
+                    {isActionPending ? "Loading..." : "Pay Now"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowMethodSelect(true)}
+                  disabled={isActionPending}
+                  className="flex h-10 w-full items-center justify-center rounded-[14px] bg-[#564FFD] text-sm font-semibold text-white transition hover:bg-[#433BDB] active:scale-[0.98] disabled:opacity-50"
+                >
+                  Pay/Change Payment
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelOrder}
+                  disabled={isActionPending}
+                  className="flex h-10 w-full items-center justify-center rounded-[14px] border border-danger-200 text-sm font-semibold text-danger-600 transition hover:bg-danger-50 active:scale-[0.98] disabled:opacity-50"
+                >
+                  {isActionPending ? "Loading..." : "Cancel Order"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </aside>
     </div>
   );
