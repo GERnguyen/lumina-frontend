@@ -16,6 +16,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import type { QuizLessonResponse, QuizQuestionResponse, CreateQuizOptionRequest } from "@/types";
+import { useToastStore } from "@/stores/toast-store";
+
 
 interface QuizLessonEditorProps {
   courseId: string;
@@ -23,8 +25,12 @@ interface QuizLessonEditorProps {
 }
 
 export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEditorProps) {
+  const addToast = useToastStore((state) => state.addToast);
+  const [quizData, setQuizData] = useState<QuizLessonResponse | null>(null);
+  const [hasQuiz, setHasQuiz] = useState(false);
+  const [deletedQuestionIds, setDeletedQuestionIds] = useState<string[]>([]);
   // Settings states
-  const [numberOfQuestionPerQuizSession, setNumberOfQuestionPerQuizSession] = useState(5);
+  const [numberOfQuestionPerQuizSession, setNumberOfQuestionPerQuizSession] = useState(3);
   const [maxAttempt, setMaxAttempt] = useState<number | undefined>(undefined);
   const [duration, setDuration] = useState<number | undefined>(undefined);
   const [isReviewAllowed, setIsReviewAllowed] = useState(true);
@@ -47,39 +53,22 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
   // Question Form states
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [questionText, setQuestionText] = useState("");
-  const [questionType, setQuestionType] = useState<"SINGLE_CHOICE" | "MULTI_CHOICE" | "SHORT_TEXT" | "ESSAY">("SINGLE_CHOICE");
+  const [questionType, setQuestionType] = useState<"SINGLE_CHOICE" | "MULTI_CHOICE" | "SHORT_TEXT" | "MATCHING" | "ORDERING">("SINGLE_CHOICE");
   const [scoringMethod, setScoringMethod] = useState<"ALL_OR_NOTHING" | "PARTIAL_CREDIT" | "NEGATIVE_MARK">("ALL_OR_NOTHING");
   const [options, setOptions] = useState<CreateQuizOptionRequest[]>([
     { optionText: "", isCorrect: false },
     { optionText: "", isCorrect: false },
   ]);
 
-  const initializeDefaultQuiz = async () => {
-    const defaultPayload = {
-      numberOfQuestionPerQuizSession: 5,
-      maxAttempt: undefined,
-      duration: undefined,
-      isReviewAllowed: true,
-      isShowAnswersOnReview: true,
-      shuffleQuestions: false,
-      shuffleOptions: false,
-      scoringMode: "HIGHEST" as const,
-      questions: [],
-    };
-    try {
-      await QuizLessonApi.createQuizLesson(courseId, lessonId, defaultPayload);
-    } catch (e) {
-      console.warn("Quiz initialization fallback warning:", e);
-    }
-  };
-
   const fetchQuizDetails = async () => {
     setLoading(true);
     setError(null);
+    setDeletedQuestionIds([]); // Reset deleted tracker
     try {
       const res = await QuizLessonApi.getQuizByLessonId(courseId, lessonId);
       if (res?.data) {
-        setNumberOfQuestionPerQuizSession(res.data.numberOfQuestionPerQuizSession || 5);
+        setHasQuiz(true);
+        setNumberOfQuestionPerQuizSession(res.data.numberOfQuestionPerQuizSession || 3);
         setMaxAttempt(res.data.maxAttempt);
         setDuration(res.data.duration);
         setIsReviewAllowed(res.data.isReviewAllowed ?? true);
@@ -89,32 +78,12 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
         setScoringMode(res.data.scoringMode || "HIGHEST");
         setQuestions(res.data.questions || []);
       } else {
-        await initializeDefaultQuiz();
-        const retryRes = await QuizLessonApi.getQuizByLessonId(courseId, lessonId).catch(() => null);
-        if (retryRes?.data) {
-          setQuestions(retryRes.data.questions || []);
-        }
+        setHasQuiz(false);
       }
     } catch (err: any) {
-      console.error("Failed to load quiz details, trying to auto-initialize:", err);
-      try {
-        await initializeDefaultQuiz();
-        const retryRes = await QuizLessonApi.getQuizByLessonId(courseId, lessonId);
-        if (retryRes?.data) {
-          setNumberOfQuestionPerQuizSession(retryRes.data.numberOfQuestionPerQuizSession || 5);
-          setMaxAttempt(retryRes.data.maxAttempt);
-          setDuration(retryRes.data.duration);
-          setIsReviewAllowed(retryRes.data.isReviewAllowed ?? true);
-          setIsShowAnswersOnReview(retryRes.data.isShowAnswersOnReview ?? true);
-          setShuffleQuestions(retryRes.data.shuffleQuestions || false);
-          setShuffleOptions(retryRes.data.shuffleOptions || false);
-          setScoringMode(retryRes.data.scoringMode || "HIGHEST");
-          setQuestions(retryRes.data.questions || []);
-        }
-      } catch (initErr: any) {
-        console.error("Failed to auto-initialize quiz:", initErr);
-        setQuestions([]);
-      }
+      console.warn("Quiz not found or failed to load:", err);
+      setHasQuiz(false);
+      setQuestions([]);
     } finally {
       setLoading(false);
     }
@@ -124,35 +93,106 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
     fetchQuizDetails();
   }, [courseId, lessonId]);
 
-  // Save general settings
+  // Save general settings AND all local questions (creates or updates the quiz)
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingSettings(true);
     setError(null);
     setSuccessMsg(null);
 
-    const payload = {
-      numberOfQuestionPerQuizSession,
-      maxAttempt: maxAttempt || undefined,
-      duration: duration || undefined,
-      isReviewAllowed,
-      isShowAnswersOnReview,
-      shuffleQuestions,
-      shuffleOptions,
-      scoringMode,
-      questions: [],
-    };
+    // Validate that we have at least 1 question
+    if (questions.length === 0) {
+      addToast("Please add at least one question to the quiz.", "warning", "Validation Error");
+      setSavingSettings(false);
+      return;
+    }
+
+    const mappedQuestions = questions.map((q) => ({
+      questionText: q.questionText || "",
+      questionType: q.questionType as any,
+      scoringMethod: q.scoringMethod as any,
+      options: (q.options || []).map((o) => ({
+        optionText: o.optionText || "",
+        isCorrect: o.isCorrect || false,
+        optionOrder: o.optionOrder,
+        matchText: o.matchText,
+      })),
+    }));
 
     try {
-      try {
-        await QuizLessonApi.updateQuizSettings(courseId, lessonId, payload);
-      } catch (err) {
-        await QuizLessonApi.createQuizLesson(courseId, lessonId, payload);
+      if (!hasQuiz) {
+        // Create the quiz with configurations AND all local questions
+        const createPayload = {
+          numberOfQuestionPerQuizSession,
+          maxAttempt: maxAttempt || undefined,
+          duration: duration || undefined,
+          isReviewAllowed,
+          isShowAnswersOnReview,
+          shuffleQuestions,
+          shuffleOptions,
+          scoringMode,
+          questions: mappedQuestions,
+        };
+
+        await QuizLessonApi.createQuizLesson(courseId, lessonId, createPayload);
+        setHasQuiz(true);
+        addToast("Quiz and questions created successfully!", "success", "Quiz Created");
+      } else {
+        // Update quiz configurations
+        const settingsPayload = {
+          numberOfQuestionPerQuizSession,
+          maxAttempt: maxAttempt || undefined,
+          duration: duration || undefined,
+          isReviewAllowed,
+          isShowAnswersOnReview,
+          shuffleQuestions,
+          shuffleOptions,
+          scoringMode,
+        };
+
+        await QuizLessonApi.updateQuizSettings(courseId, lessonId, settingsPayload);
+
+        // Diff and sync questions
+        // 1. Delete questions that were removed locally
+        const deletePromises = deletedQuestionIds.map((id) =>
+          QuizQuestionApi.deleteQuestion(courseId, lessonId, id)
+        );
+
+        // 2. Add or Update questions
+        const savePromises = questions.map((q) => {
+          const body = {
+            questionText: q.questionText || "",
+            questionType: q.questionType as any,
+            scoringMethod: q.scoringMethod as any,
+            options: (q.options || []).map((o) => ({
+              optionText: o.optionText || "",
+              isCorrect: o.isCorrect || false,
+              optionOrder: o.optionOrder,
+              matchText: o.matchText,
+            })),
+          };
+
+          if (q.id && !q.id.startsWith("temp_")) {
+            // Update existing question
+            return QuizQuestionApi.updateQuestion(courseId, lessonId, q.id, body);
+          } else {
+            // Add new question
+            return QuizQuestionApi.addQuestion(courseId, lessonId, body);
+          }
+        });
+
+        await Promise.all([...deletePromises, ...savePromises]);
+        setDeletedQuestionIds([]); // Clear deleted list
+        addToast("Quiz changes saved successfully!", "success", "Quiz Saved");
       }
-      setSuccessMsg("Quiz configurations updated successfully!");
+
+      setSuccessMsg("Quiz configurations & questions saved successfully!");
+      // Reload quiz details to sync with DB IDs
+      await fetchQuizDetails();
     } catch (err: any) {
-      console.error("Failed to save quiz settings:", err);
-      setError(err?.message || "Could not save settings.");
+      console.error("Failed to save quiz:", err);
+      setError(err?.message || "Could not save quiz settings/questions.");
+      addToast(err?.message || "Failed to save quiz", "error", "Error");
     } finally {
       setSavingSettings(false);
     }
@@ -228,75 +268,62 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
     }
   };
 
-  // Save / Add Question
-  const handleSaveQuestion = async (e: React.FormEvent) => {
+  // Save / Add Question (Locally in-memory)
+  const handleSaveQuestion = (e: React.FormEvent) => {
     e.preventDefault();
     if (!questionText.trim()) return;
 
-    if (["SINGLE_CHOICE", "MULTI_CHOICE"].includes(questionType)) {
+    if (["SINGLE_CHOICE", "MULTI_CHOICE", "SHORT_TEXT", "ORDERING", "MATCHING"].includes(questionType)) {
       if (options.some((o) => !o.optionText.trim())) {
-        alert("Please fill in option labels.");
+        addToast("Please fill in all options/items.", "warning", "Validation Error");
         return;
       }
-      if (!options.some((o) => o.isCorrect)) {
-        alert("Mark at least one option as correct.");
+      if (questionType === "MATCHING" && options.some((o) => !o.matchText?.trim())) {
+        addToast("Please fill in all matching targets.", "warning", "Validation Error");
+        return;
+      }
+      if (["SINGLE_CHOICE", "MULTI_CHOICE"].includes(questionType) && !options.some((o) => o.isCorrect)) {
+        addToast("Mark at least one option as correct.", "warning", "Validation Error");
         return;
       }
     }
 
-    setSavingQuestion(true);
-    const body = {
+    const questionBody: QuizQuestionResponse = {
+      id: editingQuestionId || undefined,
       questionText,
       questionType,
       scoringMethod,
-      options: ["SHORT_TEXT", "ESSAY"].includes(questionType) ? [] : options,
+      options: options.map((opt, idx) => ({
+        optionText: opt.optionText,
+        isCorrect: ["SHORT_TEXT", "MATCHING", "ORDERING"].includes(questionType) ? true : opt.isCorrect,
+        optionOrder: questionType === "ORDERING" ? idx + 1 : undefined,
+        matchText: questionType === "MATCHING" ? opt.matchText : undefined,
+      })),
     };
 
-    try {
-      if (editingQuestionId) {
-        await QuizQuestionApi.updateQuestion(courseId, lessonId, editingQuestionId, body);
-        setSuccessMsg("Quiz question updated.");
-      } else {
-        try {
-          await QuizQuestionApi.addQuestion(courseId, lessonId, body);
-        } catch (addErr: any) {
-          if (addErr?.message?.includes("Quiz not found") || addErr?.status === 404 || addErr?.status === 400) {
-            console.warn("Quiz not found on saving question, auto-initializing...");
-            await initializeDefaultQuiz();
-            await QuizQuestionApi.addQuestion(courseId, lessonId, body);
-          } else {
-            throw addErr;
-          }
-        }
-        setSuccessMsg("Quiz question created.");
-      }
-      startEditQuestion(); // Reset form
-      const res = await QuizQuestionApi.getQuestions(courseId, lessonId);
-      if (res?.data) {
-        setQuestions(res.data);
-      }
-    } catch (err: any) {
-      console.error("Failed to save question:", err);
-      setError(err?.message || "Could not save question.");
-    } finally {
-      setSavingQuestion(false);
+    if (editingQuestionId) {
+      // Edit local list in place
+      setQuestions(questions.map((q) => (q.id === editingQuestionId ? questionBody : q)));
+    } else {
+      // Add a new question to the local list with a temporary ID
+      const tempId = `temp_${Date.now()}`;
+      setQuestions([...questions, { ...questionBody, id: tempId }]);
     }
+
+    startEditQuestion(); // Reset form
   };
 
-  // Delete Question
-  const handleDeleteQuestion = async (qId: string) => {
-    if (!confirm("Are you sure you want to delete this question?")) return;
+  // Delete Question (Locally in-memory)
+  const handleDeleteQuestion = (qId: string) => {
+    if (!confirm("Are you sure you want to remove this question locally?")) return;
 
     setError(null);
     setSuccessMsg(null);
-    try {
-      await QuizQuestionApi.deleteQuestion(courseId, lessonId, qId);
-      setQuestions(questions.filter((q) => q.id !== qId));
-      setSuccessMsg("Question deleted.");
-    } catch (err: any) {
-      console.error("Failed to delete question:", err);
-      setError(err?.message || "Could not delete question.");
+    if (!qId.startsWith("temp_")) {
+      // Keep track of backend questions to delete on save
+      setDeletedQuestionIds([...deletedQuestionIds, qId]);
     }
+    setQuestions(questions.filter((q) => q.id !== qId));
   };
 
   if (loading) {
@@ -416,7 +443,7 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
 
             <div className="pt-4">
               <InstructorButton type="submit" loading={savingSettings} size="md" icon={Save} className="w-full px-3 py-2.5 text-sm font-medium">
-                Save Configurations
+                {hasQuiz ? "Save Quiz Changes" : "Create Quiz"}
               </InstructorButton>
             </div>
           </form>
@@ -430,6 +457,12 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
             <h3 className="text-base font-bold text-gray-900">
               {editingQuestionId ? "Modify Question" : "Add Quiz Question"}
             </h3>
+
+            {!hasQuiz && (
+              <div className="rounded-lg bg-amber-50/50 border border-amber-200 p-4 text-xs font-bold text-amber-850 leading-relaxed">
+                ⚠️ This quiz has not been created yet. Customize settings on the left, add at least one question below, and then click <strong>Create Quiz</strong> to save.
+              </div>
+            )}
 
             <form onSubmit={handleSaveQuestion} className="space-y-5">
               <Input
@@ -449,11 +482,12 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
                     { label: "🔘 Single Choice", value: "SINGLE_CHOICE" },
                     { label: "☑️ Multiple Choice", value: "MULTI_CHOICE" },
                     { label: "✍️ Short Text Fill-in", value: "SHORT_TEXT" },
-                    { label: "📝 Essay Response", value: "ESSAY" },
+                    { label: "↔️ Matching Pairs", value: "MATCHING" },
+                    { label: "🔢 Ordering Sequence", value: "ORDERING" },
                   ]}
                   value={questionType}
                   onValueChange={(value) => {
-                    const newType = value as typeof questionType;
+                    const newType = value as any;
                     setQuestionType(newType);
                     if (newType === "SINGLE_CHOICE") {
                       const opt = [...options];
@@ -466,6 +500,18 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
                         }
                       });
                       setOptions(opt);
+                    } else if (newType === "SHORT_TEXT") {
+                      setOptions([{ optionText: "", isCorrect: true }]);
+                    } else if (newType === "MATCHING") {
+                      setOptions([
+                        { optionText: "", matchText: "", isCorrect: true },
+                        { optionText: "", matchText: "", isCorrect: true },
+                      ]);
+                    } else if (newType === "ORDERING") {
+                      setOptions([
+                        { optionText: "", optionOrder: 1, isCorrect: true },
+                        { optionText: "", optionOrder: 2, isCorrect: true },
+                      ]);
                     }
                   }}
                   className="w-full max-w-full"
@@ -527,6 +573,138 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
                 </div>
               )}
 
+              {/* Options for Short Text (Fill-in-the-blank) Correct Answers */}
+              {questionType === "SHORT_TEXT" && (
+                <div className="space-y-4 pt-4 border-t border-gray-200">
+                  <label className="block text-sm font-semibold text-gray-800">Acceptable Correct Answers</label>
+                  <p className="text-[11px] text-gray-500 font-medium leading-normal">
+                    Enter one or more acceptable answers. The student's answer must match one of these (evaluated case-insensitively).
+                  </p>
+                  <div className="space-y-3">
+                    {options.map((opt, idx) => (
+                      <div key={idx} className="flex items-center space-x-2.5">
+                        <Input
+                          type="text"
+                          placeholder={`Correct Answer Alternative ${idx + 1}`}
+                          value={opt.optionText}
+                          onChange={(e) => updateOption(idx, "optionText", e.target.value)}
+                          required
+                        />
+                        {options.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeOptionRow(idx)}
+                            className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg cursor-pointer"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={addOptionRow}
+                    className="flex items-center space-x-1 text-sm font-medium text-primary-600 cursor-pointer hover:underline"
+                  >
+                    <Plus className="size-3.5" />
+                    <span>Add Acceptable Answer</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Options for Matching Pairs */}
+              {questionType === "MATCHING" && (
+                <div className="space-y-4 pt-4 border-t border-gray-200">
+                  <label className="block text-sm font-semibold text-gray-800">Matching Pairs</label>
+                  <p className="text-[11px] text-gray-500 font-medium leading-normal">
+                    Enter matching items. The student will be asked to match each item on the left with its correct counterpart on the right.
+                  </p>
+                  <div className="space-y-3">
+                    {options.map((opt, idx) => (
+                      <div key={idx} className="flex items-center space-x-3.5">
+                        <Input
+                          type="text"
+                          placeholder={`Left Item ${idx + 1}`}
+                          value={opt.optionText}
+                          onChange={(e) => updateOption(idx, "optionText", e.target.value)}
+                          required
+                        />
+                        <span className="text-gray-400 font-bold text-xs select-none">matches</span>
+                        <Input
+                          type="text"
+                          placeholder={`Right Match ${idx + 1}`}
+                          value={opt.matchText || ""}
+                          onChange={(e) => updateOption(idx, "matchText", e.target.value)}
+                          required
+                        />
+                        {options.length > 2 && (
+                          <button
+                            type="button"
+                            onClick={() => removeOptionRow(idx)}
+                            className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg cursor-pointer"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={addOptionRow}
+                    className="flex items-center space-x-1 text-sm font-medium text-primary-600 cursor-pointer hover:underline"
+                  >
+                    <Plus className="size-3.5" />
+                    <span>Add Matching Pair</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Options for Ordering Sequence */}
+              {questionType === "ORDERING" && (
+                <div className="space-y-4 pt-4 border-t border-gray-200">
+                  <label className="block text-sm font-semibold text-gray-800">Sequence Items (in correct order)</label>
+                  <p className="text-[11px] text-gray-500 font-medium leading-normal">
+                    Enter items in their correct sequence (first to last). They will be shuffled when presented to the student.
+                  </p>
+                  <div className="space-y-3">
+                    {options.map((opt, idx) => (
+                      <div key={idx} className="flex items-center space-x-2.5">
+                        <span className="text-xs font-bold text-gray-400 w-6 select-none">{idx + 1}.</span>
+                        <Input
+                          type="text"
+                          placeholder={`Sequence Item ${idx + 1}`}
+                          value={opt.optionText}
+                          onChange={(e) => updateOption(idx, "optionText", e.target.value)}
+                          required
+                        />
+                        {options.length > 2 && (
+                          <button
+                            type="button"
+                            onClick={() => removeOptionRow(idx)}
+                            className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg cursor-pointer"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={addOptionRow}
+                    className="flex items-center space-x-1 text-sm font-medium text-primary-600 cursor-pointer hover:underline"
+                  >
+                    <Plus className="size-3.5" />
+                    <span>Add Sequence Item</span>
+                  </button>
+                </div>
+              )}
+
               <div className="flex items-center justify-end space-x-2.5 pt-3.5 border-t border-gray-200">
                 {editingQuestionId && (
                   <button
@@ -538,7 +716,7 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
                   </button>
                 )}
                 <InstructorButton type="submit" loading={savingQuestion} size="md" icon={editingQuestionId ? Save : Plus} className="px-3 py-2.5 text-sm font-medium">
-                  {editingQuestionId ? "Update Question" : "Add Question"}
+                  {editingQuestionId ? "Apply Question Changes" : "Add Question to List"}
                 </InstructorButton>
               </div>
             </form>
@@ -569,13 +747,45 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
                       </div>
                       <p className="text-sm font-semibold text-gray-900 mt-3">{q.questionText}</p>
                       {q.options && q.options.length > 0 && (
-                        <ul className="mt-3 space-y-1.5 pl-6 list-disc text-sm text-gray-500 font-medium">
-                          {q.options.map((opt) => (
-                            <li key={opt.id} className={opt.isCorrect ? "text-emerald-600 font-bold" : ""}>
-                              {opt.optionText} {opt.isCorrect && "✓"}
-                            </li>
-                          ))}
-                        </ul>
+                        <div className="mt-3 space-y-1.5">
+                          <p className="text-xs font-bold text-gray-400 select-none">
+                            {q.questionType === "SHORT_TEXT"
+                              ? "Acceptable Answers:"
+                              : q.questionType === "MATCHING"
+                              ? "Matching Pairs:"
+                              : q.questionType === "ORDERING"
+                              ? "Correct Sequence (First to Last):"
+                              : "Option Choices:"}
+                          </p>
+                          {q.questionType === "ORDERING" ? (
+                            <ol className="pl-6 list-decimal text-sm text-emerald-600 font-bold space-y-1.5">
+                              {[...q.options]
+                                .sort((a, b) => (a.optionOrder || 0) - (b.optionOrder || 0))
+                                .map((opt) => (
+                                  <li key={opt.id}>{opt.optionText}</li>
+                                ))}
+                            </ol>
+                          ) : q.questionType === "MATCHING" ? (
+                            <ul className="pl-6 list-disc text-sm text-emerald-600 font-bold space-y-1.5">
+                              {q.options.map((opt) => (
+                                <li key={opt.id}>
+                                  {opt.optionText} <span className="text-gray-400 font-medium mx-1.5">➔</span> {opt.matchText}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <ul className="pl-6 list-disc text-sm text-gray-500 font-medium space-y-1.5">
+                              {q.options.map((opt) => (
+                                <li
+                                  key={opt.id}
+                                  className={opt.isCorrect || q.questionType === "SHORT_TEXT" ? "text-emerald-600 font-bold" : ""}
+                                >
+                                  {opt.optionText} {(opt.isCorrect || q.questionType === "SHORT_TEXT") && "✓"}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
                       )}
                     </div>
 

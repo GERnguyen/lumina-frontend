@@ -19,7 +19,7 @@ import { clearAuthSession } from "@/lib/auth-session";
 import { useAuthStore } from "@/stores/auth-store";
 import { cn } from "@/lib/utils";
 import { getProfileAvatar } from "@/lib/format";
-import { Button } from "../ui/shared";
+import { Button, ToastContainer } from "../ui/shared";
 import { InstructorNotifications } from "./notifications/InstructorNotifications";
 
 interface InstructorLayoutClientProps {
@@ -209,6 +209,7 @@ export function InstructorLayoutClient({ children, user }: InstructorLayoutClien
           <div className="mx-auto w-full max-w-[1400px]">{children}</div>
         </main>
       </div>
+      <ToastContainer />
     </div>
   );
 }

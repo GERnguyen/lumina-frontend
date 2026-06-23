@@ -19,6 +19,10 @@ import {
   Send,
   Loader2,
 } from "lucide-react";
+import { useToastStore } from "@/stores/toast-store";
+import { money } from "@/lib/format";
+
+
 
 interface CourseFinalReviewProps {
   course: CourseResponse | null;
@@ -28,8 +32,10 @@ interface CourseFinalReviewProps {
 
 export default function CourseFinalReview({ course, curriculum, onBack }: CourseFinalReviewProps) {
   const router = useRouter();
+  const addToast = useToastStore((state) => state.addToast);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
 
   const sections = curriculum?.sections || [];
   const images = course?.images || [];
@@ -56,8 +62,9 @@ export default function CourseFinalReview({ course, curriculum, onBack }: Course
 
     try {
       await CourseApi.submitCourse(course.id);
-      alert("Course draft submitted for review successfully!");
+      addToast("Course draft submitted for review successfully!", "success", "Submission Successful");
       router.push("/instructor/courses");
+
     } catch (err: any) {
       console.error("Failed to submit course:", err);
       setError(err?.message || "Could not submit course for review. Check credentials.");
@@ -142,17 +149,18 @@ export default function CourseFinalReview({ course, curriculum, onBack }: Course
                 <div>
                   <p className="text-[9px] text-gray-400 font-bold uppercase">Price</p>
                   <p className="text-gray-900 mt-0.5">
-                    {course?.discountedPrice ? (
+                    {course?.discountedPrice && course.price && course.discountedPrice < course.price ? (
                       <span>
-                        <span className="line-through text-gray-400 mr-1">${course.price}</span>
-                        <span className="text-primary-600">${course.discountedPrice}</span>
+                        <span className="line-through text-gray-400 mr-1.5">{money(course.price)}</span>
+                        <span className="text-primary-600">{money(course.discountedPrice)}</span>
                       </span>
                     ) : (
-                      <span>${course?.price || 0}</span>
+                      <span>{money(course?.price || 0)}</span>
                     )}
                   </p>
                 </div>
               </div>
+
 
               {course?.duration && (
                 <div className="flex items-center space-x-2 text-xs font-bold text-gray-700">

@@ -4,7 +4,8 @@ import { Users, Eye, BookOpen } from "lucide-react";
 import type {
   InstructorLearnerProgress,
 } from "@/services/actions/instructor";
-import type { LearningItemProgressResponse } from "@/types";
+import type { LearningItemProgressResponse, CourseCurriculumResponse } from "@/types";
+
 import { getCourseProgressPercentage } from "@/lib/format";
 import { InstructorCard } from "@/components/ui/shared/InstructorCard";
 import { InstructorDialog } from "@/components/ui/shared/InstructorDialog";
@@ -14,7 +15,9 @@ import { Input, DataTable, DataTableEmptyState } from "@/components/ui/shared";
 interface LearnersTabProps {
   courseId?: string;
   learners: InstructorLearnerProgress[];
+  curriculum?: CourseCurriculumResponse | null;
 }
+
 
 function ProgressBar({ value }: { value: number }) {
   const width = Math.max(0, Math.min(100, value));
@@ -25,11 +28,24 @@ function ProgressBar({ value }: { value: number }) {
   );
 }
 
-export function LearnersTab({ courseId, learners }: LearnersTabProps) {
+export function LearnersTab({ courseId, learners, curriculum }: LearnersTabProps) {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<InstructorLearnerProgress | null>(null);
   const [items, setItems] = useState<LearningItemProgressResponse[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const lessonMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    curriculum?.sections?.forEach((section) => {
+      section.lessons?.forEach((lesson) => {
+        if (lesson.id && lesson.title) {
+          map[lesson.id] = lesson.title;
+        }
+      });
+    });
+    return map;
+  }, [curriculum]);
+
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -195,7 +211,10 @@ export function LearnersTab({ courseId, learners }: LearnersTabProps) {
             {items.map((item, idx) => (
               <div key={item.itemId || idx} className="rounded-xl border border-zinc-150 p-4 bg-zinc-50/50 text-sm">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="font-bold text-zinc-800 truncate">{item.itemId || "Unknown item"}</p>
+                  <p className="font-bold text-zinc-800 truncate" title={lessonMap[item.itemId || ""] || item.itemId || "Unknown item"}>
+                    {lessonMap[item.itemId || ""] || item.itemId || "Unknown item"}
+                  </p>
+
                   <span className="text-xs font-bold text-zinc-500 bg-zinc-100 px-2 py-0.5 border border-zinc-250 rounded-md font-general">
                     {item.score ?? "--"} điểm
                   </span>

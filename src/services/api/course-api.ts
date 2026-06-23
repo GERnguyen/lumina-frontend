@@ -52,7 +52,9 @@ import type {
   UpdateVideoQuestionRequest,
   VideoLessonResponse,
   VideoQuestionResponse,
+  RejectCourseResponse,
 } from "@/types";
+
 
 // ── CourseApi ──────────────────────────────────────────────
 export const CourseApi = {
@@ -102,9 +104,10 @@ export const CourseApi = {
     return apiClient.patch(`/api/v1/courses/${id}/curriculum/lessons/${lessonId}/position`, body);
   },
 
-  async getRejectReason(id: string): Promise<ApiResponse<Record<string, unknown>>> {
+  async getRejectReason(id: string): Promise<ApiResponse<RejectCourseResponse>> {
     return apiClient.get(`/api/v1/courses/${id}/reject-reason`);
   },
+
 
   async getEditableCourseDraft(id: string): Promise<ApiResponse<CourseResponse>> {
     return apiClient.get(`/api/v1/courses/${id}/draft`);
