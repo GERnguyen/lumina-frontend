@@ -8,14 +8,13 @@ import { useState } from "react";
 import type { UserDto } from "@/types";
 import { clearAuthSession } from "@/lib/auth-session";
 import { useAuthStore } from "@/stores/auth-store";
-
-const fallbackAvatar = "/user-profile/avatar.png";
+import { getProfileAvatar } from "@/lib/format";
 
 export function CoursesUserMenu({ user }: { user: UserDto }) {
   const router = useRouter();
   const clearSession = useAuthStore((state) => state.clearSession);
   const [isOpen, setIsOpen] = useState(false);
-  const avatar = user.avatarUrl || fallbackAvatar;
+  const avatar = getProfileAvatar(user, "Lumina learner");
   const name = user.name || "Lumina learner";
 
   async function handleLogout() {

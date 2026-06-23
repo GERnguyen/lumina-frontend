@@ -18,6 +18,7 @@ import type { UserDto } from "@/types";
 import { clearAuthSession } from "@/lib/auth-session";
 import { useAuthStore } from "@/stores/auth-store";
 import { cn } from "@/lib/utils";
+import { getProfileAvatar } from "@/lib/format";
 import { Button } from "../ui/shared";
 import { InstructorNotifications } from "./notifications/InstructorNotifications";
 
@@ -26,15 +27,13 @@ interface InstructorLayoutClientProps {
   user: UserDto;
 }
 
-const fallbackAvatar = "/user-profile/avatar.png";
-
 export function InstructorLayoutClient({ children, user }: InstructorLayoutClientProps) {
   const pathname = usePathname();
   const router = useRouter();
   const clearSession = useAuthStore((state) => state.clearSession);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const avatar = user.avatarUrl || fallbackAvatar;
+  const avatar = getProfileAvatar(user, "Giảng viên");
   const name = user.name || "Giảng viên";
   const email = user.email || "instructor@lumina.local";
 
