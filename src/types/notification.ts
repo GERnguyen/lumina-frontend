@@ -10,5 +10,9 @@ export interface UserNotificationResponse {
   userId?: string;
   title?: string;
   message?: string;
+  type?: string;
+  referenceId?: string;
+  actionUrl?: string;
+  metadata?: Record<string, Record<string, unknown>>;
   isRead?: boolean;
 }

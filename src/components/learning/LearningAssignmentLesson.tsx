@@ -5,7 +5,7 @@ import { ClipboardCheck, ExternalLink, FileText, Loader2, Send, Trash2, UploadCl
 import type { AssignmentLessonResponse } from "@/types/course";
 import type { AssignmentSubmissionResponse } from "@/types/learning";
 import { getAssignmentSubmissionAction, submitAssignmentAction } from "@/services/actions/learning";
-import { CourseUploadService } from "@/services/courseService";
+import { PresignedUrlApi } from "@/services/api/user-api";
 
 type LearningAssignmentLessonProps = {
   lessonId: string;
@@ -20,7 +20,7 @@ function isSubmission(value: unknown): value is AssignmentSubmissionResponse {
 
 async function uploadSubmissionFile(file: File) {
   const contentType = file.type || "application/octet-stream";
-  const response = await CourseUploadService.getPresignedUrl({
+  const response = await PresignedUrlApi.getPresignedUrl({
     fileName: file.name,
     contentType,
   });

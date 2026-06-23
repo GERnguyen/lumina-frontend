@@ -3,7 +3,7 @@ import { Heart, Search, ShoppingCart } from "lucide-react";
 import type { UserDto } from "@/types";
 import { CoursesUserMenu } from "@/components/courses/CoursesUserMenu";
 import { TopNavLinks } from "@/components/courses/TopNavLinks";
-import { InstructorNotifications } from "@/components/instructor/InstructorNotifications";
+import { InstructorNotifications } from "@/components/instructor/notifications/InstructorNotifications";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { API_BASE_URL } from "@/lib/api-base";
 import { authHeaders } from "@/lib/server-auth";

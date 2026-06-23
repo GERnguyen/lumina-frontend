@@ -4,7 +4,6 @@
 // =============================================================
 
 import { CourseResponse } from "./course";
-import { PaymentResponse } from "./payment";
 
 // ── Domain types ───────────────────────────────────────────────
 
@@ -19,6 +18,10 @@ export interface UpdateVoucherRequest {
   validTo?: string;
 }
 
+export interface UpdatePaymentMethodRequest {
+  paymentMethod: "VN_PAY" | "MOMO" | "STRIPE";
+}
+
 export interface OrderDetailResponse {
   id?: string;
   userId?: string;
@@ -27,7 +30,7 @@ export interface OrderDetailResponse {
   discounted?: number;
   orderDate?: string;
   status?: "PENDING" | "PAID" | "CANCELLED" | "REFUNDED";
-  paymentMethod?: "MOMO" | "STRIPE";
+  paymentMethod?: "VN_PAY" | "MOMO" | "STRIPE";
   payment?: PaymentResponse;
   voucher?: VoucherResponse;
 }
@@ -38,6 +41,16 @@ export interface OrderItemResponse {
   title?: string;
   price?: number;
   discountedPrice?: number;
+}
+
+export interface PaymentResponse {
+  id?: string;
+  orderId?: string;
+  amount?: number;
+  status?: "PROCESSING" | "PAID" | "CANCELLED" | "REFUNDED";
+  paymentDate?: string;
+  paymentInfo?: string;
+  paymentMessage?: string;
 }
 
 export interface VoucherResponse {
@@ -72,24 +85,19 @@ export interface CartItemDto {
 
 export interface CreateOrderRequest {
   cartItems: CartItemDto[];
-  paymentMethod: "MOMO" | "STRIPE";
+  paymentMethod: "VN_PAY" | "MOMO" | "STRIPE";
   voucherCode?: string;
-}
-
-export interface OrderResponse {
-  id?: string;
-  userId?: string;
-  items?: OrderItemResponse[];
-  totalPrice?: number;
-  discounted?: number;
-  orderDate?: string;
-  status?: "PENDING" | "PAID" | "CANCELLED" | "REFUNDED";
-  paymentMethod?: "MOMO" | "STRIPE";
 }
 
 export interface CheckEnrollmentStatus {
   courseId?: string;
   isEnrolled?: boolean;
+}
+
+export interface CourseRevenueStats {
+  courseId?: string;
+  title?: string;
+  revenue?: number;
 }
 
 export interface CourseStats {
@@ -110,7 +118,7 @@ export interface InstructorStatisticsResponse {
   distinctLearnersInRange?: number;
   revenueByTime?: RevenueByTimeResponse[];
   enrollmentsByTime?: EnrollmentByTimeResponse[];
-  topCoursesByRevenue?: CourseStats[];
+  topCoursesByRevenue?: CourseRevenueStats[];
   topCoursesByEnrollment?: CourseStats[];
 }
 
@@ -143,7 +151,7 @@ export interface AdminOverviewResponse {
   distinctLearnersInRange?: number;
   platformRevenueByTime?: RevenueByTimeResponse[];
   enrollmentsByTime?: EnrollmentByTimeResponse[];
-  topCoursesByRevenue?: CourseStats[];
+  topCoursesByRevenue?: CourseRevenueStats[];
   topCoursesByEnrollment?: CourseStats[];
 }
 

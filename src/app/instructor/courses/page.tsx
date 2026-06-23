@@ -1,57 +1,64 @@
+import { getInstructorCourses } from "@/services/actions/instructor";
+import { CategoryApi } from "@/services/api/course-api";
+import { InstructorCoursesClient } from "@/components/instructor/InstructorCoursesClient";
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { InstructorCoursesPage } from "@/components/instructor/InstructorCoursesPage";
-import { getServerAccessToken } from "@/lib/server-auth";
-import { getInstructorCoursesData, type InstructorCoursesFilters } from "@/services/instructor-courses-service";
 
 export const metadata: Metadata = {
-  title: "My Courses - Lumina Instructor",
-  description: "Search, filter, and manage your Lumina instructor courses.",
-  alternates: {
-    canonical: "/instructor/courses",
-  },
+  title: "Khóa học của tôi - Giảng viên",
+  description: "Quản lý danh sách khóa học giảng dạy của bạn trên Lumina.",
 };
 
-type InstructorCoursesRouteProps = {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-};
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
-function firstParam(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
+function firstParam(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) return value[0];
+  return value;
 }
 
-function numberParam(value: string | string[] | undefined) {
-  const raw = firstParam(value);
-  if (!raw) return undefined;
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
+export default async function Page(props: { searchParams: SearchParams }) {
+  const searchParams = await props.searchParams;
 
-function sortParam(value: string | string[] | undefined) {
-  const raw = firstParam(value);
-  if (!raw) return '{"createdAt":"DESC"}';
-  return raw;
-}
+  // Extract query filters
+  const page = Number(firstParam(searchParams.page) || "1");
+  const size = Number(firstParam(searchParams.size) || "10");
+  const query = firstParam(searchParams.query);
+  const status = firstParam(searchParams.status);
+  const publishStatus = firstParam(searchParams.publishStatus);
+  const categoryId = firstParam(searchParams.categoryId);
+  const sort = firstParam(searchParams.sort) || '{"updatedAt":"DESC"}';
 
-export default async function InstructorCoursesRoute({ searchParams }: InstructorCoursesRouteProps) {
-  const token = await getServerAccessToken();
-  if (!token) redirect("/login");
+  // Fetch paginated courses & categories in parallel
+  const [coursesRes, categoriesRes] = await Promise.all([
+    getInstructorCourses({
+      page,
+      size,
+      query,
+      sort,
+      status: status === "all" ? undefined : status,
+      publishStatus: publishStatus === "all" ? undefined : publishStatus,
+      categoryId: categoryId === "all" ? undefined : categoryId,
+    }),
+    CategoryApi.getAllCategories().catch(() => ({ data: [] })),
+  ]);
 
-  const params = await searchParams;
-  const filters: InstructorCoursesFilters = {
-    page: numberParam(params.page) || 1,
-    size: numberParam(params.size) || 12,
-    query: firstParam(params.query),
-    sort: sortParam(params.sort),
-    rating: numberParam(params.rating),
-    categoryId: firstParam(params.categoryId),
-    status: firstParam(params.status),
-  };
+  const courses = coursesRes?.data || [];
+  const meta = coursesRes?.meta || { totalElements: 0, totalPages: 1, page: 1, limit: 10 };
+  const categories = categoriesRes?.data || [];
 
-  const data = await getInstructorCoursesData(filters);
-  if (data.user.role && data.user.role !== "INSTRUCTOR") {
-    redirect("/courses");
-  }
-
-  return <InstructorCoursesPage data={data} filters={filters} />;
+  return (
+    <InstructorCoursesClient
+      courses={courses}
+      categories={categories}
+      meta={meta}
+      filters={{
+        page,
+        size,
+        query: query || "",
+        status: status || "all",
+        publishStatus: publishStatus || "all",
+        categoryId: categoryId || "all",
+        sort,
+      }}
+    />
+  );
 }

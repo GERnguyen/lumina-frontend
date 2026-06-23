@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { StudentHomePage } from "@/components/home/StudentHomePage";
-import { InstructorDashboardPage } from "@/components/instructor/InstructorDashboardPage";
 import { CoursesFooter } from "@/components/courses/CoursesFooter";
 import { CoursesTopNav } from "@/components/courses/CoursesTopNav";
 import { getServerAccessToken } from "@/lib/server-auth";
@@ -10,7 +9,6 @@ import { EnrollmentApi } from "@/services/api/enrollment-api";
 import { DailyGoalApi, StreakApi } from "@/services/api/learning-api";
 import { NotificationApi } from "@/services/api/notification-api";
 import { UserApi } from "@/services/api/user-api";
-import { getInstructorDashboardData } from "@/services/instructor-dashboard-service";
 
 export const metadata: Metadata = {
   title: "My Learning - Lumina",
@@ -26,8 +24,7 @@ export default async function MyLearningPage() {
 
   const currentUserRes = await UserApi.getCurrentUser().catch(() => ({ data: undefined }));
   if (currentUserRes.data?.role === "INSTRUCTOR") {
-    const data = await getInstructorDashboardData();
-    return <InstructorDashboardPage data={data} />;
+    redirect("/instructor/courses");
   }
 
   const today = new Date().toISOString().slice(0, 10);

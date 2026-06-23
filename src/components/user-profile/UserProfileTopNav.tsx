@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, Search, ShoppingCart } from "lucide-react";
-import { InstructorNotifications } from "@/components/instructor/InstructorNotifications";
+import { InstructorNotifications } from "@/components/instructor/notifications/InstructorNotifications";
 import { TopNavLinks } from "@/components/courses/TopNavLinks";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { getNavCounts } from "@/services/api/nav-api";

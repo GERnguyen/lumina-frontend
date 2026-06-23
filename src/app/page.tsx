@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { HomeMarketplacePage } from "@/components/home/HomeMarketplacePage";
-import { InstructorDashboardPage } from "@/components/instructor/InstructorDashboardPage";
 import { LandingPage } from "@/components/landing/LandingPage";
 import { getServerAccessToken } from "@/lib/server-auth";
 import { CategoryApi, CourseApi } from "@/services/api/course-api";
 import { EnrollmentApi } from "@/services/api/enrollment-api";
 import { LearningProgressApi } from "@/services/api/learning-api";
 import { UserApi } from "@/services/api/user-api";
-import { getInstructorDashboardData } from "@/services/instructor-dashboard-service";
 
 export const metadata: Metadata = {
   title: "Lumina - Career-focused online learning",
@@ -41,8 +40,7 @@ export default async function Home() {
   }
 
   if (currentUser.role === "INSTRUCTOR") {
-    const data = await getInstructorDashboardData();
-    return <InstructorDashboardPage data={data} />;
+    redirect("/instructor/courses");
   }
 
   const [featuredRes, popularRes, categoriesRes, enrolledRes] = await Promise.all([

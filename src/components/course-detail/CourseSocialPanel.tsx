@@ -2,8 +2,8 @@
 
 import { Loader2, Send, Star } from "lucide-react";
 import { useEffect, useState } from "react";
-import { ReviewService, SocialStatisticsService } from "@/services/socialService";
-import { UserService } from "@/services/userService";
+import { ReviewApi, SocialStatisticsApi } from "@/services/api/social-api";
+import { UserApi } from "@/services/api/user-api";
 import { getErrorMessage } from "@/lib/errors";
 import { cn } from "@/lib/utils";
 import type { ReviewResponse, ReviewStatisticsResponse } from "@/types";
@@ -54,8 +54,8 @@ export function CourseSocialPanel({
 
   async function loadReviews() {
     const [reviewsRes, statsRes] = await Promise.all([
-      ReviewService.getReviewsByCourseId({ courseId, page: 1, size: 6, sort: '{"createdAt":"DESC"}' }).catch(() => undefined),
-      SocialStatisticsService.getReviewStatistics({ courseId }).catch(() => undefined),
+      ReviewApi.getReviewsByCourseId({ courseId, page: 1, size: 6, sort: '{"createdAt":"DESC"}' }).catch(() => undefined),
+      SocialStatisticsApi.getReviewStatistics(courseId).catch(() => undefined),
     ]);
     if (reviewsRes?.data) setReviews(reviewsRes.data);
     if (statsRes?.data) setReviewStats(statsRes.data);
@@ -71,7 +71,7 @@ export function CourseSocialPanel({
 
     const entries = await Promise.all(
       missingIds.map(async (userId) => {
-        const response = await UserService.getUserById({ id: userId }).catch(() => undefined);
+        const response = await UserApi.getUserById(userId).catch(() => undefined);
         return [
           userId,
           {
@@ -94,7 +94,7 @@ export function CourseSocialPanel({
     setPendingAction("review");
     setMessage("");
     try {
-      await ReviewService.createReview({ body: { courseId, rating, content } });
+      await ReviewApi.createReview({ courseId, rating, content });
       setReviewContent("");
       setMessage("Review posted.");
       await loadReviews();

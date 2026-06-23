@@ -1,14 +1,5 @@
-import type { Metadata } from "next";
-import { InstructorDashboardClientPage } from "@/components/instructor/InstructorClientShell";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Instructor Dashboard - Lumina",
-  description: "Manage courses, revenue, learner activity, and profile progress on Lumina.",
-  alternates: {
-    canonical: "/instructor",
-  },
-};
-
-export default function InstructorPage() {
-  return <InstructorDashboardClientPage />;
+export default function Page() {
+  redirect("/instructor/dashboard");
 }

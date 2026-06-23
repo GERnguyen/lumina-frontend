@@ -130,10 +130,11 @@ export default function LoginForm() {
 
       <Button
         type="submit"
-        content="Sign In"
-        isLoading={loginMutation.isPending}
+        loading={loginMutation.isPending}
         className="w-full"
-      />
+      >
+        Sign In
+      </Button>
     </form>
   );
 }

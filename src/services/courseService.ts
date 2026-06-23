@@ -68,14 +68,6 @@ import type {
 
 // ─────────────────────────────────────────────────────────────────
 
-// ── CourseUploadService ──────────────────────────────────────────────
-export const CourseUploadService = {
-  async getPresignedUrl({ fileName, contentType }: { fileName: string; contentType: string }, config?: AxiosRequestConfig): Promise<ApiResponse<PresignedUrlResponse>> {
-    const { data } = await axiosClient.get('/api/v1/courses/upload/presigned-url', { params: { fileName, contentType }, ...config });
-    return data;
-  },
-};
-
 // ── CourseService ──────────────────────────────────────────────
 export const CourseService = {
 

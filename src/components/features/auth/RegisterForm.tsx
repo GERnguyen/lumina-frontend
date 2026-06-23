@@ -284,10 +284,11 @@ const RegisterForm = () => {
         />
         <Button
           type="submit"
-          content="Create Account"
-          isLoading={registerMutation.isPending}
+          loading={registerMutation.isPending}
           className="w-full"
-        />
+        >
+          Create Account
+        </Button>
       </div>
     </form>
   );

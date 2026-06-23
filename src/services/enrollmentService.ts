@@ -21,7 +21,7 @@ import type {
   InstructorRevenueResponse,
   InstructorStatisticsResponse,
   OrderDetailResponse,
-  OrderResponse,
+  UpdatePaymentMethodRequest,
   UpdateVoucherRequest,
   UserEnrollmentSummaryResponse,
   VoucherResponse,
@@ -66,6 +66,11 @@ export const VoucherService = {
 // ── OrderService ──────────────────────────────────────────────
 export const OrderService = {
 
+  async updatePaymentMethod({ orderId, body }: { orderId: string; body: UpdatePaymentMethodRequest }, config?: AxiosRequestConfig): Promise<ApiResponse<OrderDetailResponse>> {
+    const { data } = await axiosClient.put(`/api/v1/orders/${orderId}/payment-method`, body, config);
+    return data;
+  },
+
   async cancelOrder({ orderId }: { orderId: string }, config?: AxiosRequestConfig): Promise<ApiResponse<OrderDetailResponse>> {
     const { data } = await axiosClient.put(`/api/v1/orders/${orderId}/cancel`, undefined, config);
     return data;
@@ -83,6 +88,12 @@ export const OrderService = {
 
   async getOrderById({ orderId }: { orderId: string }, config?: AxiosRequestConfig): Promise<ApiResponse<OrderDetailResponse>> {
     const { data } = await axiosClient.get(`/api/v1/orders/${orderId}`, config);
+    return data;
+  },
+
+  /** Get orders by user id for admin */
+  async getOrdersByUserIdForAdmin({ userId, page, size, query, sort }: { userId: string; page?: number; size?: number; query?: string; sort?: string }, config?: AxiosRequestConfig): Promise<PaginatedApiResponse<OrderDetailResponse>> {
+    const { data } = await axiosClient.get(`/api/v1/orders/admin/users/${userId}`, { params: { page, size, query, sort }, ...config });
     return data;
   },
 };
