@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { ArrowRight, FileText, Globe2, Play, Sparkles } from "lucide-react";
+import { ArrowRight, FileText, Globe2, Sparkles } from "lucide-react";
 import { LandingButton } from "@/components/ui/LandingButton";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 
@@ -17,15 +17,11 @@ export function FeaturesSection() {
           <div className="absolute left-1/2 top-1/2 size-[374px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#DCE8FA]" />
           <Image
             src="/landing/figma/feature-person.png"
-            alt="Video resume example"
+            alt="Student learning online"
             width={250}
             height={340}
-            unoptimized
             className="absolute left-1/2 top-1/2 h-[380px] w-[280px] -translate-x-1/2 -translate-y-1/2 rounded-[20px] object-cover shadow-[0_18px_45px_rgba(0,43,107,0.18)]"
           />
-          <div className="absolute left-1/2 top-1/2 flex size-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[#0066FF] shadow-[0_16px_38px_rgba(0,43,107,0.18)]">
-            <Play className="ml-0.5 size-5 fill-current" />
-          </div>
 
           <div className="absolute left-0 top-20 w-[286px] rounded-[18px] bg-white p-6 shadow-[0_24px_58px_rgba(0,43,107,0.18)]">
             <FileText className="size-8 text-[#0066FF]" />
