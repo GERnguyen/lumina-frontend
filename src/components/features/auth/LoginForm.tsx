@@ -12,6 +12,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { getErrorMessage } from "@/lib/errors";
 import { persistAuthSession } from "@/lib/auth-session";
 import { cn } from "@/lib/utils";
+import { GoogleSignInButton } from "./GoogleSignInButton";
 
 type LoginRequest = AuthRequestDto & {
   role: "USER" | "INSTRUCTOR" | "ADMIN";
@@ -245,6 +246,14 @@ export default function LoginForm() {
         >
           Sign In
         </Button>
+
+        <div className="relative flex items-center gap-3 py-1">
+          <span className="h-px flex-1 bg-[#E9EAF0]" />
+          <span className="text-xs font-medium text-[#8C94A3]">Or continue with</span>
+          <span className="h-px flex-1 bg-[#E9EAF0]" />
+        </div>
+
+        <GoogleSignInButton role={role} />
       </form>
 
       <OtpModal

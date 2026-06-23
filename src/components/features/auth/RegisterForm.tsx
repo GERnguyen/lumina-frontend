@@ -17,6 +17,7 @@ import type { RegisterRequest } from "@/types";
 import { AuthService } from "@/services";
 import { getErrorMessage } from "@/lib/errors";
 import { uploadFileWithPresignedUrl } from "@/lib/presigned-upload";
+import { GoogleSignInButton } from "./GoogleSignInButton";
 
 type RegisterRole = NonNullable<RegisterRequest["role"]>;
 type RegisterGender = NonNullable<RegisterRequest["gender"]>;
@@ -293,6 +294,14 @@ const RegisterForm = () => {
           >
             Create Account
           </Button>
+
+          <div className="relative flex items-center gap-3 py-1">
+            <span className="h-px flex-1 bg-[#E9EAF0]" />
+            <span className="text-xs font-medium text-[#8C94A3]">Or sign up with</span>
+            <span className="h-px flex-1 bg-[#E9EAF0]" />
+          </div>
+
+          <GoogleSignInButton role={formData.role === "INSTRUCTOR" ? "INSTRUCTOR" : "USER"} />
         </div>
       </form>
 
