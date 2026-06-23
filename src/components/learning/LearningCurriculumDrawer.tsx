@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { ArrowRight, Check, CheckCheck, ChevronDown, Clock, ClipboardCheck, FileText, HelpCircle, Pause, PlayCircle, Video } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AlertCircle, ArrowRight, Check, CheckCheck, CheckCircle2, ChevronDown, Clock, ClipboardCheck, FileText, HelpCircle, Pause, PlayCircle, Video, X } from "lucide-react";
 import type { LearningLesson, LearningSection } from "@/types/learning-page";
 import { formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { getQuizSessionsAction } from "@/services/actions/learning";
 
 type LearningCurriculumDrawerProps = {
   courseId: string;
@@ -18,6 +19,72 @@ function lessonIcon(type: LearningLesson["type"]) {
   if (type === "QUIZ") return <HelpCircle className="size-4" />;
   if (type === "ASSIGNMENT") return <ClipboardCheck className="size-4" />;
   return <Video className="size-4" />;
+}
+
+/** Fetches real quiz sessions and shows the correct Passed / Failed / Not Attempted badge.
+ *  Logic mirrors LearningQuizLesson: hasAttempted = submitted sessions > 0,
+ *  isQuizPassed = highest score >= 5. */
+function QuizStatusBadge({ lessonId }: { lessonId: string }) {
+  const [status, setStatus] = useState<"loading" | "passed" | "failed" | "not_attempted">("loading");
+  const [score, setScore] = useState<number | undefined>();
+
+  useEffect(() => {
+    getQuizSessionsAction(lessonId)
+      .then((payload) => {
+        if (!payload.success || !payload.data) {
+          setStatus("not_attempted");
+          return;
+        }
+
+        const submitted = payload.data.filter(
+          (s) => s.status === "SUBMITTED" || s.status === "GRADED" || s.status === "PENDING_GRADE",
+        );
+
+        if (submitted.length === 0) {
+          setStatus("not_attempted");
+          return;
+        }
+
+        // Find the best session (highest score) — same as LearningQuizLesson
+        const best = submitted.reduce<typeof submitted[0] | undefined>((prev, curr) => {
+          if (!prev) return curr;
+          return (curr.quizSessionSubmission?.score ?? 0) > (prev.quizSessionSubmission?.score ?? 0) ? curr : prev;
+        }, undefined);
+
+        const highestScore = best?.quizSessionSubmission?.score;
+        setScore(typeof highestScore === "number" ? highestScore : undefined);
+        setStatus(typeof highestScore === "number" && highestScore >= 5 ? "passed" : "failed");
+      })
+      .catch(() => setStatus("not_attempted"));
+  }, [lessonId]);
+
+  if (status === "loading") return null;
+
+  if (status === "passed") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded bg-green-50 px-1.5 py-0.5 text-[10px] font-bold text-green-700">
+        <CheckCircle2 className="size-3" />
+        Passed ({score?.toFixed(1)})
+      </span>
+    );
+  }
+
+  if (status === "failed") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-700">
+        <X className="size-3" />
+        Failed ({score?.toFixed(1)})
+      </span>
+    );
+  }
+
+  // not_attempted
+  return (
+    <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-500">
+      <AlertCircle className="size-3" />
+      Not attempted
+    </span>
+  );
 }
 
 export function LearningCurriculumDrawer({ courseId, sections, onClose }: LearningCurriculumDrawerProps) {
@@ -119,19 +186,7 @@ export function LearningCurriculumDrawer({ courseId, sections, onClose }: Learni
                         </span>
                         {lesson.type === "QUIZ" && (
                           <span className="shrink-0">
-                            {lesson.isPassed ? (
-                              <span className="inline-flex items-center rounded bg-green-50 px-1.5 py-0.5 text-[10px] font-bold text-green-700">
-                                Đạt ({lesson.score?.toFixed(1)})
-                              </span>
-                            ) : lesson.score !== undefined ? (
-                              <span className="inline-flex items-center rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-700">
-                                Trượt ({lesson.score?.toFixed(1)})
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-500">
-                                Chưa làm
-                              </span>
-                            )}
+                            <QuizStatusBadge lessonId={lesson.id} />
                           </span>
                         )}
                       </span>

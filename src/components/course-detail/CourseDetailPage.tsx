@@ -49,7 +49,13 @@ export function CourseDetailPage({
             <CourseHeroMedia course={course} />
             <CourseDetailTabs />
             <CourseOverview course={course} />
-            <CourseCurriculum curriculum={curriculum} duration={course.duration} />
+            <CourseCurriculum
+              curriculum={curriculum}
+              duration={course.duration}
+              isEnrolled={isEnrolled}
+              courseId={course.id || ""}
+              isAuthenticated={isAuthenticated}
+            />
             <CourseInstructorSection course={course} />
             <CourseSocialPanel
               courseId={course.id || ""}

@@ -11,7 +11,7 @@ import type {
 
 export const UserApi = {
   async getUserById(id: string): Promise<ApiResponse<UserDto>> {
-    return apiClient.get(`/api/v1/users/${id}`);
+    return apiClient.get(`/api/v1/users/${id}`, { auth: false });
   },
 
   async updateUser(id: string, body: UpdateProfileRequest): Promise<ApiResponse<UserDto>> {
