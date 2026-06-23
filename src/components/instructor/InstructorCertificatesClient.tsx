@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useTransition } from "react";
+import React, { useMemo, useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
@@ -16,6 +16,8 @@ import {
 import type { CertificateRequestResponse, PaginatedMetadata } from "@/types";
 import { formatShortDate } from "@/lib/format";
 import { approveCertificateAction, rejectCertificateAction } from "@/services/actions/instructor";
+import { UserApi } from "@/services/api/user-api";
+import { CourseApi } from "@/services/api/course-api";
 import { Button, DataTable, DataTableEmptyState, DataTablePagination, Input, Select } from "../ui/shared";
 import { InstructorBadge } from "../ui/shared/InstructorBadge";
 import { InstructorButton } from "../ui/shared/InstructorButton";
@@ -57,6 +59,82 @@ export function InstructorCertificatesClient({
   const [isPending, startTransition] = useTransition();
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+
+  const [userProfiles, setUserProfiles] = useState<Record<string, { name: string; email?: string }>>({});
+  const [courseProfiles, setCourseProfiles] = useState<Record<string, { title: string }>>({});
+
+  useEffect(() => {
+    async function hydrateRelations() {
+      const studentIds = Array.from(new Set(requests.map((r) => r.userId).filter(Boolean))) as string[];
+      const courseIds = Array.from(new Set(requests.map((r) => r.courseId).filter(Boolean))) as string[];
+
+      const missingUserIds = studentIds.filter((id) => !userProfiles[id]);
+      const missingCourseIds = courseIds.filter((id) => !courseProfiles[id]);
+
+      if (missingUserIds.length > 0) {
+        try {
+          const res = await UserApi.getUsersByIds(missingUserIds.join(",")).catch(() => undefined);
+          const users = res?.data || [];
+          const newEntries = users.reduce((acc, user) => {
+            if (user.userId) {
+              acc[user.userId] = {
+                name: user.name || "Lumina learner",
+                email: user.email,
+              };
+            }
+            return acc;
+          }, {} as Record<string, { name: string; email?: string }>);
+
+          missingUserIds.forEach((id) => {
+            if (!newEntries[id]) {
+              newEntries[id] = { name: "Lumina learner" };
+            }
+          });
+          setUserProfiles((current) => ({ ...current, ...newEntries }));
+        } catch (err) {
+          console.error("Failed to fetch user profiles in certificates client:", err);
+        }
+      }
+
+      if (missingCourseIds.length > 0) {
+        try {
+          const res = await CourseApi.getCoursesByIds(missingCourseIds.join(",")).catch(() => undefined);
+          const courses = res?.data || [];
+          const newEntries = courses.reduce((acc, course) => {
+            if (course.id) {
+              acc[course.id] = {
+                title: course.title || "Untitled course",
+              };
+            }
+            return acc;
+          }, {} as Record<string, { title: string }>);
+
+          missingCourseIds.forEach((id) => {
+            if (!newEntries[id]) {
+              newEntries[id] = { title: "Untitled course" };
+            }
+          });
+          setCourseProfiles((current) => ({ ...current, ...newEntries }));
+        } catch (err) {
+          console.error("Failed to fetch course details in certificates client:", err);
+        }
+      }
+    }
+
+    hydrateRelations();
+  }, [requests]);
+
+  const requestsWithRelations = useMemo<CertificateRequestWithRelations[]>(() => {
+    return requests.map((req) => {
+      const user = req.userId ? userProfiles[req.userId] : null;
+      const course = req.courseId ? courseProfiles[req.courseId] : null;
+      return {
+        ...req,
+        user,
+        course,
+      };
+    });
+  }, [requests, userProfiles, courseProfiles]);
 
   const totalElements = meta.totalElements ?? 0;
   const totalPages = meta.totalPages ?? 1;
@@ -341,14 +419,14 @@ export function InstructorCertificatesClient({
           />
         }
       >
-        {requests.length === 0 ? (
+        {requestsWithRelations.length === 0 ? (
           <DataTableEmptyState
             icon={Award}
             title="Không tìm thấy yêu cầu nào"
             description="Hãy thử điều chỉnh bộ lọc tìm kiếm hoặc quay lại sau."
           />
         ) : (
-          <DataTable columns={columns} data={requests} minWidth={900} />
+          <DataTable columns={columns} data={requestsWithRelations} minWidth={900} />
         )}
       </InstructorCard>
 

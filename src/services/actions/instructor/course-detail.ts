@@ -15,6 +15,7 @@ import type {
   QuizSessionResponse,
   ReviewStatisticsResponse,
   UserDto,
+  QuizQuestionResponse,
 } from "@/types";
 
 export interface InstructorLearnerProgress {
@@ -29,6 +30,7 @@ export interface InstructorQuizLessonData {
   analytics: QuizQuestionAnalyticsResponse[];
   sessions: QuizSessionResponse[];
   questionCount: number;
+  questions?: QuizQuestionResponse[];
 }
 
 export interface InstructorCourseOverviewData {
@@ -109,13 +111,27 @@ export async function getInstructorLearnersProgressData(courseId: string): Promi
     const progressRes = await LearningProgressApi.getCourseProgress(courseId);
     const progressList = progressRes.data || [];
 
-    const learners = await Promise.all(
-      progressList.map(async (progress) => {
-        if (!progress.userId) return { progress, user: null };
-        const user = await settleValue(UserApi.getUserById(progress.userId), { data: undefined });
-        return { progress, user: user.data || null };
-      })
-    );
+    const userIds = Array.from(new Set(progressList.map((p) => p.userId).filter(Boolean))) as string[];
+    const userMap: Record<string, UserDto> = {};
+
+    if (userIds.length > 0) {
+      try {
+        const usersRes = await UserApi.getUsersByIds(userIds.join(","));
+        const usersList = usersRes.data || [];
+        usersList.forEach((user) => {
+          if (user.userId) {
+            userMap[user.userId] = user;
+          }
+        });
+      } catch (err) {
+        console.error("Failed to fetch user profiles for progress list:", err);
+      }
+    }
+
+    const learners = progressList.map((progress) => {
+      const user = progress.userId ? userMap[progress.userId] : null;
+      return { progress, user };
+    });
 
     return learners;
   } catch (err) {
@@ -168,6 +184,7 @@ export async function getInstructorQuizData(courseId: string): Promise<Instructo
           analytics,
           sessions,
           questionCount: quiz?.questions?.length || analytics.length || 0,
+          questions: quiz?.questions || [],
         };
       })
     );

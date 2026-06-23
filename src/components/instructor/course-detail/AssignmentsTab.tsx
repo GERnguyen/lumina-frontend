@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ClipboardCheck, PenLine } from "lucide-react";
 import type { AssignmentSubmissionResponse } from "@/types";
+import { UserApi } from "@/services/api/user-api";
 import { InstructorCard } from "@/components/ui/shared/InstructorCard";
 import { InstructorDialog } from "@/components/ui/shared/InstructorDialog";
 import { InstructorButton } from "@/components/ui/shared/InstructorButton";
@@ -23,6 +24,47 @@ export function AssignmentsTab({ courseId, assignments }: AssignmentsTabProps) {
   const [selected, setSelected] = useState<AssignmentSubmissionWithTitle | null>(null);
   const [score, setScore] = useState("");
   const [saving, setSaving] = useState(false);
+  const [userProfiles, setUserProfiles] = useState<Record<string, { name: string; email?: string }>>({});
+
+  useEffect(() => {
+    async function hydrateUsers() {
+      const studentIds = Array.from(new Set(assignments.map((a) => a.userId).filter(Boolean))) as string[];
+      if (!studentIds.length) return;
+
+      const missingIds = studentIds.filter((id) => !userProfiles[id]);
+      if (!missingIds.length) return;
+
+      try {
+        const res = await UserApi.getUsersByIds(missingIds.join(",")).catch(() => undefined);
+        const users = res?.data || [];
+        const newEntries = users.reduce((acc, user) => {
+          if (user.userId) {
+            acc[user.userId] = {
+              name: user.name || "Lumina learner",
+              email: user.email,
+            };
+          }
+          return acc;
+        }, {} as Record<string, { name: string; email?: string }>);
+
+        // Fallback for any IDs that weren't returned by the API
+        missingIds.forEach((id) => {
+          if (!newEntries[id]) {
+            newEntries[id] = {
+              name: "Lumina learner",
+              email: undefined,
+            };
+          }
+        });
+
+        setUserProfiles((current) => ({ ...current, ...newEntries }));
+      } catch (err) {
+        console.error("Failed to fetch student profiles in assignments tab:", err);
+      }
+    }
+
+    hydrateUsers();
+  }, [assignments]);
 
   const submitScore = async () => {
     if (!courseId || !selected?.id) return;
@@ -48,7 +90,16 @@ export function AssignmentsTab({ courseId, assignments }: AssignmentsTabProps) {
       {
         id: "student",
         header: "Học viên",
-        cell: ({ row }) => <span className="text-sm font-bold text-zinc-950 font-general">{row.original.userId || "--"}</span>,
+        cell: ({ row }) => {
+          const userId = row.original.userId;
+          const profile = userId ? userProfiles[userId] : undefined;
+          return (
+            <div>
+              <p className="text-sm font-bold text-zinc-950">{profile?.name || userId || "--"}</p>
+              {profile?.email && <p className="text-[10px] text-zinc-400 font-medium">{profile.email}</p>}
+            </div>
+          );
+        },
       },
       {
         id: "submitted",
@@ -95,7 +146,7 @@ export function AssignmentsTab({ courseId, assignments }: AssignmentsTabProps) {
         ),
       },
     ],
-    []
+    [userProfiles]
   );
 
   return (
@@ -117,12 +168,11 @@ export function AssignmentsTab({ courseId, assignments }: AssignmentsTabProps) {
         )}
       </InstructorCard>
 
-      {/* Grade submission dialog */}
       <InstructorDialog
         isOpen={Boolean(selected)}
         onClose={() => setSelected(null)}
         title={selected?.assignmentTitle || "Chấm bài tập"}
-        description={selected?.userId || undefined}
+        description={selected?.userId ? (userProfiles[selected.userId]?.name || selected.userId) : undefined}
         className="border-zinc-200 shadow-2xl rounded-xl"
       >
         <div className="space-y-5">
