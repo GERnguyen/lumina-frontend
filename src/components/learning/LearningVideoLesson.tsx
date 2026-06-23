@@ -16,6 +16,7 @@ import {
   trackVideoProgressAction,
   updateVideoNoteAction,
 } from "@/services/actions/learning";
+import { VideoLessonApi } from "@/services/api/course-api";
 import { cn } from "@/lib/utils";
 
 type HlsQualityLevel = {
@@ -88,7 +89,13 @@ export function LearningVideoLesson({
   const [showSubtitleMenu, setShowSubtitleMenu] = useState(false);
   const subtitleMenuRef = useRef<HTMLDivElement>(null);
 
-  const readySubtitles = video?.subtitles?.filter((track) => track.fileUrl && track.status === "READY") || [];
+  const [videoData, setVideoData] = useState<VideoLessonResponse | undefined>(video);
+
+  useEffect(() => {
+    setVideoData(video);
+  }, [video]);
+
+  const readySubtitles = videoData?.subtitles?.filter((track) => track.fileUrl && track.status === "READY") || [];
 
   // Set initial subtitle preference
   useEffect(() => {
@@ -113,15 +120,29 @@ export function LearningVideoLesson({
   useEffect(() => {
     const player = videoRef.current;
     if (!player) return;
-    const tracks = player.textTracks;
-    for (let i = 0; i < tracks.length; i++) {
-      const track = tracks[i];
-      if (activeSubtitleLang && track.language === activeSubtitleLang) {
-        track.mode = "showing";
-      } else {
-        track.mode = "disabled";
+
+    const syncTracks = () => {
+      const tracks = player.textTracks;
+      for (let i = 0; i < tracks.length; i++) {
+        const track = tracks[i];
+        if (activeSubtitleLang && track.language === activeSubtitleLang) {
+          track.mode = "showing";
+        } else {
+          track.mode = "disabled";
+        }
       }
-    }
+    };
+
+    syncTracks();
+
+    const tracksList = player.textTracks;
+    tracksList.addEventListener("change", syncTracks);
+    tracksList.addEventListener("addtrack", syncTracks);
+
+    return () => {
+      tracksList.removeEventListener("change", syncTracks);
+      tracksList.removeEventListener("addtrack", syncTracks);
+    };
   }, [activeSubtitleLang, readySubtitles.length]);
 
   // Handle clicking outside to close subtitles menu
@@ -225,14 +246,18 @@ export function LearningVideoLesson({
     lastTrackedSecond.current = 0;
 
     async function loadVideoLearningData() {
-      const [questionsResponse, submissionsResponse, notesResponse] = await Promise.all([
+      const [questionsResponse, submissionsResponse, notesResponse, videoResponse] = await Promise.all([
         getVideoQuestionsAction(courseId, lessonId),
         getVideoQuestionSubmissionsAction(courseId, lessonId),
         getVideoNotesByLessonAction(courseId, lessonId),
+        VideoLessonApi.getVideoByLessonId(courseId, lessonId).catch(() => undefined),
       ]);
 
       if (cancelled) return;
 
+      if (videoResponse?.success && videoResponse.data) {
+        setVideoData(videoResponse.data);
+      }
       if (questionsResponse?.success) {
         setQuestions((questionsResponse.data || []).sort((a: VideoQuestionResponse, b: VideoQuestionResponse) => (a.timestampSeconds || 0) - (b.timestampSeconds || 0)));
       }
@@ -539,7 +564,7 @@ export function LearningVideoLesson({
 
   return (
     <div className="overflow-hidden rounded-[18px] bg-[#111827] shadow-[0_24px_70px_rgba(29,32,38,0.16)]">
-      {video?.videoUrl ? (
+      {videoData?.videoUrl ? (
         <div
           ref={playerShellRef}
           tabIndex={0}
@@ -557,6 +582,7 @@ export function LearningVideoLesson({
             className="aspect-video w-full bg-black object-contain"
             playsInline
             preload="metadata"
+            crossOrigin="anonymous"
             poster={poster}
             onLoadedMetadata={syncVideoDuration}
             onDurationChange={syncVideoDuration}
@@ -570,7 +596,7 @@ export function LearningVideoLesson({
             onClick={togglePlayback}
             onEnded={handleEnded}
           >
-            {video.subtitles
+            {videoData?.subtitles
               ?.filter((track) => track.fileUrl && track.status === "READY")
               .map((track) => (
                 <track

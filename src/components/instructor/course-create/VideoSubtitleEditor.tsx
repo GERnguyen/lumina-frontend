@@ -51,12 +51,28 @@ export default function VideoSubtitleEditor({
   const [isUploading, setIsUploading] = useState(false);
 
   // AI states
-  const [aiGenerateLang, setAiGenerateLang] = useState("en");
+  const [aiGenerateLang, setAiGenerateLang] = useState("auto");
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
 
   const [aiSourceSubtitleId, setAiSourceSubtitleId] = useState("");
   const [aiTargetLang, setAiTargetLang] = useState("vi");
   const [isTranslatingAi, setIsTranslatingAi] = useState(false);
+
+  // Filter target languages that are not already present in the subtitles
+  const existingLangCodes = subtitles.map((sub) => sub.languageCode);
+  const availableTargetLanguages = SUPPORTED_LANGUAGES.filter(
+    (lang) => !existingLangCodes.includes(lang.code)
+  );
+
+  useEffect(() => {
+    if (availableTargetLanguages.length > 0) {
+      if (!availableTargetLanguages.some((l) => l.code === aiTargetLang)) {
+        setAiTargetLang(availableTargetLanguages[0].code);
+      }
+    } else {
+      setAiTargetLang("");
+    }
+  }, [subtitles]);
 
   // General loading & jobs tracking
   const [jobs, setJobs] = useState<SubtitleJobResponse[]>([]);
@@ -202,10 +218,11 @@ export default function VideoSubtitleEditor({
     setIsGeneratingAi(true);
     setActionError(null);
     try {
+      const isAuto = aiGenerateLang === "auto";
       const matched = SUPPORTED_LANGUAGES.find((lang) => lang.code === aiGenerateLang);
       const res = await SubtitleTrackApi.createDefaultSubtitleJob(courseId, lessonId, {
-        languageCode: aiGenerateLang,
-        displayName: matched?.name || aiGenerateLang.toUpperCase(),
+        languageCode: isAuto ? undefined : aiGenerateLang,
+        displayName: isAuto ? undefined : (matched?.name || aiGenerateLang.toUpperCase()),
       });
 
       if (!res.success) {
@@ -500,9 +517,7 @@ export default function VideoSubtitleEditor({
             <h4 className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
               <Sparkles className="size-4 text-primary-500" />
               AI Subtitle Automation
-            </h4>
-
-            {/* AI Generate Subtitles */}
+            </h4>             {/* AI Generate Subtitles */}
             <div className="space-y-2 pb-4 border-b border-gray-150">
               <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
                 Transcribe the video audio to generate subtitles automatically in the selected language.
@@ -513,6 +528,7 @@ export default function VideoSubtitleEditor({
                   onChange={(e) => setAiGenerateLang(e.target.value)}
                   className="h-[38px] flex-1 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold outline-none focus:border-primary-500"
                 >
+                  <option value="auto">Auto Detect Language</option>
                   {SUPPORTED_LANGUAGES.map((lang) => (
                     <option key={lang.code} value={lang.code}>
                       {lang.name}
@@ -530,59 +546,64 @@ export default function VideoSubtitleEditor({
                 </button>
               </div>
             </div>
-
             {/* AI Translate Subtitles */}
             <div className="space-y-2">
               <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
                 Translate existing subtitles into other languages. Requires at least one ready subtitle track.
               </p>
               {readySources.length > 0 ? (
-                <div className="space-y-2.5">
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Source</label>
-                      <select
-                        value={aiSourceSubtitleId}
-                        onChange={(e) => setAiSourceSubtitleId(e.target.value)}
-                        className="w-full h-[36px] rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold outline-none focus:border-primary-500"
-                      >
-                        <option value="">Select source...</option>
-                        {readySources.map((sub) => (
-                          <option key={sub.id} value={sub.id}>
-                            {sub.displayName}
-                          </option>
-                        ))}
-                      </select>
+                availableTargetLanguages.length > 0 ? (
+                  <div className="space-y-2.5">
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Source</label>
+                        <select
+                          value={aiSourceSubtitleId}
+                          onChange={(e) => setAiSourceSubtitleId(e.target.value)}
+                          className="w-full h-[36px] rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold outline-none focus:border-primary-500"
+                        >
+                          <option value="">Select source...</option>
+                          {readySources.map((sub) => (
+                            <option key={sub.id} value={sub.id}>
+                              {sub.displayName}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex-1">
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Translate to</label>
+                        <select
+                          value={aiTargetLang}
+                          onChange={(e) => setAiTargetLang(e.target.value)}
+                          className="w-full h-[36px] rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold outline-none focus:border-primary-500"
+                        >
+                          {availableTargetLanguages.map((lang) => (
+                            <option key={lang.code} value={lang.code}>
+                              {lang.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
 
-                    <div className="flex-1">
-                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Translate to</label>
-                      <select
-                        value={aiTargetLang}
-                        onChange={(e) => setAiTargetLang(e.target.value)}
-                        className="w-full h-[36px] rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold outline-none focus:border-primary-500"
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={handleAiTranslate}
+                        disabled={isTranslatingAi || !aiSourceSubtitleId || activeJobs.length > 0}
+                        className="h-[38px] px-3.5 rounded-lg border border-primary-200 bg-primary-50 text-primary-600 font-bold text-xs hover:bg-primary-100 transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-xs shrink-0"
                       >
-                        {SUPPORTED_LANGUAGES.map((lang) => (
-                          <option key={lang.code} value={lang.code}>
-                            {lang.name}
-                          </option>
-                        ))}
-                      </select>
+                        {isTranslatingAi ? <Loader2 className="size-3.5 animate-spin" /> : <Languages className="size-3.5" />}
+                        Translate (AI)
+                      </button>
                     </div>
                   </div>
-
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={handleAiTranslate}
-                      disabled={isTranslatingAi || !aiSourceSubtitleId || activeJobs.length > 0}
-                      className="h-[38px] px-3.5 rounded-lg border border-primary-200 bg-primary-50 text-primary-600 font-bold text-xs hover:bg-primary-100 transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-xs shrink-0"
-                    >
-                      {isTranslatingAi ? <Loader2 className="size-3.5 animate-spin" /> : <Languages className="size-3.5" />}
-                      Translate (AI)
-                    </button>
+                ) : (
+                  <div className="p-3 text-center border border-dashed border-gray-200 text-[11px] text-gray-400 font-bold rounded-lg bg-white/40">
+                    All supported languages already have subtitles.
                   </div>
-                </div>
+                )
               ) : (
                 <div className="p-3 text-center border border-dashed border-gray-200 text-[11px] text-gray-400 font-bold rounded-lg bg-white/40">
                   Ready subtitle track required to translate.

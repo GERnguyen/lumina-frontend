@@ -6,7 +6,7 @@ import { uploadFileWithPresignedUrl } from "@/lib/presigned-upload";
 import { InstructorButton } from "@/components/ui/shared/InstructorButton";
 import { Checkbox, Input } from "@/components/ui/shared";
 import { InstructorSwitch } from "@/components/ui/shared/InstructorSwitch";
-import { Video, Trash2, Plus, Play, Pause, Save, Loader2, FileVideo } from "lucide-react";
+import { Video, Trash2, Plus, Play, Pause, Save, Loader2, FileVideo, Subtitles } from "lucide-react";
 import type { VideoLessonResponse, VideoQuestionResponse, CreateVideoOptionRequest } from "@/types";
 import VideoSubtitleEditor from "./VideoSubtitleEditor";
 
@@ -33,6 +33,52 @@ export default function VideoLessonEditor({ courseId, lessonId }: VideoLessonEdi
   ]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [activeSubtitleLang, setActiveSubtitleLang] = useState<string | null>(null);
+
+  const readySubtitles = videoData?.subtitles?.filter((track) => track.fileUrl && track.status === "READY") || [];
+
+  // Set initial subtitle preference
+  useEffect(() => {
+    if (readySubtitles.length > 0) {
+      const defaultTrack = readySubtitles.find((s) => s.isDefault);
+      if (defaultTrack) {
+        setActiveSubtitleLang(defaultTrack.languageCode || null);
+      } else {
+        setActiveSubtitleLang(readySubtitles[0].languageCode || null);
+      }
+    } else {
+      setActiveSubtitleLang(null);
+    }
+  }, [videoData?.subtitles]);
+
+  // Sync selected subtitle track with the video's actual text tracks
+  useEffect(() => {
+    const player = videoRef.current;
+    if (!player) return;
+
+    const syncTracks = () => {
+      const tracks = player.textTracks;
+      for (let i = 0; i < tracks.length; i++) {
+        const track = tracks[i];
+        if (activeSubtitleLang && track.language === activeSubtitleLang) {
+          track.mode = "showing";
+        } else {
+          track.mode = "disabled";
+        }
+      }
+    };
+
+    syncTracks();
+
+    const tracksList = player.textTracks;
+    tracksList.addEventListener("change", syncTracks);
+    tracksList.addEventListener("addtrack", syncTracks);
+
+    return () => {
+      tracksList.removeEventListener("change", syncTracks);
+      tracksList.removeEventListener("addtrack", syncTracks);
+    };
+  }, [activeSubtitleLang, readySubtitles.length]);
 
   const fetchVideoDetails = async () => {
     if (!videoData) {
@@ -230,14 +276,55 @@ export default function VideoLessonEditor({ courseId, lessonId }: VideoLessonEdi
         {videoData?.videoUrl ? (
           <div className="space-y-5">
             {/* Custom Video Preview */}
-            <div className="rounded-lg overflow-hidden bg-black aspect-video relative max-w-full shadow-lg border border-gray-200">
+            <div className="rounded-lg overflow-hidden bg-black aspect-video relative max-w-full shadow-lg border border-gray-200 group/video">
               <video
                 ref={videoRef}
                 src={videoData.videoUrl}
                 controls
+                crossOrigin="anonymous"
                 className="w-full h-full"
                 onTimeUpdate={captureTimestamp}
-              />
+              >
+                {readySubtitles.map((track) => (
+                  <track
+                    key={`${track.languageCode}-${track.fileUrl}`}
+                    kind="subtitles"
+                    src={track.fileUrl}
+                    srcLang={track.languageCode || "en"}
+                    label={track.displayName || track.languageCode || "Subtitle"}
+                    default={track.isDefault}
+                  />
+                ))}
+              </video>
+
+              {/* Subtitle Selector Overlay */}
+              {readySubtitles.length > 0 && (
+                <div className="absolute top-4 right-4 z-10 flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-xs font-bold text-white shadow-[0_12px_30px_rgba(0,0,0,0.25)] backdrop-blur transition-opacity opacity-90 hover:opacity-100">
+                  <Subtitles className="size-3.5 text-white/90" />
+                  <span className="text-[11px] font-bold mr-1">CC:</span>
+                  <select
+                    value={activeSubtitleLang || ""}
+                    onChange={(e) => setActiveSubtitleLang(e.target.value || null)}
+                    className="border-none bg-transparent py-0.5 pr-6 pl-0 text-xs font-bold text-white outline-none cursor-pointer focus:ring-0"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E")`,
+                      backgroundPosition: 'right 0 center',
+                      backgroundSize: '1.25em 1.25em',
+                      backgroundRepeat: 'no-repeat',
+                      WebkitAppearance: 'none',
+                      MozAppearance: 'none',
+                      appearance: 'none',
+                    }}
+                  >
+                    <option value="" className="text-gray-900 bg-white">Off</option>
+                    {readySubtitles.map((track) => (
+                      <option key={track.languageCode} value={track.languageCode || ""} className="text-gray-900 bg-white">
+                        {track.displayName || track.languageCode}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-between p-6 bg-gray-50 border border-gray-200 rounded-lg max-w-full">
