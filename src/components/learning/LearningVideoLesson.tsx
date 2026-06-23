@@ -360,10 +360,21 @@ export function LearningVideoLesson({
 
     const currentPosition = Math.floor(player.currentTime);
     if (!hasMarkedNearCompleteRef.current && duration > 0 && currentPosition >= Math.floor(duration * 0.95)) {
-      hasMarkedNearCompleteRef.current = true;
-      trackProgress(true).then(() => {
-        onComplete(lessonId);
-      });
+      // Don't fire onComplete yet if there are still unanswered questions remaining
+      // at or after the current position (they need to be shown first).
+      const hasPendingQuestionsAhead = questions.some(
+        (q) =>
+          q.id &&
+          typeof q.timestampSeconds === "number" &&
+          q.timestampSeconds >= currentPosition &&
+          !passedQuestionIdsThisRunRef.current.has(q.id),
+      );
+      if (!hasPendingQuestionsAhead) {
+        hasMarkedNearCompleteRef.current = true;
+        trackProgress(true).then(() => {
+          onComplete(lessonId);
+        });
+      }
     }
 
     const passedIds = passedQuestionIdsThisRunRef.current;

@@ -121,20 +121,23 @@ export function QuizzesTab({ quizzes }: QuizzesTabProps) {
                       <p className="text-xs text-zinc-400 font-medium italic">Chưa có dữ liệu phân tích câu hỏi.</p>
                     ) : (
                       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                        {quiz.analytics.slice(0, 6).map((item, idx) => (
-                          <div key={item.questionId || idx} className="rounded-xl border border-zinc-200/70 bg-white p-3.5 space-y-2">
-                            <div className="flex items-center justify-between gap-3 text-xs font-bold text-zinc-500 font-general">
-                              <span className="truncate max-w-[70%]">{item.questionId}</span>
-                              <span className="text-zinc-400">
-                                {item.correctAttempts || 0}/{item.totalAttempts || 0} đúng
-                              </span>
-                            </div>
+                        {quiz.analytics.slice(0, 6).map((item, idx) => {
+                          const questionText = quiz.questions?.find((q) => q.id === item.questionId)?.questionText || item.questionId;
+                          return (
+                            <div key={item.questionId || idx} className="rounded-xl border border-zinc-200/70 bg-white p-3.5 space-y-2">
+                              <div className="flex items-center justify-between gap-3 text-xs font-bold text-zinc-500 font-general">
+                                <span className="truncate max-w-[70%]" title={questionText}>{questionText}</span>
+                                <span className="text-zinc-400">
+                                  {item.correctAttempts || 0}/{item.totalAttempts || 0} đúng
+                                </span>
+                              </div>
                             <div className="flex items-center gap-3">
                               <ProgressBar value={item.accuracy || 0} />
                               <span className="text-xs font-bold text-zinc-650 font-general shrink-0">{Math.round(item.accuracy || 0)}%</span>
                             </div>
                           </div>
-                        ))}
+                        );
+                      })}
                       </div>
                     )}
                   </div>

@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api-client";
+import { apiClient, type FetchOptions } from "@/lib/api-client";
 import { cache } from "react";
 import type {
   ApiResponse,
@@ -170,8 +170,8 @@ export const LessonApi = {
 
 // ── VideoLessonApi ──────────────────────────────────────────────
 export const VideoLessonApi = {
-  async getVideoByLessonId(courseId: string, lessonId: string): Promise<ApiResponse<VideoLessonResponse>> {
-    return apiClient.get(`/api/v1/courses/${courseId}/lessons/${lessonId}/videos`);
+  async getVideoByLessonId(courseId: string, lessonId: string, options?: Omit<FetchOptions, "method" | "body">): Promise<ApiResponse<VideoLessonResponse>> {
+    return apiClient.get(`/api/v1/courses/${courseId}/lessons/${lessonId}/videos`, options);
   },
 
   async updateVideoLesson(courseId: string, lessonId: string, body: UpdateVideoLessonRequest): Promise<ApiResponse<Record<string, unknown>>> {
@@ -312,8 +312,8 @@ export const AssignmentLessonApi = {
 
 // ── ArticleLessonApi ──────────────────────────────────────────────
 export const ArticleLessonApi = {
-  async getArticleByLessonId(courseId: string, lessonId: string): Promise<ApiResponse<ArticleLessonResponse>> {
-    return apiClient.get(`/api/v1/courses/${courseId}/lessons/${lessonId}/articles`);
+  async getArticleByLessonId(courseId: string, lessonId: string, options?: Omit<FetchOptions, "method" | "body">): Promise<ApiResponse<ArticleLessonResponse>> {
+    return apiClient.get(`/api/v1/courses/${courseId}/lessons/${lessonId}/articles`, options);
   },
 
   async updateArticleLesson(courseId: string, lessonId: string, body: UpdateArticleLessonRequest): Promise<ApiResponse<Record<string, unknown>>> {

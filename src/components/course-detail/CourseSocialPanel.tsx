@@ -69,19 +69,33 @@ export function CourseSocialPanel({
     const missingIds = userIds.filter((userId) => !reviewUserProfiles[userId]);
     if (!missingIds.length) return;
 
-    const entries = await Promise.all(
-      missingIds.map(async (userId) => {
-        const response = await UserApi.getUserById(userId).catch(() => undefined);
-        return [
-          userId,
-          {
-            name: response?.data?.name || "Lumina learner",
-            avatarUrl: response?.data?.avatarUrl,
-          },
-        ] as const;
-      }),
-    );
-    setReviewUserProfiles((current) => ({ ...current, ...Object.fromEntries(entries) }));
+    try {
+      const response = await UserApi.getUsersByIds(missingIds.join(",")).catch(() => undefined);
+      const users = response?.data || [];
+      const newEntries = users.reduce((acc, user) => {
+        if (user.userId) {
+          acc[user.userId] = {
+            name: user.name || "Lumina learner",
+            avatarUrl: user.avatarUrl,
+          };
+        }
+        return acc;
+      }, {} as Record<string, ReviewUserMeta>);
+
+      // Fallback for any IDs that weren't returned by the API
+      missingIds.forEach((id) => {
+        if (!newEntries[id]) {
+          newEntries[id] = {
+            name: "Lumina learner",
+            avatarUrl: undefined,
+          };
+        }
+      });
+
+      setReviewUserProfiles((current) => ({ ...current, ...newEntries }));
+    } catch (err) {
+      console.error("Failed to fetch reviewer profiles:", err);
+    }
   }
 
   useEffect(() => {

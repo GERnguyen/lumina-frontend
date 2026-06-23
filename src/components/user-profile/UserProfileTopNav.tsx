@@ -1,10 +1,10 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Heart, Search, ShoppingCart } from "lucide-react";
 import { InstructorNotifications } from "@/components/instructor/notifications/InstructorNotifications";
 import { TopNavLinks } from "@/components/courses/TopNavLinks";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { getNavCounts } from "@/services/api/nav-api";
+import { UserProfileUserMenu } from "@/components/user-profile/UserProfileUserMenu";
 
 export async function UserProfileTopNav({ avatar }: { avatar: string }) {
   const counts = await getNavCounts();
@@ -54,9 +54,7 @@ export async function UserProfileTopNav({ avatar }: { avatar: string }) {
                 </span>
               ) : null}
             </Link>
-            <Link href="/user-profile" aria-label="Open profile" className="relative size-12 overflow-hidden rounded-full bg-[#E9EAF0]">
-              <Image src={avatar} alt="User avatar" fill sizes="48px" className="object-cover" />
-            </Link>
+            <UserProfileUserMenu avatar={avatar} />
           </div>
         </div>
       </div>

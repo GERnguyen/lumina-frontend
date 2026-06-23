@@ -29,7 +29,7 @@ export class ApiError extends Error {
 }
 
 export interface FetchOptions extends Omit<RequestInit, "body"> {
-  auth?: boolean;
+  auth?: boolean | "optional";
   params?: Record<
     string,
     string | number | boolean | undefined | null | (string | number | boolean)[]
@@ -221,24 +221,32 @@ export async function fetchClient<T>(
   }
 
   if (auth && response.status === 401) {
-    const token = await refreshAuthToken();
+    if (auth === "optional") {
+      const token = await refreshAuthToken().catch(() => undefined);
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+        response = await fetch(url.toString(), requestInit);
+      }
+    } else {
+      const token = await refreshAuthToken();
 
-    if (!token) {
-      await redirectToLogin();
-    }
+      if (!token) {
+        await redirectToLogin();
+      }
 
-    headers.set("Authorization", `Bearer ${token}`);
-    response = await fetch(url.toString(), requestInit);
+      headers.set("Authorization", `Bearer ${token}`);
+      response = await fetch(url.toString(), requestInit);
 
-    if (isDev) {
-      const duration = Date.now() - startTime;
-      console.log(
-        `[api-client] ${fetchOpts.method || "GET"} ${url.pathname}${url.search} - Retry status: ${response.status} (${duration}ms)`,
-      );
-    }
+      if (isDev) {
+        const duration = Date.now() - startTime;
+        console.log(
+          `[api-client] ${fetchOpts.method || "GET"} ${url.pathname}${url.search} - Retry status: ${response.status} (${duration}ms)`,
+        );
+      }
 
-    if (response.status === 401) {
-      await redirectToLogin();
+      if (response.status === 401) {
+        await redirectToLogin();
+      }
     }
   }
 

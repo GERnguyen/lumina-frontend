@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Award, HelpCircle, MessageSquare, Star } from "lucide-react";
+import { UserApi } from "@/services/api/user-api";
 import type { ReviewResponse, QuestionDto, CertificateRequestResponse } from "@/types";
 import { InstructorCard } from "@/components/ui/shared/InstructorCard";
 import { InstructorDialog } from "@/components/ui/shared/InstructorDialog";
@@ -24,6 +25,51 @@ export function EngagementTab({ courseId, data }: EngagementTabProps) {
   const [target, setTarget] = useState<{ type: "review" | "question"; id: string; review?: ReviewResponse } | null>(null);
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
+  const [userProfiles, setUserProfiles] = useState<Record<string, { name: string; avatarUrl?: string }>>({});
+
+  useEffect(() => {
+    async function hydrateUsers() {
+      const reviewUserIds = (data.reviews || []).map((r) => r.userId);
+      const questionUserIds = (data.questions || []).map((q) => q.userId);
+      const certUserIds = (data.certificateRequests || []).map((c) => c.userId);
+
+      const allUserIds = Array.from(new Set([...reviewUserIds, ...questionUserIds, ...certUserIds].filter(Boolean))) as string[];
+      if (!allUserIds.length) return;
+
+      const missingIds = allUserIds.filter((id) => !userProfiles[id]);
+      if (!missingIds.length) return;
+
+      try {
+        const res = await UserApi.getUsersByIds(missingIds.join(",")).catch(() => undefined);
+        const users = res?.data || [];
+        const newEntries = users.reduce((acc, user) => {
+          if (user.userId) {
+            acc[user.userId] = {
+              name: user.name || "Lumina learner",
+              avatarUrl: user.avatarUrl,
+            };
+          }
+          return acc;
+        }, {} as Record<string, { name: string; avatarUrl?: string }>);
+
+        // Fallback for any IDs that weren't returned by the API
+        missingIds.forEach((id) => {
+          if (!newEntries[id]) {
+            newEntries[id] = {
+              name: "Lumina learner",
+              avatarUrl: undefined,
+            };
+          }
+        });
+
+        setUserProfiles((current) => ({ ...current, ...newEntries }));
+      } catch (err) {
+        console.error("Failed to fetch reviewer profiles in engagement tab:", err);
+      }
+    }
+
+    hydrateUsers();
+  }, [data.reviews, data.questions, data.certificateRequests]);
 
   const submitText = async () => {
     if (!courseId || !target) return;
@@ -92,7 +138,9 @@ export function EngagementTab({ courseId, data }: EngagementTabProps) {
                 className="rounded-xl border border-zinc-150 bg-zinc-50/30 p-4 hover:bg-white hover:border-zinc-200 hover:shadow-xs transition-all duration-200"
               >
                 <div className="flex items-center justify-between gap-3 border-b border-zinc-100 pb-2">
-                  <p className="text-xs font-bold text-zinc-950 font-general">{review.userId || "Học viên ẩn danh"}</p>
+                  <p className="text-xs font-bold text-zinc-950 font-general">
+                    {review.userId ? (userProfiles[review.userId]?.name || "Loading...") : "Học viên ẩn danh"}
+                  </p>
                   <span className="inline-flex items-center rounded-full bg-amber-50 border border-amber-200/50 px-2 py-0.5 text-[10px] font-extrabold text-amber-700">
                     <Star className="size-3 mr-0.5 fill-amber-500 text-amber-500" />
                     {review.rating || 0}/5
@@ -189,7 +237,9 @@ export function EngagementTab({ courseId, data }: EngagementTabProps) {
                 className="rounded-xl border border-zinc-150 bg-zinc-50/30 p-4 hover:bg-white hover:border-zinc-200 hover:shadow-xs transition-all duration-200"
               >
                 <div className="flex items-center justify-between gap-3 border-b border-zinc-100 pb-2">
-                  <p className="text-xs font-bold text-zinc-950 font-general">{request.userId || "Học viên ẩn danh"}</p>
+                  <p className="text-xs font-bold text-zinc-950 font-general">
+                    {request.userId ? (userProfiles[request.userId]?.name || "Loading...") : "Học viên ẩn danh"}
+                  </p>
                   <span
                     className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-extrabold border ${
                       request.status === "PENDING"

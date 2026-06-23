@@ -34,11 +34,10 @@ export function TestimonialsSection() {
           <div className="relative min-h-[430px] overflow-hidden rounded-[34px] bg-[#DCE8FA] shadow-[0_28px_80px_rgba(0,43,107,0.12)]">
             <Image
               src="/landing/figma/testimonial-person.png"
-              alt="Lumina learner testimonial"
+              alt="Manuel Rikob - Senior Software Engineer at Google"
               fill
               sizes="(min-width: 768px) 500px, 100vw"
-              unoptimized
-              className="object-cover"
+              className="object-cover object-top"
             />
           </div>
         </div>
