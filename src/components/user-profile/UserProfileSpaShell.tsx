@@ -18,7 +18,7 @@ import { UserProfilePurchaseHistoryList } from "./UserProfilePurchaseHistoryList
 import { UserProfileSettingsForm } from "./UserProfileSettingsForm";
 import { UserProfileWishlistTable } from "./UserProfileWishlistTable";
 
-type ProfileTabKey = "dashboard" | "courses" | "wishlist" | "purchase-history" | "settings";
+type ProfileTabKey = "courses" | "wishlist" | "purchase-history" | "settings";
 
 type UserProfileSpaShellProps = {
   user: UserProfileDashboardData["user"];
@@ -34,7 +34,6 @@ type UserProfileSpaShellProps = {
 };
 
 const tabs: Array<{ key: ProfileTabKey; label: string }> = [
-  { key: "dashboard", label: "Dashboard" },
   { key: "courses", label: "Courses" },
   { key: "wishlist", label: "Wishlist" },
   { key: "purchase-history", label: "Purchase History" },
@@ -43,14 +42,13 @@ const tabs: Array<{ key: ProfileTabKey; label: string }> = [
 
 export function UserProfileSpaShell({
   user,
-  learningCourses,
   courses,
   courseFilters,
   wishlistItems,
   purchases,
   settings,
 }: UserProfileSpaShellProps) {
-  const [activeTab, setActiveTab] = useState<ProfileTabKey>("dashboard");
+  const [activeTab, setActiveTab] = useState<ProfileTabKey>("courses");
 
   return (
     <>
@@ -91,49 +89,12 @@ export function UserProfileSpaShell({
 
       <section className="px-6 py-10 lg:px-8">
         <div className="mx-auto max-w-[1320px] animate-[fadeIn_180ms_ease-out]">
-          {activeTab === "dashboard" ? (
-            <DashboardTab user={user} learningCourses={learningCourses} />
-          ) : null}
           {activeTab === "courses" ? <CoursesTab courses={courses} filters={courseFilters} /> : null}
           {activeTab === "wishlist" ? <WishlistTab items={wishlistItems} /> : null}
           {activeTab === "purchase-history" ? <PurchaseHistoryTab purchases={purchases} /> : null}
           {activeTab === "settings" ? <SettingsTab settings={settings} /> : null}
         </div>
       </section>
-    </>
-  );
-}
-
-function DashboardTab({
-  user,
-  learningCourses,
-}: {
-  user: UserProfileDashboardData["user"];
-  learningCourses: UserProfileDashboardData["learningCourses"];
-}) {
-  return (
-    <>
-      <h2 className="text-2xl font-semibold tracking-normal text-[#1D2026]">Dashboard</h2>
-
-      <div className="mt-6 flex items-center justify-between gap-4">
-        <h2 className="text-2xl font-semibold tracking-normal text-[#1D2026]">
-          Let’s start learning, {user.name.split(" ")[0]}
-        </h2>
-        <div className="flex gap-2">
-          <button type="button" aria-label="Previous course" className="flex size-10 items-center justify-center rounded-full bg-[#EBEBFF] text-[#564FFD] transition hover:bg-[#DEDDFF]">
-            <ArrowLeft className="size-5" />
-          </button>
-          <button type="button" aria-label="Next course" className="flex size-10 items-center justify-center rounded-full bg-[#EBEBFF] text-[#564FFD] transition hover:bg-[#DEDDFF]">
-            <ArrowRight className="size-5" />
-          </button>
-        </div>
-      </div>
-
-      <div className="mt-5 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        {learningCourses.map((course) => (
-          <UserProfileLearningCard key={course.id} course={course} />
-        ))}
-      </div>
     </>
   );
 }

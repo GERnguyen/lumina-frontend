@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { Heart, Loader2, ShoppingCart } from "lucide-react";
 import { addToCartAction, removeFromCartAction } from "@/services/actions/cart";
@@ -25,6 +25,7 @@ export function CoursePurchaseActions({
   cartItemId: initialCartItemId,
 }: CoursePurchaseActionsProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isInCart, setIsInCart] = useState(initialIsInCart);
   const [isWishlisted, setIsWishlisted] = useState(initialIsWishlisted);
   const [cartItemId, setCartItemId] = useState(initialCartItemId);
@@ -32,9 +33,13 @@ export function CoursePurchaseActions({
   const [message, setMessage] = useState("");
 
   if (!isAuthenticated) {
+    const loginUrl = pathname
+      ? `/login?returnUrl=${encodeURIComponent(pathname)}`
+      : `/login?returnUrl=${encodeURIComponent(`/courses/${courseId}`)}`;
+
     return (
       <div className="space-y-3 p-6">
-        <Link href="/login" className="flex h-12 w-full items-center justify-center rounded-[18px] bg-[#7872FD] text-sm font-semibold text-white transition hover:bg-[#6C66F3]">
+        <Link href={loginUrl} className="flex h-12 w-full items-center justify-center rounded-[18px] bg-[#7872FD] text-sm font-semibold text-white transition hover:bg-[#6C66F3]">
           Sign in to enroll
         </Link>
         <p className="text-center text-xs text-[#8C94A3]">Sign in to add this course to your cart or wishlist.</p>

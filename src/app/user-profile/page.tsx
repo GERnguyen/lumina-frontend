@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { getServerAccessToken } from "@/lib/server-auth";
 import { CoursesFooter } from "@/components/courses/CoursesFooter";
 import { UserProfileTopNav } from "@/components/user-profile/UserProfileTopNav";
 import { UserProfileSpaShell } from "@/components/user-profile/UserProfileSpaShell";
@@ -28,15 +31,40 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function Page() {
-  const [userRes, enrolledRes, wishlistRes, ordersRes] = await Promise.all([
-    UserApi.getCurrentUser().catch(() => ({ data: undefined })),
-    EnrollmentApi.getEnrolledCourses({ page: 1, size: 20 }).catch(() => ({ data: [], meta: { totalElements: 0, totalPages: 1 } })),
-    WishlistApi.getWishlist().catch(() => ({ data: [] })),
-    OrderApi.getOrders({ page: 1, size: 10, sort: '{"orderDate":"DESC"}' }).catch(() => ({ data: [] })),
-  ]);
+function throwOn401(error: any) {
+  const status = error?.response?.status || error?.status;
+  if (status === 401) {
+    throw error;
+  }
+}
 
-  const user = userRes.data;
+export default async function Page() {
+  try {
+    const token = await getServerAccessToken();
+    if (!token) {
+      redirect("/login?returnUrl=%2Fuser-profile");
+    }
+
+    const [userRes, enrolledRes, wishlistRes, ordersRes] = await Promise.all([
+      UserApi.getCurrentUser().catch((err) => {
+        throwOn401(err);
+        return { data: undefined };
+      }),
+      EnrollmentApi.getEnrolledCourses({ page: 1, size: 20 }).catch((err) => {
+        throwOn401(err);
+        return { data: [], meta: { totalElements: 0, totalPages: 1 } };
+      }),
+      WishlistApi.getWishlist().catch((err) => {
+        throwOn401(err);
+        return { data: [] };
+      }),
+      OrderApi.getOrders({ page: 1, size: 10, sort: '{"orderDate":"DESC"}' }).catch((err) => {
+        throwOn401(err);
+        return { data: [] };
+      }),
+    ]);
+
+    const user = userRes.data;
   const fallbackUser = mockUserProfileDashboard.user;
   const profileUser = {
     name: user?.name || fallbackUser.name,
@@ -87,11 +115,12 @@ export default async function Page() {
   const relatedCourses = relatedCoursesRes.data || [];
 
   const purchasedCourseIds = new Set([...enrolledIds, ...Array.from(orderCourseIds)]);
-  const hydratedWishlist = wishlistItems.filter((item) => !item.courseId || !purchasedCourseIds.has(item.courseId)).map((item, index) => {
+  const hydratedWishlist = wishlistItems.map((item, index) => {
     const course = relatedCourses.find((candidate) => candidate.id === item.courseId);
     const mock = mockProfileWishlist[index % mockProfileWishlist.length];
     const price = course?.discountedPrice ?? course?.price;
     const originalPrice = course?.discountedPrice && course?.price && course.discountedPrice < course.price ? course.price : undefined;
+    const isPurchased = item.courseId ? purchasedCourseIds.has(item.courseId) : false;
 
     return {
       id: item.id || `${item.courseId}-${index}`,
@@ -103,6 +132,7 @@ export default async function Page() {
       instructors: course ? [getCourseInstructorName(course)] : mock.instructors,
       price: typeof price === "number" ? money(price) : mock.price,
       originalPrice: originalPrice ? money(originalPrice) : undefined,
+      isPurchased,
     };
   });
 
@@ -173,4 +203,14 @@ export default async function Page() {
       <CoursesFooter />
     </main>
   );
+  } catch (error: any) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
+    const status = error?.response?.status || error?.status;
+    if (status === 401) {
+      redirect("/login?returnUrl=%2Fuser-profile&error=session_expired");
+    }
+    throw error;
+  }
 }

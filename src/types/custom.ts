@@ -10,6 +10,7 @@ export type CourseCatalogFilters = {
   priceFrom?: number;
   priceTo?: number;
   categoryId?: string;
+  excludeEnrolled?: boolean;
 };
 
 export type CourseCategoryFilter = {

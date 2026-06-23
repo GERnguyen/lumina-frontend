@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { FormEvent, useState } from "react";
 import { Button, Input, Password, Radio } from "@/components/ui";
@@ -10,6 +10,7 @@ import type { AuthRequestDto, TokenResponseDto } from "@/types";
 import { useAuthStore } from "@/stores/auth-store";
 import { getErrorMessage } from "@/lib/errors";
 import { persistAuthSession } from "@/lib/auth-session";
+import { cn } from "@/lib/utils";
 
 type LoginRequest = AuthRequestDto & {
   role: "USER" | "INSTRUCTOR" | "ADMIN";
@@ -32,8 +33,22 @@ const roleOptions: Array<{ label: string; value: LoginRole }> = [
   { label: "Instructor", value: "INSTRUCTOR" },
 ];
 
+function getSafeRedirectUrl(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    const decoded = decodeURIComponent(url);
+    if (decoded.startsWith("/") && !decoded.startsWith("//")) {
+      return decoded;
+    }
+  } catch (e) {
+    console.error(e);
+  }
+  return null;
+}
+
 export default function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const setSession = useAuthStore((state) => state.setSession);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,7 +59,40 @@ export default function LoginForm() {
     onSuccess: async (tokens) => {
       const session = await persistAuthSession(tokens);
       setSession({ accessToken: session.accessToken });
-      router.push(role === "INSTRUCTOR" ? "/instructor" : "/");
+
+      const returnUrlParam = searchParams ? searchParams.get("returnUrl") : null;
+      let returnUrl = getSafeRedirectUrl(returnUrlParam);
+
+      if (!returnUrl && typeof window !== "undefined") {
+        try {
+          const cached = localStorage.getItem("login_return_url");
+          returnUrl = getSafeRedirectUrl(cached);
+          localStorage.removeItem("login_return_url");
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      if (!returnUrl && typeof window !== "undefined") {
+        try {
+          const referrer = document.referrer;
+          if (referrer && referrer.startsWith(window.location.origin)) {
+            const relativePath = referrer.substring(window.location.origin.length);
+            if (
+              relativePath.startsWith("/") &&
+              !relativePath.startsWith("//") &&
+              !relativePath.startsWith("/login") &&
+              !relativePath.startsWith("/register")
+            ) {
+              returnUrl = relativePath;
+            }
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      router.push(returnUrl || (role === "INSTRUCTOR" ? "/instructor" : "/"));
       router.refresh();
     },
   });
@@ -62,6 +110,25 @@ export default function LoginForm() {
     ? getErrorMessage(loginMutation.error, "Unable to sign in")
     : undefined;
 
+  const errorParam = searchParams ? searchParams.get("error") : null;
+  const returnUrlParam = searchParams ? searchParams.get("returnUrl") : null;
+
+  const displayMessage = (() => {
+    if (errorParam === "session_expired") {
+      return {
+        text: "Your session has expired. Please sign in again.",
+        type: "error",
+      };
+    }
+    if (returnUrlParam && decodeURIComponent(returnUrlParam).includes("/learning/")) {
+      return {
+        text: "Please sign in to access your course.",
+        type: "info",
+      };
+    }
+    return null;
+  })();
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -71,6 +138,17 @@ export default function LoginForm() {
         <h1>Welcome back</h1>
         <p>Sign in to continue learning on Lumina.</p>
       </div>
+
+      {displayMessage && (
+        <div className={cn(
+          "rounded-lg border px-4 py-3 text-sm font-semibold",
+          displayMessage.type === "error"
+            ? "border-danger-200 bg-danger-100 text-danger-700"
+            : "border-[#DEDFFF] bg-[#F4F3FF] text-[#564FFD]"
+        )}>
+          {displayMessage.text}
+        </div>
+      )}
 
       {error && (
         <div className="rounded-lg border border-danger-200 bg-danger-100 px-4 py-3 text-sm text-danger-700">

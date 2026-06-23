@@ -8,11 +8,31 @@ type CoursesFilterSidebarProps = {
   categories: CourseCategoryFilter[];
   filters: CourseCatalogFilters;
   queryString: (updates: Partial<CourseCatalogFilters>) => string;
+  isAuthenticated: boolean;
 };
 
-export function CoursesFilterSidebar({ categories, filters, queryString }: CoursesFilterSidebarProps) {
+export function CoursesFilterSidebar({ categories, filters, queryString, isAuthenticated }: CoursesFilterSidebarProps) {
   return (
     <aside className="hidden w-[312px] shrink-0 flex-col gap-6 rounded-[18px] lg:flex">
+      {isAuthenticated && (
+        <CollapsibleFilterPanel title="Preferences">
+          <div className="space-y-4">
+            <Link
+              href={queryString({ excludeEnrolled: filters.excludeEnrolled ? undefined : true, page: 1 })}
+              className="flex items-center gap-3 rounded-[14px] px-3 py-2 transition hover:bg-[#F7F7FF]"
+            >
+              <span className={filters.excludeEnrolled ? "size-4 flex items-center justify-center rounded border border-[#7872FD] bg-[#7872FD] text-white" : "size-4 rounded border border-[#C6CAD1]"} >
+                {filters.excludeEnrolled && (
+                  <svg className="size-3 fill-current" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </span>
+              <span className="text-sm font-medium text-[#4E5566]">Hide purchased courses</span>
+            </Link>
+          </div>
+        </CollapsibleFilterPanel>
+      )}
       <CollapsibleFilterPanel title="Category">
         <div className="space-y-4">
           <FilterLink href={queryString({ categoryId: undefined, page: 1 })} active={!filters.categoryId} label="All categories" />
