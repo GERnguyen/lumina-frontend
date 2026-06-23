@@ -1,12 +1,13 @@
 import { PresignedUrlService } from "@/services";
 import { CoursePresignedUrlApi } from "@/services/api/course-api";
 import { LearningPresignedUrlApi } from "@/services/api/learning-api";
+import { AuthApi } from "@/services/api/auth-api";
 
 type UploadOptions = {
   fallbackContentType?: string;
   prepareError?: string;
   uploadError?: string;
-  serviceType?: "user" | "course" | "learning";
+  serviceType?: "user" | "course" | "learning" | "auth";
 };
 
 export async function uploadFileWithPresignedUrl(file: File, options: UploadOptions = {}) {
@@ -21,6 +22,11 @@ export async function uploadFileWithPresignedUrl(file: File, options: UploadOpti
     });
   } else if (serviceType === "learning") {
     response = await LearningPresignedUrlApi.getPresignedUrl({
+      fileName: file.name,
+      contentType,
+    });
+  } else if (serviceType === "auth") {
+    response = await AuthApi.getPresignedUrl({
       fileName: file.name,
       contentType,
     });

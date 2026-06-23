@@ -57,6 +57,7 @@ export default function LoginForm() {
   const [role, setRole] = useState<LoginRole>("USER");
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [isUnverified, setIsUnverified] = useState(false);
+  const [isPendingApproval, setIsPendingApproval] = useState(false);
 
   const loginMutation = useMutation({
     mutationFn: login,
@@ -106,26 +107,42 @@ export default function LoginForm() {
     },
     onError: (error) => {
       const errorMsg = getErrorMessage(error, "");
-      if (
+      const isInstructorPending =
+        errorMsg.toLowerCase().includes("instructor") &&
+        (errorMsg.toLowerCase().includes("verify") ||
+          errorMsg.toLowerCase().includes("verified") ||
+          errorMsg.toLowerCase().includes("approved") ||
+          errorMsg.toLowerCase().includes("approve") ||
+          errorMsg.toLowerCase().includes("pending"));
+
+      if (isInstructorPending) {
+        setIsUnverified(false);
+        setIsPendingApproval(true);
+      } else if (
         errorMsg.toLowerCase().includes("verify") ||
         errorMsg.toLowerCase().includes("verified") ||
         errorMsg.toLowerCase().includes("otp")
       ) {
         setIsUnverified(true);
+        setIsPendingApproval(false);
         setShowOtpModal(true);
       } else {
         setIsUnverified(false);
+        setIsPendingApproval(false);
       }
     },
   });
 
   function handleRoleChange(event: React.ChangeEvent<HTMLInputElement>) {
     setRole(event.target.value as LoginRole);
+    setIsPendingApproval(false);
+    setIsUnverified(false);
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsUnverified(false);
+    setIsPendingApproval(false);
     loginMutation.mutate({ email, password, role });
   }
 
@@ -176,15 +193,21 @@ export default function LoginForm() {
 
         {error && (
           <div className="rounded-lg border border-danger-200 bg-danger-100 px-4 py-3 text-sm text-danger-700">
-            {error}
-            {isUnverified && (
-              <button
-                type="button"
-                onClick={() => setShowOtpModal(true)}
-                className="ml-1 font-bold underline hover:text-danger-800 cursor-pointer block mt-1"
-              >
-                Verify your account now
-              </button>
+            {isPendingApproval ? (
+              <span>Your instructor account is pending approval by the admin. Please check back later.</span>
+            ) : (
+              <>
+                {error}
+                {isUnverified && (
+                  <button
+                    type="button"
+                    onClick={() => setShowOtpModal(true)}
+                    className="ml-1 font-bold underline hover:text-danger-800 cursor-pointer block mt-1"
+                  >
+                    Verify your account now
+                  </button>
+                )}
+              </>
             )}
           </div>
         )}

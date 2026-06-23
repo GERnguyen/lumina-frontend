@@ -24,6 +24,7 @@ type RegisterGender = NonNullable<RegisterRequest["gender"]>;
 
 async function uploadInstructorCv(file: File) {
   return uploadFileWithPresignedUrl(file, {
+    serviceType: "auth",
     fallbackContentType: "application/pdf",
     prepareError: "Could not prepare CV upload",
     uploadError: "Could not upload instructor CV.",

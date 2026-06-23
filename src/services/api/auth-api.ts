@@ -10,6 +10,7 @@ import type {
   SendOtpRequest,
   TokenResponseDto,
   VerifyEmailRequest,
+  PresignedUrlResponse,
 } from "@/types";
 
 export const AuthApi = {
@@ -39,6 +40,10 @@ export const AuthApi = {
 
   async loginWithGoogle(body: OAuthRequest): Promise<ApiResponse<TokenResponseDto>> {
     return apiClient.post("/api/v1/auth/login/google", body, { auth: false });
+  },
+
+  async getPresignedUrl(params: { fileName: string; contentType: string }): Promise<ApiResponse<PresignedUrlResponse>> {
+    return apiClient.get("/api/v1/auth/upload/presigned-url", { params, auth: false });
   },
 
   async changePassword(body: ChangePasswordRequest): Promise<ApiResponse<Record<string, unknown>>> {

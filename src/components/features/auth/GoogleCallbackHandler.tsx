@@ -80,7 +80,19 @@ export function GoogleCallbackHandler({ role }: GoogleCallbackHandlerProps) {
         }
         router.refresh();
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "An unexpected error occurred.";
+        let message = err instanceof Error ? err.message : "An unexpected error occurred.";
+        const isInstructorPending =
+          role === "INSTRUCTOR" &&
+          message.toLowerCase().includes("instructor") &&
+          (message.toLowerCase().includes("verify") ||
+            message.toLowerCase().includes("verified") ||
+            message.toLowerCase().includes("approved") ||
+            message.toLowerCase().includes("approve") ||
+            message.toLowerCase().includes("pending"));
+
+        if (isInstructorPending) {
+          message = "Your instructor account is pending approval by the admin. Please check back later.";
+        }
         setError(message);
       }
     }
