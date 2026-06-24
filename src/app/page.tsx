@@ -9,18 +9,18 @@ import { LearningProgressApi } from "@/services/api/learning-api";
 import { UserApi } from "@/services/api/user-api";
 
 export const metadata: Metadata = {
-  title: "Lumina - Career-focused online learning",
+  title: "Cinx - Career-focused online learning",
   description:
-    "Lumina helps learners discover practical IT courses, explore categories, and build job-ready technology skills.",
+    "Cinx helps learners discover practical IT courses, explore categories, and build job-ready technology skills.",
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "Lumina - Career-focused online learning",
+    title: "Cinx - Career-focused online learning",
     description:
-      "Discover practical courses, career pathways, categories, and instructor-led learning on Lumina.",
+      "Discover practical courses, career pathways, categories, and instructor-led learning on Cinx.",
     url: "/",
-    siteName: "Lumina",
+    siteName: "Cinx",
     type: "website",
   },
 };

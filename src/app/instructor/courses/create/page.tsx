@@ -2,8 +2,8 @@ import CourseCreateClient from "@/components/instructor/course-create/CourseCrea
 import { CategoryApi } from "@/services/api/course-api";
 
 export const metadata = {
-  title: "Create Course - Lumina Instructor",
-  description: "Create a new course draft on Lumina",
+  title: "Create Course - Cinx Instructor",
+  description: "Create a new course draft on Cinx",
 };
 
 export default async function CreateCoursePage() {

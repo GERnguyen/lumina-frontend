@@ -26,7 +26,7 @@ export function CheckoutPage({
         <div>
           <p className="text-sm font-medium text-[#564FFD]">Checkout</p>
           <h1 className="mt-2 text-2xl font-semibold tracking-[-0.24px] text-[#1D2026] md:text-[32px] md:leading-10">
-            Complete your Lumina order
+            Complete your Cinx order
           </h1>
           <p className="mt-2 max-w-[620px] text-sm leading-6 text-[#6E7485]">
             Review your courses, choose a supported payment method, and continue to the secure provider page.

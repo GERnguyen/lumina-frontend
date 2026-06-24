@@ -95,8 +95,8 @@ export function splitDescription(description?: string): string[] {
 
 export function getCourseImage(course?: CourseLike, index: number = 0): string {
   const image = course?.images?.find((img) => img.imageUrl)?.imageUrl ||
-                course?.images?.[0]?.imageUrl || 
-                `/courses/course-0${(index % 8) + 1}.png`;
+    course?.images?.[0]?.imageUrl ||
+    `/courses/course-0${(index % 8) + 1}.png`;
   return image;
 }
 
@@ -116,7 +116,7 @@ export function getCourseInstructorName(course?: CourseLike): string {
   return "Course Instructor";
 }
 
-export function getProfileAvatar(user?: UserLike, fallbackName = "Lumina Learner"): string {
+export function getProfileAvatar(user?: UserLike, fallbackName = "Cinx Learner"): string {
   const avatar = user?.avatarUrl?.trim();
   if (avatar) {
     if (/^(https?:|data:|blob:)/.test(avatar) || avatar.startsWith("/")) return avatar;

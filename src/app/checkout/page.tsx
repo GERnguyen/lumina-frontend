@@ -11,7 +11,7 @@ type CheckoutRouteProps = {
 
 export const metadata: Metadata = {
   title: "Checkout",
-  description: "Complete your Lumina course order using supported secure payment methods.",
+  description: "Complete your Cinx course order using supported secure payment methods.",
   alternates: {
     canonical: "/checkout",
   },

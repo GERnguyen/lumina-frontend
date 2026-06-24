@@ -7,7 +7,7 @@ import { getServerAccessToken } from "@/lib/server-auth";
 import { LearningPathDetailClient } from "@/components/learning-paths/LearningPathDetailClient";
 
 export const metadata: Metadata = {
-  title: "Learning Path Detail - Lumina",
+  title: "Learning Path Detail - Cinx",
   description: "View details and progress of your custom learning roadmap.",
 };
 
@@ -17,7 +17,7 @@ type PageProps = {
 
 export default async function Page({ params }: PageProps) {
   const { id } = await params;
-  
+
   try {
     const token = await getServerAccessToken();
     if (!token) {

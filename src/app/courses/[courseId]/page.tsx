@@ -17,13 +17,13 @@ export async function generateMetadata({ params }: CourseDetailRouteProps): Prom
 
   return {
     title: course?.title || "Course Details",
-    description: course?.description || "Course details page on Lumina",
+    description: course?.description || "Course details page on Cinx",
     alternates: {
       canonical: `/courses/${courseId}`,
     },
     openGraph: {
       title: course?.title || "Course Details",
-      description: course?.description || "Course details page on Lumina",
+      description: course?.description || "Course details page on Cinx",
       images: course?.images?.[0]?.imageUrl ? [course.images[0].imageUrl] : ["/courses/course-01.png"],
     },
   };
@@ -50,7 +50,7 @@ export default async function Page({ params }: CourseDetailRouteProps) {
   const curriculum = curriculumRes.data;
   const reviews = reviewsRes.data || [];
   const reviewStats = reviewStatsRes.data;
-  
+
   const isEnrolled = Boolean(enrollmentRes.data?.find((item) => item.courseId === courseId)?.isEnrolled);
   const cartItem = (cartRes.data || []).find((item) => item.course?.id === courseId);
   const isInCart = Boolean(cartItem);

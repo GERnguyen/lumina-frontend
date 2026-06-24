@@ -100,7 +100,7 @@ export function LearningVideoLesson({
   // Set initial subtitle preference
   useEffect(() => {
     if (typeof window !== "undefined" && readySubtitles.length > 0) {
-      const stored = localStorage.getItem("lumina:preferred-subtitle-language");
+      const stored = localStorage.getItem("cinx:preferred-subtitle-language");
       if (stored && readySubtitles.some((s) => s.languageCode === stored)) {
         setActiveSubtitleLang(stored);
       } else {
@@ -161,9 +161,9 @@ export function LearningVideoLesson({
   const handleSelectSubtitle = (langCode: string | null) => {
     setActiveSubtitleLang(langCode);
     if (langCode) {
-      localStorage.setItem("lumina:preferred-subtitle-language", langCode);
+      localStorage.setItem("cinx:preferred-subtitle-language", langCode);
     } else {
-      localStorage.removeItem("lumina:preferred-subtitle-language");
+      localStorage.removeItem("cinx:preferred-subtitle-language");
     }
     setShowSubtitleMenu(false);
   };
@@ -289,7 +289,7 @@ export function LearningVideoLesson({
     let initialPosition = resumePosition || 0;
     if (typeof window !== "undefined") {
       try {
-        const stored = localStorage.getItem(`lumina:video-progress:${courseId}:${lessonId}`);
+        const stored = localStorage.getItem(`cinx:video-progress:${courseId}:${lessonId}`);
         if (stored) {
           const parsed = parseInt(stored, 10);
           if (!isNaN(parsed) && parsed > 0) {
@@ -344,7 +344,7 @@ export function LearningVideoLesson({
     lastTrackedSecond.current = currentPosition;
     if (typeof window !== "undefined") {
       try {
-        localStorage.setItem(`lumina:video-progress:${courseId}:${lessonId}`, String(currentPosition));
+        localStorage.setItem(`cinx:video-progress:${courseId}:${lessonId}`, String(currentPosition));
       } catch (e) {
         console.error(e);
       }

@@ -6,8 +6,8 @@ import { CoursesFooter } from "@/components/courses/CoursesFooter";
 import { ShieldCheck } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Terms & Policies - Lumina",
-  description: "Read Lumina's service agreements, privacy policies, cookie usage, and refund terms.",
+  title: "Terms & Policies - Cinx",
+  description: "Read Cinx's service agreements, privacy policies, cookie usage, and refund terms.",
 };
 
 export default async function PoliciesIndexPage() {
@@ -32,7 +32,7 @@ export default async function PoliciesIndexPage() {
             </div>
             <h1 className="text-2xl font-black text-zinc-900 leading-tight">Điều khoản & Chính sách</h1>
             <p className="mt-3 text-sm font-medium text-zinc-500 max-w-md mx-auto leading-relaxed">
-              Các văn bản thỏa thuận sử dụng dịch vụ, chính sách bảo mật và hoàn tiền của Lumina hiện chưa được công bố. Vui lòng quay lại sau!
+              Các văn bản thỏa thuận sử dụng dịch vụ, chính sách bảo mật và hoàn tiền của Cinx hiện chưa được công bố. Vui lòng quay lại sau!
             </p>
           </div>
         </div>

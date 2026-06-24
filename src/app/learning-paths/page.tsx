@@ -6,7 +6,7 @@ import { LearningPathsDashboard } from "@/components/recommendations/LearningPat
 import { getServerAccessToken } from "@/lib/server-auth";
 
 export const metadata: Metadata = {
-  title: "My Learning Pathways - Lumina",
+  title: "My Learning Pathways - Cinx",
   description: "View and manage your AI-generated learning paths and track your study progression.",
 };
 

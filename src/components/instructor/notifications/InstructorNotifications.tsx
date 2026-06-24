@@ -93,9 +93,9 @@ export function InstructorNotifications({
       }
     };
 
-    window.addEventListener("lumina:notifications-changed", handleSync);
+    window.addEventListener("cinx:notifications-changed", handleSync);
     return () => {
-      window.removeEventListener("lumina:notifications-changed", handleSync);
+      window.removeEventListener("cinx:notifications-changed", handleSync);
     };
   }, []);
 
@@ -148,7 +148,7 @@ export function InstructorNotifications({
                 };
 
                 window.dispatchEvent(
-                  new CustomEvent("lumina:notifications-changed", {
+                  new CustomEvent("cinx:notifications-changed", {
                     detail: {
                       action: "new-notification",
                       notification: newNotification,
@@ -193,7 +193,7 @@ export function InstructorNotifications({
       const target = notifications.find((n) => n.id === id);
       if (target) {
         window.dispatchEvent(
-          new CustomEvent("lumina:notifications-changed", {
+          new CustomEvent("cinx:notifications-changed", {
             detail: {
               action: "toggle-read",
               id,
@@ -211,7 +211,7 @@ export function InstructorNotifications({
     try {
       await NotificationApi.deleteNotification(id);
       window.dispatchEvent(
-        new CustomEvent("lumina:notifications-changed", {
+        new CustomEvent("cinx:notifications-changed", {
           detail: {
             action: "delete",
             id,
@@ -227,7 +227,7 @@ export function InstructorNotifications({
     try {
       await NotificationApi.markAllAsRead();
       window.dispatchEvent(
-        new CustomEvent("lumina:notifications-changed", {
+        new CustomEvent("cinx:notifications-changed", {
           detail: {
             action: "mark-all-read",
           },
@@ -243,7 +243,7 @@ export function InstructorNotifications({
       await NotificationApi.markAllAsUnread();
       const countRes = await NotificationApi.countUnreadNotifications();
       window.dispatchEvent(
-        new CustomEvent("lumina:notifications-changed", {
+        new CustomEvent("cinx:notifications-changed", {
           detail: {
             action: "mark-all-unread",
             count: countRes?.data ?? 0,
@@ -337,9 +337,8 @@ export function InstructorNotifications({
                   return (
                     <div
                       key={n.id}
-                      className={`p-3.5 flex items-start justify-between gap-2.5 transition ${
-                        !n.isRead ? "bg-primary-50/35" : "hover:bg-gray-50"
-                      }`}
+                      className={`p-3.5 flex items-start justify-between gap-2.5 transition ${!n.isRead ? "bg-primary-50/35" : "hover:bg-gray-50"
+                        }`}
                     >
                       <button
                         type="button"
@@ -363,11 +362,10 @@ export function InstructorNotifications({
                         <button
                           type="button"
                           onClick={() => n.id && handleToggleRead(n.id)}
-                          className={`p-1 rounded-md transition cursor-pointer ${
-                            !n.isRead
+                          className={`p-1 rounded-md transition cursor-pointer ${!n.isRead
                               ? "text-gray-400 hover:text-emerald-600 hover:bg-emerald-50"
                               : "text-emerald-600 hover:bg-gray-100"
-                          }`}
+                            }`}
                           title={n.isRead ? "Đánh dấu là chưa đọc" : "Đánh dấu là đã đọc"}
                         >
                           <Check className="size-3.5" />

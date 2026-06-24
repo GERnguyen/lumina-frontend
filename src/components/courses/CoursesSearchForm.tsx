@@ -20,8 +20,8 @@ export function CoursesSearchForm({ filters }: CoursesSearchFormProps) {
       }
     }
 
-    window.addEventListener("lumina:courses-search", handleSuggestion);
-    return () => window.removeEventListener("lumina:courses-search", handleSuggestion);
+    window.addEventListener("cinx:courses-search", handleSuggestion);
+    return () => window.removeEventListener("cinx:courses-search", handleSuggestion);
   }, []);
 
   return (

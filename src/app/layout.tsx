@@ -5,12 +5,12 @@ import { notoSans } from "./fonts";
 
 export const metadata: Metadata = {
   title: {
-    default: "Lumina",
-    template: "%s | Lumina",
+    default: "Cinx",
+    template: "%s | Cinx",
   },
   description:
-    "Lumina is an online learning platform for discovering courses, learning with interactive lessons, and managing instructor content.",
-  applicationName: "Lumina",
+    "Cinx is an online learning platform for discovering courses, learning with interactive lessons, and managing instructor content.",
+  applicationName: "Cinx",
   metadataBase: new URL("https://shiny.id.vn"),
 };
 

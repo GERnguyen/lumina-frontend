@@ -2,8 +2,8 @@ import CourseCreateClient from "@/components/instructor/course-create/CourseCrea
 import { CategoryApi } from "@/services/api/course-api";
 
 export const metadata = {
-  title: "Edit Course - Lumina Instructor",
-  description: "Edit course draft on Lumina",
+  title: "Edit Course - Cinx Instructor",
+  description: "Edit course draft on Cinx",
 };
 
 interface PageProps {

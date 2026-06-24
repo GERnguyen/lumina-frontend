@@ -16,25 +16,25 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
   const [currentUser, setCurrentUser] = useState<UserDto | null>(null);
   const [questions, setQuestions] = useState<QuestionDto[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
-  
+
   // Filtering & Search
   const [filterMode, setFilterMode] = useState<"this-lesson" | "all-lessons">("this-lesson");
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   // Q&A detail thread state
   const [selectedQuestion, setSelectedQuestion] = useState<QuestionDto | null>(null);
   const [answers, setAnswers] = useState<AnswerDto[]>([]);
   const [loadingAnswers, setLoadingAnswers] = useState(false);
   const [newAnswerText, setNewAnswerText] = useState("");
-  
+
   // Create question state
   const [isAsking, setIsAsking] = useState(false);
   const [newQuestionTitle, setNewQuestionTitle] = useState("");
   const [newQuestionContent, setNewQuestionContent] = useState("");
-  
+
   // Hydrated user details
   const [userProfiles, setUserProfiles] = useState<Record<string, { name: string; avatarUrl?: string }>>({});
-  
+
   const [isPending, startTransition] = useTransition();
 
   // Fetch current user details on mount
@@ -54,7 +54,7 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
       const res = await getQuestionsAction(courseId, activeLessonId);
       if (res.success && res.data) {
         setQuestions(res.data);
-        
+
         // Collect user ids to hydrate
         const userIds = res.data.map((q) => q.userId).filter(Boolean) as string[];
         hydrateUsers(userIds);
@@ -83,7 +83,7 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
         const res = await getAnswersForQuestionAction(selectedQuestion!.id!);
         if (res.success && res.data) {
           setAnswers(res.data);
-          
+
           // Hydrate user ids
           const userIds = res.data.map((a) => a.userId).filter(Boolean) as string[];
           hydrateUsers(userIds);
@@ -110,7 +110,7 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
       const newEntries = users.reduce((acc, user) => {
         if (user.userId) {
           acc[user.userId] = {
-            name: user.name || "Lumina learner",
+            name: user.name || "Cinx learner",
             avatarUrl: user.avatarUrl,
           };
         }
@@ -120,7 +120,7 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
       missingIds.forEach((id) => {
         if (!newEntries[id]) {
           newEntries[id] = {
-            name: "Lumina learner",
+            name: "Cinx learner",
             avatarUrl: undefined,
           };
         }
@@ -319,7 +319,7 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
                 </div>
               </div>
             </div>
-            
+
             <p className="text-sm text-zinc-700 leading-relaxed font-medium whitespace-pre-wrap">
               {selectedQuestion.content}
             </p>
@@ -337,7 +337,7 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
                 <ThumbsUp className="size-3.5" />
                 <span>{selectedQuestion.upvoteCount || 0} Hữu ích</span>
               </button>
-              
+
               {currentUser?.userId === selectedQuestion.userId && (
                 <button
                   onClick={(e) => handleDeleteQuestion(selectedQuestion.id!, e)}
@@ -369,7 +369,7 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
               {answers.map((answer) => {
                 const profile = answer.userId ? userProfiles[answer.userId] : undefined;
                 const isInstructor = answer.isInstructorAnswer;
-                
+
                 return (
                   <div
                     key={answer.id}
@@ -383,7 +383,7 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
                     <div className="flex items-center justify-between gap-3 border-b border-zinc-100 pb-2">
                       <div className="flex items-center gap-2 text-xs">
                         <span className="font-extrabold text-zinc-950">
-                          {profile?.name || answer.userId || "Lumina Learner"}
+                          {profile?.name || answer.userId || "Cinx Learner"}
                         </span>
                         {isInstructor && (
                           <span className="rounded-full bg-primary-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-primary-850 border border-primary-200">
@@ -463,7 +463,7 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
               <h3 className="text-lg font-bold text-zinc-950">Hỏi & Đáp (Q&A)</h3>
               <p className="mt-1 text-xs text-zinc-450 font-medium">Thảo luận cùng giảng viên và học viên khác trong khóa học.</p>
             </div>
-            
+
             <button
               onClick={() => setIsAsking(!isAsking)}
               className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-[#564FFD] px-5 text-xs font-bold text-white hover:bg-[#4338CA] transition select-none cursor-pointer"
@@ -477,7 +477,7 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
           {isAsking && (
             <div className="rounded-2xl border border-primary-200 bg-primary-50/10 p-5 space-y-4 animate-in slide-in-from-top-1 duration-200">
               <h4 className="text-sm font-bold text-primary-950">Đặt câu hỏi cho bài học này</h4>
-              
+
               <div className="space-y-3 text-xs">
                 <div>
                   <label className="font-semibold text-zinc-650" htmlFor="q-title">Tiêu đề câu hỏi</label>
@@ -490,7 +490,7 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
                     className="mt-1.5 w-full rounded-xl border border-zinc-250 bg-white px-4 py-2.5 font-medium text-zinc-900 outline-none focus:border-primary-500"
                   />
                 </div>
-                
+
                 <div>
                   <label className="font-semibold text-zinc-650" htmlFor="q-content">Chi tiết câu hỏi</label>
                   <textarea
@@ -572,7 +572,7 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
             <div className="divide-y divide-zinc-150">
               {filteredQuestions.map((q) => {
                 const author = q.userId ? userProfiles[q.userId] : undefined;
-                
+
                 return (
                   <div
                     key={q.id}
@@ -601,7 +601,7 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
                       <p className="text-xs text-zinc-500 font-medium line-clamp-2 leading-relaxed">
                         {q.content}
                       </p>
-                      
+
                       <div className="flex items-center gap-3 text-[10px] font-bold text-zinc-400 tracking-wider">
                         <span className="font-extrabold text-zinc-650">{author?.name || q.userId || "Ẩn danh"}</span>
                         <span>•</span>

@@ -6,8 +6,8 @@ import { AIAssistant } from "@/components/recommendations/AIAssistant";
 import { getServerAccessToken } from "@/lib/server-auth";
 
 export const metadata: Metadata = {
-  title: "AI Career Assistant - Lumina",
-  description: "Chat with Lumina AI Assistant to build custom learning roadmaps and find courses.",
+  title: "AI Career Assistant - Cinx",
+  description: "Chat with Cinx AI Assistant to build custom learning roadmaps and find courses.",
 };
 
 export default async function AIAssistantPage() {

@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Thông báo - Giảng viên",
-  description: "Xem và quản lý tất cả các thông báo của bạn trên Lumina.",
+  description: "Xem và quản lý tất cả các thông báo của bạn trên Cinx.",
 };
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;

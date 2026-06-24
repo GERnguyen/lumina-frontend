@@ -15,19 +15,19 @@ const paymentMethods: Array<{
   description: string;
   mark: string;
 }> = [
-  {
-    id: "STRIPE",
-    title: "Stripe",
-    description: "Pay with cards and supported international payment methods through Stripe Checkout.",
-    mark: "S",
-  },
-  {
-    id: "MOMO",
-    title: "MoMo",
-    description: "You will be redirected to MoMo to review and complete your Lumina order.",
-    mark: "M",
-  },
-];
+    {
+      id: "STRIPE",
+      title: "Stripe",
+      description: "Pay with cards and supported international payment methods through Stripe Checkout.",
+      mark: "S",
+    },
+    {
+      id: "MOMO",
+      title: "MoMo",
+      description: "You will be redirected to MoMo to review and complete your Cinx order.",
+      mark: "M",
+    },
+  ];
 
 export function CheckoutPaymentPanel({ selectedMethod, onSelectedMethodChange }: CheckoutPaymentPanelProps) {
   return (
@@ -42,9 +42,8 @@ export function CheckoutPaymentPanel({ selectedMethod, onSelectedMethodChange }:
               key={method.id}
               type="button"
               onClick={() => onSelectedMethodChange(method.id)}
-              className={`flex w-full items-center gap-5 border bg-white px-5 py-4 text-left transition hover:border-[#7872FD] hover:bg-[#F8F8FF] ${
-                isSelected ? "border-[#23BD33]" : "border-[#E9EAF0]"
-              }`}
+              className={`flex w-full items-center gap-5 border bg-white px-5 py-4 text-left transition hover:border-[#7872FD] hover:bg-[#F8F8FF] ${isSelected ? "border-[#23BD33]" : "border-[#E9EAF0]"
+                }`}
             >
               <span className={`flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ${method.id === "MOMO" ? "bg-[#A50064] text-white" : "bg-[#635BFF] text-white"}`}>
                 {method.mark}

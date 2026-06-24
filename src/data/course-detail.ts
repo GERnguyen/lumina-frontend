@@ -228,7 +228,7 @@ export const courseDetail: CourseDetail = {
       avatar: "/course-detail/person-8.png",
       rating: 5,
       text:
-        "This should be one of the best courses I ever made about UI/UX in Lumina. Highly recommend to those new to UI/UX.",
+        "This should be one of the best courses I ever made about UI/UX in Cinx. Highly recommend to those new to UI/UX.",
     },
   ],
 };

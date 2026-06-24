@@ -40,7 +40,7 @@ export function CtaFooterSection() {
               <p><strong>Corporate Head Office:</strong> 1 Vo Van Ngan Street, Thu Duc, .</p>
               <p>Ho Chi Minh City, Vietnam</p>
               <p><strong>Phone:</strong> 36-3636-3636</p>
-              <p><strong>Email:</strong> info@lumina.com</p>
+              <p><strong>Email:</strong> info@cinx.com</p>
             </div>
           </div>
 

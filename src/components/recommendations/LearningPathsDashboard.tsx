@@ -116,7 +116,7 @@ export function LearningPathsDashboard() {
         ]);
 
         const coursesList = coursesRes.data || [];
-        
+
         // Build map of lesson titles by lessonId
         const lessonMap = new Map<string, { title: string; type: string }>();
         curriculumsRes.forEach(({ curriculum }) => {
@@ -417,7 +417,7 @@ export function LearningPathsDashboard() {
             <Compass className="size-12 text-[#7872FD] mx-auto animate-soft-float" />
             <h3 className="mt-4 text-lg font-bold text-[#1D2026]">Bạn chưa có lộ trình đang hoạt động</h3>
             <p className="mt-2 text-sm text-[#6E7485] leading-relaxed">
-              Bạn có thể dễ dàng thiết kế một lộ trình học tập cá nhân hóa thông qua AI Assistant của Lumina, giúp bạn tập trung vào bài học cốt lõi theo thời gian định trước.
+              Bạn có thể dễ dàng thiết kế một lộ trình học tập cá nhân hóa thông qua AI Assistant của Cinx, giúp bạn tập trung vào bài học cốt lõi theo thời gian định trước.
             </p>
             <Link
               href="/ai-assistant"

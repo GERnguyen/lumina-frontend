@@ -19,7 +19,7 @@ export function LearningHeader({ data }: LearningHeaderProps) {
             {data.courseTitle}
           </h1>
           <p className="mt-1 text-sm font-medium text-[#6E7485]">
-            Learning with {data.instructorName || "Lumina Instructor"}
+            Learning with {data.instructorName || "Cinx Instructor"}
           </p>
         </div>
 

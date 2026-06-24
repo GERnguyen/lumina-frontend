@@ -14,8 +14,8 @@ export function CoursesUserMenu({ user }: { user: UserDto }) {
   const router = useRouter();
   const clearSession = useAuthStore((state) => state.clearSession);
   const [isOpen, setIsOpen] = useState(false);
-  const avatar = getProfileAvatar(user, "Lumina learner");
-  const name = user.name || "Lumina learner";
+  const avatar = getProfileAvatar(user, "Cinx learner");
+  const name = user.name || "Cinx learner";
 
   async function handleLogout() {
     await clearAuthSession();

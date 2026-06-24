@@ -13,7 +13,7 @@ type ThankYouPageProps = {
 
 export const metadata: Metadata = {
   title: "Payment Result",
-  description: "Review your Lumina payment result and continue learning.",
+  description: "Review your Cinx payment result and continue learning.",
 };
 
 function getParam(params: Record<string, string | string[] | undefined>, key: string) {
@@ -56,9 +56,8 @@ export default async function Page({ params, searchParams }: ThankYouPageProps) 
       <CoursesTopNav />
       <section className="mx-auto flex max-w-[760px] flex-col items-center px-5 py-20 text-center sm:px-8">
         <div
-          className={`flex size-16 items-center justify-center rounded-full ${
-            isPaid ? "bg-[#E9F9EC] text-[#23BD33]" : isFailed ? "bg-[#FFF0F0] text-[#EF4444]" : "bg-[#FFF7E8] text-[#F59E0B]"
-          }`}
+          className={`flex size-16 items-center justify-center rounded-full ${isPaid ? "bg-[#E9F9EC] text-[#23BD33]" : isFailed ? "bg-[#FFF0F0] text-[#EF4444]" : "bg-[#FFF7E8] text-[#F59E0B]"
+            }`}
         >
           {isPaid ? <CheckCircle2 className="size-9" /> : isFailed ? <XCircle className="size-9" /> : <Clock3 className="size-9" />}
         </div>
@@ -69,8 +68,8 @@ export default async function Page({ params, searchParams }: ThankYouPageProps) 
           {isPaid
             ? "Your courses are now available in your learning dashboard."
             : isFailed
-            ? "The payment provider returned without completing the payment. You can retry checkout whenever you are ready."
-            : "We have received your payment redirect. Your enrollment will appear after the payment provider confirms the transaction."}
+              ? "The payment provider returned without completing the payment. You can retry checkout whenever you are ready."
+              : "We have received your payment redirect. Your enrollment will appear after the payment provider confirms the transaction."}
         </p>
 
         <div className="mt-8 w-full rounded-[18px] border border-[#E9EAF0] bg-white p-6 text-left">

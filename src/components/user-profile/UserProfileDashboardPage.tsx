@@ -36,8 +36,8 @@ export function UserProfileDashboardPage({
 
   const dashboardHero = {
     user: {
-      name: user?.name || "Lumina Learner",
-      headline: user?.role === "INSTRUCTOR" ? "Instructor on Lumina" : user?.bio || "Lifelong learner on Lumina",
+      name: user?.name || "Cinx Learner",
+      headline: user?.role === "INSTRUCTOR" ? "Instructor on Cinx" : user?.bio || "Lifelong learner on Cinx",
       avatar: getProfileAvatar(user),
     },
     tabs: getProfileTabs("Dashboard"),

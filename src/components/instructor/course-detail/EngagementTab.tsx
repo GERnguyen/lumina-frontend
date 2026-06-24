@@ -47,7 +47,7 @@ export function EngagementTab({ courseId, data }: EngagementTabProps) {
         const newEntries = users.reduce((acc, user) => {
           if (user.userId) {
             acc[user.userId] = {
-              name: user.name || "Lumina learner",
+              name: user.name || "Cinx learner",
               avatarUrl: user.avatarUrl,
             };
           }
@@ -58,7 +58,7 @@ export function EngagementTab({ courseId, data }: EngagementTabProps) {
         missingIds.forEach((id) => {
           if (!newEntries[id]) {
             newEntries[id] = {
-              name: "Lumina learner",
+              name: "Cinx learner",
               avatarUrl: undefined,
             };
           }
@@ -244,13 +244,12 @@ export function EngagementTab({ courseId, data }: EngagementTabProps) {
                     {request.userId ? (userProfiles[request.userId]?.name || "Loading...") : "Học viên ẩn danh"}
                   </p>
                   <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-extrabold border ${
-                      request.status === "PENDING"
+                    className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-extrabold border ${request.status === "PENDING"
                         ? "bg-amber-50 text-amber-700 border-amber-200/50"
                         : request.status === "APPROVED"
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200/50"
-                        : "bg-red-50 text-red-700 border-red-200/50"
-                    }`}
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200/50"
+                          : "bg-red-50 text-red-700 border-red-200/50"
+                      }`}
                   >
                     {request.status || "--"}
                   </span>

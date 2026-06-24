@@ -51,7 +51,7 @@ export async function CoursesSection() {
       <div className="mx-auto max-w-[1240px]">
         <SectionHeader
           title="Discover our Courses"
-          description="Find software development courses from Lumina and build the skills for your next step."
+          description="Find software development courses from Cinx and build the skills for your next step."
         />
 
         <CoursesTabs categories={categories} courses={courses} />

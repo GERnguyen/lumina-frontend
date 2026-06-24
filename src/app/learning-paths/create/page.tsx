@@ -7,7 +7,7 @@ import { getServerAccessToken } from "@/lib/server-auth";
 import { LearningPathCreateClient } from "@/components/learning-paths/LearningPathCreateClient";
 
 export const metadata: Metadata = {
-  title: "Create Learning Path - Lumina",
+  title: "Create Learning Path - Cinx",
   description: "Create a custom learning roadmap with chosen lessons from your courses.",
   alternates: {
     canonical: "/learning-paths/create",

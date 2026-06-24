@@ -23,21 +23,21 @@ export const landingNavItems = [
 
 export type TrustedLogo =
   | {
-      name: string;
-      image: string;
-      width: number;
-      height: number;
-      text?: never;
-      icon?: never;
-    }
+    name: string;
+    image: string;
+    width: number;
+    height: number;
+    text?: never;
+    icon?: never;
+  }
   | {
-      name: string;
-      text: string;
-      icon?: LucideIcon;
-      image?: never;
-      width?: never;
-      height?: never;
-    };
+    name: string;
+    text: string;
+    icon?: LucideIcon;
+    image?: never;
+    width?: never;
+    height?: never;
+  };
 
 export const trustedLogos: TrustedLogo[] = [
   { name: "Google", image: "/landing/figma/hero-google.png", width: 216, height: 212 },
@@ -179,7 +179,7 @@ export const workSteps = [
   {
     number: "01",
     title: "Upload Your Portfolio",
-    description: "Add your portfolio and learning history so Lumina can understand your current profile.",
+    description: "Add your portfolio and learning history so Cinx can understand your current profile.",
   },
   {
     number: "02",
@@ -216,22 +216,22 @@ export const showcaseItems = [
 
 export const faqs = [
   {
-    question: "How do I start learning on Lumina?",
+    question: "How do I start learning on Cinx?",
     answer:
       "Create an account, choose a course that matches your goal, and follow each lesson with notes, files, and progress tracking.",
   },
   {
-    question: "Can Lumina help me choose the right course?",
+    question: "Can Cinx help me choose the right course?",
     answer:
       "Yes. You can explore by category, search by skill, and use learning paths to find courses that fit your current level.",
   },
   {
     question: "How is my course progress tracked?",
     answer:
-      "Lumina keeps your enrolled courses, completed lessons, watch progress, notes, and certificates in your learning dashboard.",
+      "Cinx keeps your enrolled courses, completed lessons, watch progress, notes, and certificates in your learning dashboard.",
   },
   {
-    question: "Can instructors publish courses on Lumina?",
+    question: "Can instructors publish courses on Cinx?",
     answer:
       "Instructors can create course drafts, organize sections and lessons, upload resources, then submit courses for review before publishing.",
   },

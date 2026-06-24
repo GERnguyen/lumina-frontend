@@ -156,7 +156,7 @@ function HeroSection() {
       <div className="mx-auto grid max-w-[1320px] gap-10 px-6 py-14 lg:min-h-[620px] lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:px-8 lg:py-20">
         <div className="relative z-10 flex flex-col justify-center">
           <h1 className="max-w-[760px] text-4xl font-semibold leading-[1.08] tracking-normal text-[#111033] md:text-5xl lg:text-6xl">
-            Build job-ready tech skills with Lumina.
+            Build job-ready tech skills with Cinx.
           </h1>
           <p className="mt-5 max-w-[620px] text-lg leading-8 text-[#4E5566]">
             Explore practical courses, follow career paths, and keep your learning momentum in one place.
@@ -196,7 +196,7 @@ function PartnerStrip() {
         <div>
           <h2 className="text-[32px] font-semibold leading-10 tracking-normal text-[#1D2026]">6.3k trusted companies</h2>
           <p className="mt-5 max-w-[312px] text-sm leading-[22px] text-[#6E7485]">
-            Learners use Lumina to build practical skills for modern software, data, cloud, and product teams.
+            Learners use Cinx to build practical skills for modern software, data, cloud, and product teams.
           </p>
         </div>
 

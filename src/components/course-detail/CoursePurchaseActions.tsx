@@ -161,7 +161,7 @@ export function CoursePurchaseActions({
         {pendingAction === "wishlist" ? <Loader2 className="size-4 animate-spin" /> : <Heart className={isWishlisted ? "size-4 fill-[#7872FD] text-[#7872FD]" : "size-4"} />}
         {isWishlisted ? "Remove From Wishlist" : "Add To Wishlist"}
       </button>
-      <p className="text-center text-xs text-[#8C94A3]">{message || "Secure checkout is powered by Lumina payment services."}</p>
+      <p className="text-center text-xs text-[#8C94A3]">{message || "Secure checkout is powered by Cinx payment services."}</p>
     </div>
   );
 }

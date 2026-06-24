@@ -179,7 +179,7 @@ export default function LoginForm() {
       >
         <div className="space-y-2 text-center">
           <h1>Welcome back</h1>
-          <p>Sign in to continue learning on Lumina.</p>
+          <p>Sign in to continue learning on Cinx.</p>
         </div>
 
         {displayMessage && (

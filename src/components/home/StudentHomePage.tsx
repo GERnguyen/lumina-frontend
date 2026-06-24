@@ -173,9 +173,9 @@ export function StudentHomePage({
       }
     };
 
-    window.addEventListener("lumina:notifications-changed", handleSync);
+    window.addEventListener("cinx:notifications-changed", handleSync);
     return () => {
-      window.removeEventListener("lumina:notifications-changed", handleSync);
+      window.removeEventListener("cinx:notifications-changed", handleSync);
     };
   }, []);
 
@@ -410,7 +410,7 @@ function RoadmapStudio({
             ) : (
               <EmptyHomeState
                 title="No path yet"
-                copy="Enroll in your first course and Lumina will build this path from your activity."
+                copy="Enroll in your first course and Cinx will build this path from your activity."
                 href="/courses"
                 action="Start learning"
               />

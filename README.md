@@ -1,7 +1,7 @@
-# Lumina - Modern E-Learning & Course Authoring Platform
+# Cinx - Modern E-Learning & Course Authoring Platform
 
 <div align="center">
-  <img src="./public/icon.svg" alt="Lumina Logo" width="80" height="80" />
+  <img src="./public/icon.svg" alt="Cinx Logo" width="80" height="80" />
   <p><em>A state-of-the-art e-learning client application with advanced course authoring and interactive learning portals.</em></p>
 
   [![Next.js](https://img.shields.io/badge/Next.js-16.2.4-black?style=for-the-badge&logo=nextdotjs)](https://nextjs.org/)
@@ -14,7 +14,7 @@
 
 ## 📖 Overview
 
-**Lumina** is a premium, responsive Single Page Application (SPA) built using **Next.js 16 (App Router)** and **React 19**. It serves as the frontend layer for an enterprise-level Learning Management System (LMS), offering features for both student learning journeys and comprehensive instructor course administration.
+**Cinx** is a premium, responsive Single Page Application (SPA) built using **Next.js 16 (App Router)** and **React 19**. It serves as the frontend layer for an enterprise-level Learning Management System (LMS), offering features for both student learning journeys and comprehensive instructor course administration.
 
 ---
 
@@ -50,7 +50,7 @@
 <div align="center">
   <h3>Student Learning Portal</h3>
   <!-- TODO: Replace with student portal screenshot -->
-  <img src="https://via.placeholder.com/800x450.png?text=Lumina+Student+Learning+Space" alt="Student Portal Screenshot" width="80%" />
+  <img src="https://via.placeholder.com/800x450.png?text=Cinx+Student+Learning+Space" alt="Student Portal Screenshot" width="80%" />
 
   <h3>Instructor Curriculum Drag & Drop Editor</h3>
   <!-- TODO: Replace with curriculum builder screenshot -->
@@ -159,5 +159,5 @@ npm run swagger-generate
 ---
 
 <div align="center">
-  <p>© 2026 Lumina E-Learning. All rights reserved.</p>
+  <p>© 2026 Cinx E-Learning. All rights reserved.</p>
 </div>
