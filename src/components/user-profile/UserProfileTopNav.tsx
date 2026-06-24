@@ -1,10 +1,10 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Heart, Search, ShoppingCart } from "lucide-react";
-import { InstructorNotifications } from "@/components/instructor/InstructorNotifications";
+import { InstructorNotifications } from "@/components/instructor/notifications/InstructorNotifications";
 import { TopNavLinks } from "@/components/courses/TopNavLinks";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { getNavCounts } from "@/services/api/nav-api";
+import { UserProfileUserMenu } from "@/components/user-profile/UserProfileUserMenu";
 
 export async function UserProfileTopNav({ avatar }: { avatar: string }) {
   const counts = await getNavCounts();
@@ -34,8 +34,8 @@ export async function UserProfileTopNav({ avatar }: { avatar: string }) {
 
           <div className="flex items-center gap-6">
             <InstructorNotifications
-              emptyDescription="Learning updates, payment messages, Q&A replies, and certificates will appear here."
-              buttonClassName="hidden size-6 rounded-none bg-transparent text-[#1D2026] hover:bg-transparent hover:text-[#7872FD] md:flex"
+              emptyDescription="Learning updates, payment messages, and certificates will appear here."
+              buttonClassName="hidden text-[#1D2026] hover:text-[#7872FD] md:flex"
               iconClassName="size-6"
             />
             <Link href="/user-profile/wishlist" aria-label="Wishlist" className="relative hidden text-[#1D2026] transition hover:text-[#7872FD] md:block">
@@ -54,9 +54,7 @@ export async function UserProfileTopNav({ avatar }: { avatar: string }) {
                 </span>
               ) : null}
             </Link>
-            <Link href="/user-profile" aria-label="Open profile" className="relative size-12 overflow-hidden rounded-full bg-[#E9EAF0]">
-              <Image src={avatar} alt="User avatar" fill sizes="48px" className="object-cover" />
-            </Link>
+            <UserProfileUserMenu avatar={avatar} />
           </div>
         </div>
       </div>

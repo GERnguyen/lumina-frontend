@@ -10,6 +10,7 @@ import {
 } from "@/services/api/course-api";
 import {
   AssignmentApi,
+  CertificateApi,
   LearningProgressApi,
   VideoTrackingApi,
 } from "@/services/api/learning-api";
@@ -17,6 +18,7 @@ import type {
   CourseCurriculumResponse,
   CurriculumSectionResponse,
   LessonResponse,
+  LearningItemProgressResponse,
 } from "@/types";
 import type {
   LearningLesson,
@@ -48,19 +50,24 @@ function pickCurrentLesson(curriculum?: CourseCurriculumResponse, lessonId?: str
 function mapSections(
   curriculum: CourseCurriculumResponse | undefined,
   currentLessonId: string,
-  completedIds: Set<string>
+  progressMap: Map<string, LearningItemProgressResponse>
 ): LearningSection[] {
   return orderByIndex<CurriculumSectionResponse>(curriculum?.sections).map((section, index) => {
     const lessons = orderByIndex(section.lessons)
       .filter((lesson): lesson is LessonResponse & { id: string } => Boolean(lesson.id))
-      .map<LearningLesson>((lesson) => ({
-        id: lesson.id,
-        title: lesson.title || "Untitled lesson",
-        duration: lesson.duration,
-        type: normalizeType(lesson.lessonType),
-        isCompleted: completedIds.has(lesson.id),
-        isCurrent: lesson.id === currentLessonId,
-      }));
+      .map<LearningLesson>((lesson) => {
+        const itemProgress = progressMap.get(lesson.id);
+        return {
+          id: lesson.id,
+          title: lesson.title || "Untitled lesson",
+          duration: lesson.duration,
+          type: normalizeType(lesson.lessonType),
+          isCompleted: Boolean(itemProgress?.isCompleted),
+          isCurrent: lesson.id === currentLessonId,
+          isPassed: itemProgress?.isPassed,
+          score: itemProgress?.score,
+        };
+      });
 
     return {
       id: section.id || `section-${index}`,
@@ -149,6 +156,15 @@ export const getLearningPageData = cache(async (courseId: string, lessonId?: str
   const completedItems = progressPayload.data?.completedItems || completedIds.size;
   const progressPercent = totalItems ? Math.round((completedItems / totalItems) * 100) : 0;
   const content = await getLessonContent(courseId, currentLessonPayload as LessonResponse & { id: string });
+  const certificatePayload = course.hasCertificate
+    ? await CertificateApi.getMyCertificate(courseId).catch(() => undefined)
+    : undefined;
+
+  const progressMap = new Map<string, LearningItemProgressResponse>(
+    (itemProgressPayload.data || []).map((item) => [item.itemId || "", item])
+  );
+
+  const currentItemProgress = progressMap.get(currentLessonPayload.id);
 
   return {
     courseId,
@@ -156,6 +172,11 @@ export const getLearningPageData = cache(async (courseId: string, lessonId?: str
     courseDescription: course.description,
     coverUrl: getCourseImage(course),
     instructorName: getCourseInstructorName(course),
+    hasCertificate: Boolean(course.hasCertificate),
+    certificateTitle: course.certificateTitle,
+    certificate: certificatePayload?.data,
+    isCourseCompleted: Boolean(progressPayload.data?.isCompleted),
+    isCoursePassed: Boolean(progressPayload.data?.isPassed),
     progressPercent,
     completedItems,
     totalItems,
@@ -166,10 +187,12 @@ export const getLearningPageData = cache(async (courseId: string, lessonId?: str
       type: normalizeType(currentLessonPayload.lessonType),
       isCompleted: completedIds.has(currentLessonPayload.id),
       isCurrent: true,
+      isPassed: currentItemProgress?.isPassed,
+      score: currentItemProgress?.score,
     },
     previousLessonId: currentIndex > 0 ? lessons[currentIndex - 1]?.id : undefined,
     nextLessonId: currentIndex >= 0 ? lessons[currentIndex + 1]?.id : undefined,
-    sections: mapSections(curriculum, currentLessonPayload.id, completedIds),
+    sections: mapSections(curriculum, currentLessonPayload.id, progressMap),
     content,
   };
 });

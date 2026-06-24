@@ -84,7 +84,7 @@ const config: Config = {
       },
       fontFamily: {
         // Ghi đè font sans mặc định bằng Inter
-        sans: ["var(--font-inter)", "ui-sans-serif", "system-ui"],
+        sans: ["var(--font-noto-sans)", "ui-sans-serif", "system-ui"],
         logo: ["Fortusnova", "serif"], // Font CF Fortusnova định nghĩa ở globals.css
         general: ["General Sans", "sans-serif"], // Font General Sans định nghĩa ở globals.css
       },

@@ -1,9 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, CheckSquare, PlayCircle, Trophy, Users } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import type {
   ProfileCourseFilter,
   ProfileCourseItem,
@@ -17,10 +17,11 @@ import { UserProfileCourseFilters } from "./UserProfileCourseFilters";
 import { UserProfileLearningCard } from "./UserProfileLearningCard";
 import { UserProfilePurchaseHistoryList } from "./UserProfilePurchaseHistoryList";
 import { UserProfileSettingsForm } from "./UserProfileSettingsForm";
-import { UserProfileStatCard } from "./UserProfileStatCard";
 import { UserProfileWishlistTable } from "./UserProfileWishlistTable";
+import { UserProfileNotificationsList } from "./UserProfileNotificationsList";
+import { UserProfileCertificatesList } from "./UserProfileCertificatesList";
 
-type ProfileTabKey = "dashboard" | "courses" | "wishlist" | "purchase-history" | "settings";
+type ProfileTabKey = "courses" | "wishlist" | "purchase-history" | "settings" | "notifications" | "certificates";
 
 type UserProfileSpaShellProps = {
   user: UserProfileDashboardData["user"];
@@ -36,36 +37,37 @@ type UserProfileSpaShellProps = {
 };
 
 const tabs: Array<{ key: ProfileTabKey; label: string }> = [
-  { key: "dashboard", label: "Dashboard" },
   { key: "courses", label: "Courses" },
   { key: "wishlist", label: "Wishlist" },
   { key: "purchase-history", label: "Purchase History" },
   { key: "settings", label: "Settings" },
+  { key: "notifications", label: "Notifications" },
+  { key: "certificates", label: "Certificates" },
 ];
 
 export function UserProfileSpaShell({
   user,
-  totalEnrolled,
-  activeCourses,
-  completedCourses,
-  learningCourses,
   courses,
   courseFilters,
   wishlistItems,
   purchases,
   settings,
 }: UserProfileSpaShellProps) {
-  const [activeTab, setActiveTab] = useState<ProfileTabKey>("dashboard");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab") as ProfileTabKey | null;
 
-  const stats = useMemo(
-    () => [
-      { label: "Enrolled Courses", value: String(totalEnrolled), icon: PlayCircle, tone: "purple" as const },
-      { label: "Active Courses", value: String(activeCourses), icon: CheckSquare, tone: "purple" as const },
-      { label: "Completed Courses", value: String(completedCourses), icon: Trophy, tone: "green" as const },
-      { label: "Course Instructors", value: "0", icon: Users, tone: "orange" as const },
-    ],
-    [activeCourses, completedCourses, totalEnrolled],
-  );
+  const [activeTab, setActiveTab] = useState<ProfileTabKey>(() => {
+    if (tabParam && ["courses", "wishlist", "purchase-history", "settings", "notifications", "certificates"].includes(tabParam)) {
+      return tabParam;
+    }
+    return "courses";
+  });
+
+  useEffect(() => {
+    if (tabParam && ["courses", "wishlist", "purchase-history", "settings", "notifications", "certificates"].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
 
   return (
     <>
@@ -88,7 +90,7 @@ export function UserProfileSpaShell({
             <div className="flex overflow-x-auto px-4 sm:justify-center sm:gap-6 sm:px-0">
               {tabs.map((tab) => (
                 <button
-                  key={tab.key}
+                   key={tab.key}
                   type="button"
                   onClick={() => setActiveTab(tab.key)}
                   className={`relative flex h-[68px] min-w-[168px] items-center justify-center text-center text-base font-semibold transition ${
@@ -106,56 +108,14 @@ export function UserProfileSpaShell({
 
       <section className="px-6 py-10 lg:px-8">
         <div className="mx-auto max-w-[1320px] animate-[fadeIn_180ms_ease-out]">
-          {activeTab === "dashboard" ? (
-            <DashboardTab user={user} stats={stats} learningCourses={learningCourses} />
-          ) : null}
           {activeTab === "courses" ? <CoursesTab courses={courses} filters={courseFilters} /> : null}
           {activeTab === "wishlist" ? <WishlistTab items={wishlistItems} /> : null}
           {activeTab === "purchase-history" ? <PurchaseHistoryTab purchases={purchases} /> : null}
           {activeTab === "settings" ? <SettingsTab settings={settings} /> : null}
+          {activeTab === "notifications" ? <UserProfileNotificationsList /> : null}
+          {activeTab === "certificates" ? <UserProfileCertificatesList courses={courses} /> : null}
         </div>
       </section>
-    </>
-  );
-}
-
-function DashboardTab({
-  user,
-  stats,
-  learningCourses,
-}: {
-  user: UserProfileDashboardData["user"];
-  stats: Array<{ label: string; value: string; icon: LucideIcon; tone: "purple" | "green" | "orange" }>;
-  learningCourses: UserProfileDashboardData["learningCourses"];
-}) {
-  return (
-    <>
-      <h2 className="text-2xl font-semibold tracking-normal text-[#1D2026]">Dashboard</h2>
-      <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat) => (
-          <UserProfileStatCard key={stat.label} stat={stat} />
-        ))}
-      </div>
-
-      <div className="mt-11 flex items-center justify-between gap-4">
-        <h2 className="text-2xl font-semibold tracking-normal text-[#1D2026]">
-          Let’s start learning, {user.name.split(" ")[0]}
-        </h2>
-        <div className="flex gap-2">
-          <button type="button" aria-label="Previous course" className="flex size-10 items-center justify-center rounded-full bg-[#EBEBFF] text-[#564FFD] transition hover:bg-[#DEDDFF]">
-            <ArrowLeft className="size-5" />
-          </button>
-          <button type="button" aria-label="Next course" className="flex size-10 items-center justify-center rounded-full bg-[#EBEBFF] text-[#564FFD] transition hover:bg-[#DEDDFF]">
-            <ArrowRight className="size-5" />
-          </button>
-        </div>
-      </div>
-
-      <div className="mt-5 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        {learningCourses.map((course) => (
-          <UserProfileLearningCard key={course.id} course={course} />
-        ))}
-      </div>
     </>
   );
 }

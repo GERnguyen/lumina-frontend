@@ -1,9 +1,9 @@
 "use server";
 
-import { AssignmentApi, DailyGoalApi, LearningProgressApi, QuizSessionApi, VideoNoteApi, VideoTrackingApi } from "@/services/api/learning-api";
+import { AssignmentApi, CertificateApi, DailyGoalApi, LearningProgressApi, QuizSessionApi, VideoNoteApi, VideoTrackingApi } from "@/services/api/learning-api";
 import { CourseApi, VideoQuestionApi } from "@/services/api/course-api";
 import { EnrollmentApi } from "@/services/api/enrollment-api";
-import type { CreateAssignmentSubmissionRequest, CreateVideoNoteRequest, ChooseQuizAnswerRequest, SetDailyGoalRequest, SubmitQuizSessionRequest, SubmitVideoQuestionRequest, TrackingVideoLessonRequest, UpdateVideoNoteRequest } from "@/types";
+import type { CreateAssignmentSubmissionRequest, CreateVideoNoteRequest, ChooseQuizAnswerRequest, SetDailyGoalRequest, SubmitQuizSessionRequest, SubmitVideoQuestionRequest, TrackingVideoLessonRequest, UpdateVideoNoteRequest, GradeEssayRequest } from "@/types";
 import { revalidatePath } from "next/cache";
 
 export async function setDailyGoalAction(body: SetDailyGoalRequest) {
@@ -59,6 +59,15 @@ export async function getCourseProgressByCourseIdsAction(courseIds: string) {
   try {
     const res = await LearningProgressApi.getCourseProgressByCourseIds(courseIds);
     return { success: true, data: res.data || [] };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to fetch course progress" };
+  }
+}
+
+export async function getMyCourseProgressAction(courseId: string) {
+  try {
+    const res = await LearningProgressApi.getMyCourseProgress(courseId);
+    return { success: true, data: res.data };
   } catch (error: any) {
     return { success: false, error: error?.message || "Failed to fetch course progress" };
   }
@@ -158,6 +167,25 @@ export async function submitAssignmentAction(assignmentId: string, body: CreateA
   }
 }
 
+export async function getAssignmentSubmissionAction(assignmentId: string) {
+  try {
+    const res = await AssignmentApi.getAssignmentSubmission({ assignmentId });
+    return { success: true, data: res.data };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to load assignment submission" };
+  }
+}
+
+export async function applyForCertificateAction(courseId: string) {
+  try {
+    const res = await CertificateApi.applyForCertificate(courseId);
+    revalidatePath(`/learning/${courseId}`);
+    return { success: true, data: res.data };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to request certificate" };
+  }
+}
+
 export async function getVideoNotesByLessonAction(courseId: string, lessonId: string) {
   try {
     const res = await VideoNoteApi.getNotesByLesson(courseId, lessonId);
@@ -215,6 +243,7 @@ export async function getVideoQuestionSubmissionsAction(courseId: string, lesson
 export async function trackVideoProgressAction(courseId: string, lessonId: string, body: TrackingVideoLessonRequest) {
   try {
     const res = await VideoTrackingApi.trackVideoProgress(courseId, lessonId, body);
+    revalidatePath(`/learning/${courseId}`);
     return { success: true, data: res.data };
   } catch (error: any) {
     return { success: false, error: error?.message || "Failed to track video progress" };
@@ -227,5 +256,15 @@ export async function submitVideoQuestionAnswerAction(courseId: string, lessonId
     return { success: true, data: res.data };
   } catch (error: any) {
     return { success: false, error: error?.message || "Incorrect answer. Please try again." };
+  }
+}
+
+export async function gradeQuizEssayAction(sessionId: string, body: GradeEssayRequest) {
+  try {
+    const res = await QuizSessionApi.gradeEssay(sessionId, body);
+    revalidatePath("/learning");
+    return { success: true, data: res.data };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to grade essay" };
   }
 }

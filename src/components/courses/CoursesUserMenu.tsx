@@ -3,26 +3,25 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogOut, UserRound } from "lucide-react";
+import { LogOut, UserRound, Bell } from "lucide-react";
 import { useState } from "react";
 import type { UserDto } from "@/types";
 import { clearAuthSession } from "@/lib/auth-session";
 import { useAuthStore } from "@/stores/auth-store";
-
-const fallbackAvatar = "/user-profile/avatar.png";
+import { getProfileAvatar } from "@/lib/format";
 
 export function CoursesUserMenu({ user }: { user: UserDto }) {
   const router = useRouter();
   const clearSession = useAuthStore((state) => state.clearSession);
   const [isOpen, setIsOpen] = useState(false);
-  const avatar = user.avatarUrl || fallbackAvatar;
+  const avatar = getProfileAvatar(user, "Lumina learner");
   const name = user.name || "Lumina learner";
 
   async function handleLogout() {
     await clearAuthSession();
     clearSession();
     setIsOpen(false);
-    router.push("/login");
+    router.push("/login?logout=true");
     router.refresh();
   }
 
@@ -52,6 +51,14 @@ export function CoursesUserMenu({ user }: { user: UserDto }) {
           >
             <UserRound className="size-4" />
             Profile
+          </Link>
+          <Link
+            href="/user-profile?tab=notifications"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-[#4E5566] transition hover:bg-[#F5F7FA] hover:text-[#7872FD]"
+          >
+            <Bell className="size-4" />
+            Notifications
           </Link>
           <button
             type="button"

@@ -5,10 +5,21 @@
 
 // ── Domain types ───────────────────────────────────────────────
 
+export interface PaginatedMetadata {
+  page?: number;
+  limit?: number;
+  totalElements?: number;
+  totalPages?: number;
+}
+
 export interface UserNotificationResponse {
   id?: string;
   userId?: string;
   title?: string;
   message?: string;
+  type?: string;
+  referenceId?: string;
+  actionUrl?: string;
+  metadata?: Record<string, Record<string, unknown>>;
   isRead?: boolean;
 }

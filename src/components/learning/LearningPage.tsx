@@ -1,24 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Clock, FileText, Menu, PanelRightOpen, PlayCircle, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { ArrowLeft, ArrowRight, AlertCircle, Award, CheckCircle2, Clock, FileText, Loader2, Menu, PanelRightOpen, PlayCircle, X } from "lucide-react";
 import type { LearningPageData } from "@/types/learning-page";
+import type { CertificateRequestResponse } from "@/types/learning";
 import { formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { markItemAsCompleteAction } from "@/services/actions/learning";
+import { applyForCertificateAction, markItemAsCompleteAction } from "@/services/actions/learning";
 import { API_BASE_URL } from "@/lib/api-base";
 import { LearningArticleLesson } from "./LearningArticleLesson";
 import { LearningAssignmentLesson } from "./LearningAssignmentLesson";
 import { LearningCurriculumDrawer } from "./LearningCurriculumDrawer";
 import { LearningQuizLesson } from "./LearningQuizLesson";
 import { LearningVideoLesson } from "./LearningVideoLesson";
+import { LearningQnAPanel } from "./LearningQnAPanel";
 
 type LearningPageProps = {
   data: LearningPageData;
 };
 
+function completionModalStorageKey(courseId: string) {
+  return `lumina:completion-modal-shown:${courseId}`;
+}
+
 export function LearningPage({ data }: LearningPageProps) {
+  const router = useRouter();
+  // Track which lesson IDs have already been persisted to server this session,
+  // to avoid duplicate calls when video fires onComplete multiple times.
+  const serverPersistedRef = useRef<Set<string>>(new Set());
   const [completedIds, setCompletedIds] = useState(() => {
     const ids = new Set<string>();
     data.sections.forEach((section) => {
@@ -30,6 +41,21 @@ export function LearningPage({ data }: LearningPageProps) {
   });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [contentsOpen, setContentsOpen] = useState(true);
+  const [certificate, setCertificate] = useState<CertificateRequestResponse | undefined>(data.certificate);
+  const [certAlert, setCertAlert] = useState<{ type: "error" | "success"; text: string } | null>(null);
+  const [completionModalOpen, setCompletionModalOpen] = useState(false);
+  const [isCertificatePending, startCertificateTransition] = useTransition();
+
+  // Sync completedIds from server data every time data.sections changes (e.g. after router.refresh())
+  useEffect(() => {
+    const serverIds = new Set<string>();
+    data.sections.forEach((section) => {
+      section.lessons.forEach((lesson) => {
+        if (lesson.isCompleted) serverIds.add(lesson.id);
+      });
+    });
+    setCompletedIds(serverIds);
+  }, [data.sections]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -57,20 +83,80 @@ export function LearningPage({ data }: LearningPageProps) {
       })),
     [completedIds, data.sections]
   );
+  const displayedLessonTotal = useMemo(() => sections.reduce((total, section) => total + section.lessons.length, 0), [sections]);
+  const displayedCompletedTotal = useMemo(() => sections.reduce((total, section) => total + section.completedCount, 0), [sections]);
+  // displayedCourseComplete: local/optimistic UI only (sidebar checkmarks, progress bar)
+  const displayedCourseComplete = displayedLessonTotal > 0 && displayedCompletedTotal >= displayedLessonTotal;
+  // serverCourseComplete: authoritative BE value — used for cert gating
+  const serverCourseComplete = data.progressPercent >= 100;
+  const canRequestCertificate = Boolean(data.hasCertificate && serverCourseComplete && !certificate?.id);
 
-  function handleComplete(lessonId: string) {
-    setCompletedIds((current) => {
-      if (current.has(lessonId)) return current;
-      const next = new Set(current);
-      next.add(lessonId);
-      return next;
-    });
+  useEffect(() => {
+    setCertificate(data.certificate);
+  }, [data.certificate]);
+
+  useEffect(() => {
+    if (!canRequestCertificate) return;
+    try {
+      const key = completionModalStorageKey(data.courseId);
+      if (window.localStorage.getItem(key)) return;
+      window.localStorage.setItem(key, "1");
+      setCompletionModalOpen(true);
+    } catch {
+      setCompletionModalOpen(true);
+    }
+  }, [canRequestCertificate, data.courseId]);
+
+  async function handleComplete(lessonId: string) {
+    const lesson = data.sections.flatMap((section) => section.lessons).find((item) => item.id === lessonId);
+    if (lesson?.type === "ASSIGNMENT" || lesson?.type === "VIDEO") {
+      router.refresh();
+      return;
+    }
+
+    // Persist to server (only once per lesson per session, even if video fires multiple times)
+    if (!serverPersistedRef.current.has(lessonId)) {
+      serverPersistedRef.current.add(lessonId);
+      const res = await markItemAsCompleteAction(lessonId);
+      if (!res.success) {
+        serverPersistedRef.current.delete(lessonId);
+      }
+    }
+
+    // Refresh server component — completedIds will sync from fresh data.sections
+    router.refresh();
   }
 
   async function markCurrentComplete() {
-    handleComplete(data.currentLesson.id);
-    await markItemAsCompleteAction(data.currentLesson.id);
+    await handleComplete(data.currentLesson.id);
   }
+
+  function requestCertificate() {
+    if (!canRequestCertificate || isCertificatePending) return;
+    setCertAlert(null);
+    startCertificateTransition(async () => {
+      const payload = await applyForCertificateAction(data.courseId);
+      if (!payload.success) {
+        setCertAlert({ type: "error", text: payload.error || "Could not request certificate yet. Make sure all lessons are completed and assignments are graded." });
+        router.refresh();
+        return;
+      }
+
+      setCertificate(payload.data);
+      setCertAlert({ type: "success", text: "Certificate request sent successfully! Your instructor can now review it." });
+      setCompletionModalOpen(false);
+    });
+  }
+
+  const certificateButtonLabel = (() => {
+    if (!data.hasCertificate) return "Certificate unavailable";
+    if (certificate?.status === "APPROVED") return "Certificate issued";
+    if (certificate?.status === "PENDING") return "Certificate requested";
+    if (certificate?.status === "REJECTED") return "Certificate rejected";
+    if (!serverCourseComplete) return "Complete course to request";
+    return "Request Certificate";
+  })();
+  const certificateButtonDisabled = !canRequestCertificate || isCertificatePending;
 
   const currentContent = data.content;
   const stats = [
@@ -120,9 +206,38 @@ export function LearningPage({ data }: LearningPageProps) {
               {contentsOpen ? <ArrowRight className="size-4" /> : <PanelRightOpen className="size-4" />}
               {contentsOpen ? "Hide Contents" : "Show Contents"}
             </button>
-            <button type="button" onClick={markCurrentComplete} className="h-12 rounded-[18px] bg-white px-6 text-sm font-semibold text-[#7872FD]">
-              Mark Complete
-            </button>
+            {/* Mark Complete button: only for ARTICLE lessons (manual completion) */}
+            {data.currentLesson.type === "ARTICLE" ? (
+              <button
+                type="button"
+                onClick={markCurrentComplete}
+                disabled={completedIds.has(data.currentLesson.id)}
+                className={cn(
+                  "h-12 rounded-[18px] px-6 text-sm font-semibold transition",
+                  completedIds.has(data.currentLesson.id)
+                    ? "cursor-not-allowed bg-[#F5F7FA] text-[#8C94A3]"
+                    : "bg-white text-[#7872FD] hover:bg-[#EBEBFF]"
+                )}
+              >
+                {completedIds.has(data.currentLesson.id) ? "Completed ✓" : "Mark Complete"}
+              </button>
+            ) : null}
+            {data.hasCertificate ? (
+              <button
+                type="button"
+                onClick={requestCertificate}
+                disabled={certificateButtonDisabled}
+                className={cn(
+                  "inline-flex h-12 items-center gap-2 rounded-[18px] px-5 text-sm font-semibold transition",
+                  certificateButtonDisabled
+                    ? "cursor-not-allowed bg-[#F5F7FA] text-[#8C94A3]"
+                    : "bg-[#EBEBFF] text-[#564FFD] hover:-translate-y-0.5 hover:bg-[#DEDFFF]",
+                )}
+              >
+                {isCertificatePending ? <Loader2 className="size-4 animate-spin" /> : <Award className="size-4" />}
+                {certificateButtonLabel}
+              </button>
+            ) : null}
             {data.nextLessonId ? (
               <Link href={`/learning/${data.courseId}?lessonId=${data.nextLessonId}`} className="inline-flex h-12 items-center gap-2 rounded-[18px] bg-[#7872FD] px-6 text-sm font-semibold text-white">
                 Next Lecture
@@ -150,7 +265,12 @@ export function LearningPage({ data }: LearningPageProps) {
               ) : null}
 
               {currentContent.type === "ARTICLE" ? (
-                <LearningArticleLesson lessonId={data.currentLesson.id} article={currentContent.article} onComplete={handleComplete} />
+                <LearningArticleLesson
+                  lessonId={data.currentLesson.id}
+                  article={currentContent.article}
+                  onComplete={handleComplete}
+                  isCompleted={completedIds.has(data.currentLesson.id)}
+                />
               ) : null}
 
               {currentContent.type === "QUIZ" ? (
@@ -183,6 +303,10 @@ export function LearningPage({ data }: LearningPageProps) {
                   </span>
                 </div>
               </div>
+
+              <LearningQnAPanel courseId={data.courseId} lessonId={data.currentLesson.id} />
+
+
 
             </div>
           </main>
@@ -228,6 +352,80 @@ export function LearningPage({ data }: LearningPageProps) {
               <X className="size-5" />
             </button>
             <LearningCurriculumDrawer courseId={data.courseId} sections={sections} />
+          </div>
+        </div>
+      ) : null}
+
+      {completionModalOpen ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#111827]/55 px-5 backdrop-blur-sm">
+          <div className="w-full max-w-[520px] rounded-[28px] bg-white p-7 shadow-[0_30px_90px_rgba(17,24,39,0.28)]">
+            <div className="flex items-start justify-between gap-4">
+              <div className="inline-flex size-14 items-center justify-center rounded-[20px] bg-[#EBEBFF] text-[#564FFD]">
+                <CheckCircle2 className="size-7" />
+              </div>
+              <button
+                type="button"
+                onClick={() => setCompletionModalOpen(false)}
+                className="inline-flex size-10 items-center justify-center rounded-full bg-[#F5F7FA] text-[#6E7485] transition hover:bg-[#EBEBFF] hover:text-[#564FFD]"
+                aria-label="Close completion dialog"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+            <h2 className="mt-6 text-3xl font-bold leading-tight text-[#1D2026]">Course completed</h2>
+            <p className="mt-3 text-sm font-medium leading-6 text-[#6E7485]">
+              Nice work. You finished every lesson in {data.courseTitle}. You can request your certificate now, or come back to it later from this page.
+            </p>
+
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setCompletionModalOpen(false)}
+                className="h-12 rounded-full border border-[#E9EAF0] px-6 text-sm font-bold text-[#4E5566] transition hover:border-[#D8D6FF] hover:bg-[#F8F8FF]"
+              >
+                Later
+              </button>
+              <button
+                type="button"
+                onClick={requestCertificate}
+                disabled={certificateButtonDisabled}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#564FFD] px-6 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-[#4338CA] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isCertificatePending ? <Loader2 className="size-4 animate-spin" /> : <Award className="size-4" />}
+                Request Certificate
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {/* Certificate alert popup */}
+      {certAlert ? (
+        <div className="fixed bottom-8 left-1/2 z-[100] w-full max-w-[480px] -translate-x-1/2 px-4">
+          <div
+            className={cn(
+              "flex items-start gap-4 rounded-[18px] px-5 py-4 shadow-[0_20px_60px_rgba(17,24,39,0.22)] ring-1",
+              certAlert.type === "error"
+                ? "bg-white ring-[#FECACA] text-[#1D2026]"
+                : "bg-white ring-[#BBF7D0] text-[#1D2026]",
+            )}
+          >
+            <div
+              className={cn(
+                "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full",
+                certAlert.type === "error" ? "bg-red-50 text-red-500" : "bg-green-50 text-green-500",
+              )}
+            >
+              {certAlert.type === "error" ? <AlertCircle className="size-4" /> : <CheckCircle2 className="size-4" />}
+            </div>
+            <p className="flex-1 text-sm font-medium leading-6">{certAlert.text}</p>
+            <button
+              type="button"
+              onClick={() => setCertAlert(null)}
+              aria-label="Dismiss"
+              className="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-full text-[#8C94A3] transition hover:bg-[#F5F7FA] hover:text-[#1D2026]"
+            >
+              <X className="size-4" />
+            </button>
           </div>
         </div>
       ) : null}

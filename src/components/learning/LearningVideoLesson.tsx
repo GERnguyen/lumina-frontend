@@ -2,7 +2,7 @@
 
 import Hls from "hls.js";
 import Image from "next/image";
-import { AlertCircle, CheckCircle2, Loader2, Plus, PlayCircle, Trash2 } from "lucide-react";
+import { AlertCircle, Loader2, Maximize2, Minimize2, Pause, Play, PlayCircle, Plus, Subtitles, Trash2, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { VideoLessonResponse, VideoQuestionResponse } from "@/types/course";
 import type { VideoNoteDto } from "@/types/learning";
@@ -12,11 +12,11 @@ import {
   getVideoNotesByLessonAction,
   getVideoQuestionsAction,
   getVideoQuestionSubmissionsAction,
-  markItemAsCompleteAction,
   submitVideoQuestionAnswerAction,
   trackVideoProgressAction,
   updateVideoNoteAction,
 } from "@/services/actions/learning";
+import { VideoLessonApi } from "@/services/api/course-api";
 import { cn } from "@/lib/utils";
 
 type HlsQualityLevel = {
@@ -25,6 +25,20 @@ type HlsQualityLevel = {
   height: number;
 };
 
+function formatVideoTime(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "0:00";
+  const totalSeconds = Math.floor(value);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
 type LearningVideoLessonProps = {
   courseId: string;
   lessonId: string;
@@ -32,7 +46,7 @@ type LearningVideoLessonProps = {
   poster?: string;
   video?: VideoLessonResponse;
   resumePosition?: number;
-  onComplete: (lessonId: string) => void;
+  onComplete: (lessonId: string) => Promise<void> | void;
 };
 
 export function LearningVideoLesson({
@@ -44,8 +58,11 @@ export function LearningVideoLesson({
   resumePosition,
   onComplete,
 }: LearningVideoLessonProps) {
+  const playerShellRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastTrackedSecond = useRef(0);
+  const passedQuestionIdsThisRunRef = useRef<Set<string>>(new Set());
+  const hasMarkedNearCompleteRef = useRef(false);
   const [error, setError] = useState<string>();
   const [questions, setQuestions] = useState<VideoQuestionResponse[]>([]);
   const [answeredQuestionIds, setAnsweredQuestionIds] = useState<Set<string>>(new Set());
@@ -61,7 +78,95 @@ export function LearningVideoLesson({
   const [isCreatingNote, setIsCreatingNote] = useState(false);
   const [qualityLevels, setQualityLevels] = useState<HlsQualityLevel[]>([]);
   const [selectedQuality, setSelectedQuality] = useState("-1");
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const hlsRef = useRef<Hls | null>(null);
+  const [activeSubtitleLang, setActiveSubtitleLang] = useState<string | null>(null);
+  const [showSubtitleMenu, setShowSubtitleMenu] = useState(false);
+  const subtitleMenuRef = useRef<HTMLDivElement>(null);
+
+  const [videoData, setVideoData] = useState<VideoLessonResponse | undefined>(video);
+
+  useEffect(() => {
+    setVideoData(video);
+  }, [video]);
+
+  const readySubtitles = videoData?.subtitles?.filter((track) => track.fileUrl && track.status === "READY") || [];
+
+  // Set initial subtitle preference
+  useEffect(() => {
+    if (typeof window !== "undefined" && readySubtitles.length > 0) {
+      const stored = localStorage.getItem("lumina:preferred-subtitle-language");
+      if (stored && readySubtitles.some((s) => s.languageCode === stored)) {
+        setActiveSubtitleLang(stored);
+      } else {
+        const defaultTrack = readySubtitles.find((s) => s.isDefault);
+        if (defaultTrack) {
+          setActiveSubtitleLang(defaultTrack.languageCode || null);
+        } else {
+          setActiveSubtitleLang(null);
+        }
+      }
+    } else {
+      setActiveSubtitleLang(null);
+    }
+  }, [lessonId, readySubtitles.length]);
+
+  // Sync selected subtitle track with the video's actual text tracks
+  useEffect(() => {
+    const player = videoRef.current;
+    if (!player) return;
+
+    const syncTracks = () => {
+      const tracks = player.textTracks;
+      for (let i = 0; i < tracks.length; i++) {
+        const track = tracks[i];
+        if (activeSubtitleLang && track.language === activeSubtitleLang) {
+          track.mode = "showing";
+        } else {
+          track.mode = "disabled";
+        }
+      }
+    };
+
+    syncTracks();
+
+    const tracksList = player.textTracks;
+    tracksList.addEventListener("change", syncTracks);
+    tracksList.addEventListener("addtrack", syncTracks);
+
+    return () => {
+      tracksList.removeEventListener("change", syncTracks);
+      tracksList.removeEventListener("addtrack", syncTracks);
+    };
+  }, [activeSubtitleLang, readySubtitles.length]);
+
+  // Handle clicking outside to close subtitles menu
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (subtitleMenuRef.current && !subtitleMenuRef.current.contains(event.target as Node)) {
+        setShowSubtitleMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleSelectSubtitle = (langCode: string | null) => {
+    setActiveSubtitleLang(langCode);
+    if (langCode) {
+      localStorage.setItem("lumina:preferred-subtitle-language", langCode);
+    } else {
+      localStorage.removeItem("lumina:preferred-subtitle-language");
+    }
+    setShowSubtitleMenu(false);
+  };
 
   useEffect(() => {
     const player = videoRef.current;
@@ -127,18 +232,32 @@ export function LearningVideoLesson({
     }
   }
 
+  function syncVideoDuration() {
+    const player = videoRef.current;
+    if (!player || !Number.isFinite(player.duration)) return;
+    setDuration(player.duration);
+    setCurrentTime(player.currentTime || 0);
+  }
+
   useEffect(() => {
     let cancelled = false;
+    passedQuestionIdsThisRunRef.current = new Set();
+    hasMarkedNearCompleteRef.current = false;
+    lastTrackedSecond.current = 0;
 
     async function loadVideoLearningData() {
-      const [questionsResponse, submissionsResponse, notesResponse] = await Promise.all([
+      const [questionsResponse, submissionsResponse, notesResponse, videoResponse] = await Promise.all([
         getVideoQuestionsAction(courseId, lessonId),
         getVideoQuestionSubmissionsAction(courseId, lessonId),
         getVideoNotesByLessonAction(courseId, lessonId),
+        VideoLessonApi.getVideoByLessonId(courseId, lessonId).catch(() => undefined),
       ]);
 
       if (cancelled) return;
 
+      if (videoResponse?.success && videoResponse.data) {
+        setVideoData(videoResponse.data);
+      }
       if (questionsResponse?.success) {
         setQuestions((questionsResponse.data || []).sort((a: VideoQuestionResponse, b: VideoQuestionResponse) => (a.timestampSeconds || 0) - (b.timestampSeconds || 0)));
       }
@@ -157,37 +276,122 @@ export function LearningVideoLesson({
   }, [courseId, lessonId]);
 
   useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === playerShellRef.current);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  useEffect(() => {
     const player = videoRef.current;
-    if (!player || !resumePosition || resumePosition <= 0) return;
+    let initialPosition = resumePosition || 0;
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(`lumina:video-progress:${courseId}:${lessonId}`);
+        if (stored) {
+          const parsed = parseInt(stored, 10);
+          if (!isNaN(parsed) && parsed > 0) {
+            initialPosition = parsed;
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    if (!player || initialPosition <= 0) return;
 
     const handleLoaded = () => {
-      player.currentTime = resumePosition;
+      player.currentTime = initialPosition;
+      setCurrentTime(initialPosition);
+      lastTrackedSecond.current = initialPosition;
     };
+
+    if (player.readyState >= 1) {
+      handleLoaded();
+      return;
+    }
 
     player.addEventListener("loadedmetadata", handleLoaded, { once: true });
     return () => player.removeEventListener("loadedmetadata", handleLoaded);
-  }, [resumePosition]);
+  }, [courseId, lessonId, resumePosition]);
 
-  function trackProgress() {
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        trackProgress(true);
+      }
+    };
+
+    window.addEventListener("pagehide", handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.removeEventListener("pagehide", handleVisibilityChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [courseId, lessonId]);
+
+  async function trackProgress(force = false) {
     const player = videoRef.current;
     if (!player) return;
 
     const currentPosition = Math.floor(player.currentTime);
-    if (player.paused || currentPosition < 1 || currentPosition - lastTrackedSecond.current < 10) return;
+    if (currentPosition < 1) return;
+    if (!force && (player.paused || currentPosition - lastTrackedSecond.current < 10)) return;
 
     lastTrackedSecond.current = currentPosition;
-    void trackVideoProgressAction(courseId, lessonId, { currentPosition });
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(`lumina:video-progress:${courseId}:${lessonId}`, String(currentPosition));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    await trackVideoProgressAction(courseId, lessonId, { currentPosition });
   }
 
   function handleTimeUpdate() {
-    trackProgress();
     const player = videoRef.current;
+    if (player) setCurrentTime(player.currentTime);
+    trackProgress();
     if (!player || activeQuestion) return;
 
     const currentPosition = Math.floor(player.currentTime);
+    if (!hasMarkedNearCompleteRef.current && duration > 0 && currentPosition >= Math.floor(duration * 0.95)) {
+      // Don't fire onComplete yet if there are still unanswered questions remaining
+      // at or after the current position (they need to be shown first).
+      const hasPendingQuestionsAhead = questions.some(
+        (q) =>
+          q.id &&
+          typeof q.timestampSeconds === "number" &&
+          q.timestampSeconds >= currentPosition &&
+          !passedQuestionIdsThisRunRef.current.has(q.id),
+      );
+      if (!hasPendingQuestionsAhead) {
+        hasMarkedNearCompleteRef.current = true;
+        trackProgress(true).then(() => {
+          onComplete(lessonId);
+        });
+      }
+    }
+
+    const passedIds = passedQuestionIdsThisRunRef.current;
+    let changedPassedIds = false;
+    questions.forEach((question) => {
+      if (!question.id || typeof question.timestampSeconds !== "number") return;
+      if (currentPosition <= question.timestampSeconds - 1 && passedIds.delete(question.id)) {
+        changedPassedIds = true;
+      }
+    });
+    if (changedPassedIds) {
+      passedQuestionIdsThisRunRef.current = new Set(passedIds);
+    }
+
     const nextQuestion = questions.find((question) => {
       const timestamp = question.timestampSeconds ?? -1;
-      return question.id && timestamp >= 0 && currentPosition >= timestamp && !answeredQuestionIds.has(question.id);
+      return question.id && timestamp >= 0 && currentPosition >= timestamp && !passedQuestionIdsThisRunRef.current.has(question.id);
     });
 
     if (!nextQuestion) return;
@@ -195,6 +399,108 @@ export function LearningVideoLesson({
     setActiveQuestion(nextQuestion);
     setSelectedAnswers([]);
     setQuestionMessage(undefined);
+  }
+
+  function handleSeeked() {
+    const player = videoRef.current;
+    if (!player) return;
+    setCurrentTime(player.currentTime);
+    trackProgress(true);
+    handleTimeUpdate();
+  }
+
+  function jumpToCheckpoint(timestamp?: number) {
+    const player = videoRef.current;
+    if (!player || typeof timestamp !== "number") return;
+    player.currentTime = Math.max(0, timestamp - 1);
+    player.play().catch(() => undefined);
+  }
+
+  function seekFromPointer(event: React.PointerEvent<HTMLDivElement>) {
+    const player = videoRef.current;
+    if (!player || duration <= 0) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+    player.currentTime = ratio * duration;
+    setCurrentTime(player.currentTime);
+  }
+
+  function seekBy(deltaSeconds: number) {
+    const player = videoRef.current;
+    if (!player || activeQuestion) return;
+    player.currentTime = Math.min(duration || Number.MAX_SAFE_INTEGER, Math.max(0, player.currentTime + deltaSeconds));
+    setCurrentTime(player.currentTime);
+    handleTimeUpdate();
+  }
+
+  function togglePlayback() {
+    const player = videoRef.current;
+    if (!player || activeQuestion) return;
+    if (player.paused) {
+      player.play().catch(() => undefined);
+    } else {
+      player.pause();
+    }
+  }
+
+  function toggleMute() {
+    const player = videoRef.current;
+    if (!player) return;
+    player.muted = !player.muted;
+    setIsMuted(player.muted);
+  }
+
+  function changeVolume(value: number) {
+    const player = videoRef.current;
+    if (!player) return;
+    player.volume = value;
+    player.muted = value === 0;
+    setVolume(value);
+    setIsMuted(player.muted);
+  }
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => undefined);
+      return;
+    }
+
+    playerShellRef.current?.requestFullscreen?.().catch(() => undefined);
+  }
+
+  function handlePlayerKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    const target = event.target as HTMLElement | null;
+    if (target && ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName)) return;
+    if (activeQuestion) return;
+
+    if (event.code === "Space" || event.key === "k" || event.key === "K") {
+      event.preventDefault();
+      togglePlayback();
+      return;
+    }
+
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      seekBy(-10);
+      return;
+    }
+
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      seekBy(10);
+      return;
+    }
+
+    if (event.key === "m" || event.key === "M") {
+      event.preventDefault();
+      toggleMute();
+      return;
+    }
+
+    if (event.key === "f" || event.key === "F") {
+      event.preventDefault();
+      toggleFullscreen();
+    }
   }
 
   function toggleVideoAnswer(optionId: string) {
@@ -226,6 +532,7 @@ export function LearningVideoLesson({
     }
 
     setAnsweredQuestionIds((current) => new Set(current).add(activeQuestion.id!));
+    passedQuestionIdsThisRunRef.current = new Set(passedQuestionIdsThisRunRef.current).add(activeQuestion.id!);
     setActiveQuestion(undefined);
     setSelectedAnswers([]);
     videoRef.current?.play().catch(() => undefined);
@@ -262,25 +569,45 @@ export function LearningVideoLesson({
   }
 
   async function handleEnded() {
+    await trackProgress(true);
     onComplete(lessonId);
-    await markItemAsCompleteAction(lessonId);
   }
 
   return (
     <div className="overflow-hidden rounded-[18px] bg-[#111827] shadow-[0_24px_70px_rgba(29,32,38,0.16)]">
-      {video?.videoUrl ? (
-        <div className="relative bg-black">
+      {videoData?.videoUrl ? (
+        <div
+          ref={playerShellRef}
+          tabIndex={0}
+          onKeyDown={handlePlayerKeyDown}
+          onPointerDown={(event) => {
+            const target = event.target as HTMLElement | null;
+            if (target && ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName)) return;
+            playerShellRef.current?.focus();
+          }}
+          className="relative bg-black outline-none"
+          aria-label="Video player"
+        >
           <video
             ref={videoRef}
             className="aspect-video w-full bg-black object-contain"
-            controls
             playsInline
             preload="metadata"
+            crossOrigin="anonymous"
             poster={poster}
+            onLoadedMetadata={syncVideoDuration}
+            onDurationChange={syncVideoDuration}
             onTimeUpdate={handleTimeUpdate}
+            onSeeked={handleSeeked}
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => {
+              setIsPlaying(false);
+              trackProgress(true);
+            }}
+            onClick={togglePlayback}
             onEnded={handleEnded}
           >
-            {video.subtitles
+            {videoData?.subtitles
               ?.filter((track) => track.fileUrl && track.status === "READY")
               .map((track) => (
                 <track
@@ -310,6 +637,165 @@ export function LearningVideoLesson({
               </select>
             </label>
           ) : null}
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-5 pb-4 pt-12">
+            <div
+              role="slider"
+              aria-label="Video progress"
+              aria-valuemin={0}
+              aria-valuemax={Math.floor(duration || 0)}
+              aria-valuenow={Math.floor(currentTime || 0)}
+              tabIndex={0}
+              onPointerDown={seekFromPointer}
+              className="relative h-5 cursor-pointer touch-none"
+            >
+              <div className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-white/25">
+                <div className="h-full rounded-full bg-[#7872FD]" style={{ width: `${duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0}%` }} />
+              </div>
+              {duration > 0 && questions.length ? questions
+                .filter((question) => typeof question.timestampSeconds === "number")
+                .map((question, index) => {
+                  const timestamp = Math.max(0, question.timestampSeconds || 0);
+                  const left = Math.min(100, Math.max(0, (timestamp / duration) * 100));
+                  const isAnswered = question.id ? answeredQuestionIds.has(question.id) : false;
+                  return (
+                    <button
+                      key={question.id || `${timestamp}-${index}`}
+                      type="button"
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={() => jumpToCheckpoint(timestamp)}
+                      aria-label={`Jump to quiz checkpoint at ${formatVideoTime(timestamp)}`}
+                      title={`${question.questionText || "Video quiz"} - ${formatVideoTime(timestamp)}`}
+                      className={cn(
+                        "absolute top-1/2 flex size-4 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white shadow-[0_8px_18px_rgba(0,0,0,0.32)] transition hover:scale-125",
+                        isAnswered ? "bg-[#22C55E]" : "bg-[#7872FD]",
+                      )}
+                      style={{ left: `${left}%` }}
+                    >
+                      <span className="size-1.5 rounded-full bg-white" />
+                    </button>
+                  );
+                }) : null}
+            </div>
+
+            <div className="mt-2 flex items-center gap-3 text-white">
+              <button type="button" onClick={togglePlayback} className="flex size-9 items-center justify-center rounded-full bg-white/15 transition hover:bg-white/25" aria-label={isPlaying ? "Pause video" : "Play video"}>
+                {isPlaying ? <Pause className="size-4 fill-white" /> : <Play className="size-4 fill-white" />}
+              </button>
+              <span className="min-w-[92px] text-xs font-bold tabular-nums text-white/90">
+                {formatVideoTime(currentTime)} / {formatVideoTime(duration)}
+              </span>
+              <div className="ml-auto flex items-center gap-2">
+                <button type="button" onClick={toggleMute} className="flex size-9 items-center justify-center rounded-full bg-white/15 transition hover:bg-white/25" aria-label={isMuted ? "Unmute video" : "Mute video"}>
+                  {isMuted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
+                </button>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={isMuted ? 0 : volume}
+                  onChange={(event) => changeVolume(Number(event.target.value))}
+                  className="hidden h-1 w-20 accent-[#7872FD] sm:block"
+                  aria-label="Volume"
+                />
+                {readySubtitles.length > 0 ? (
+                  <div className="relative" ref={subtitleMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowSubtitleMenu(!showSubtitleMenu)}
+                      className={cn(
+                        "flex size-9 items-center justify-center rounded-full transition hover:bg-white/25",
+                        activeSubtitleLang ? "bg-[#7872FD] text-white" : "bg-white/15 text-white"
+                      )}
+                      aria-label="Subtitles"
+                      title="Subtitles/CC"
+                    >
+                      <Subtitles className="size-4" />
+                    </button>
+                    {showSubtitleMenu ? (
+                      <div className="absolute bottom-11 right-0 z-[70] min-w-[140px] rounded-xl border border-white/10 bg-[#1D2026]/95 p-1.5 shadow-xl backdrop-blur">
+                        <div className="flex flex-col gap-0.5 max-h-48 overflow-y-auto">
+                          <button
+                            type="button"
+                            onClick={() => handleSelectSubtitle(null)}
+                            className={cn(
+                              "w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold transition hover:bg-white/10",
+                              activeSubtitleLang === null ? "text-[#7872FD]" : "text-white/80"
+                            )}
+                          >
+                            Off
+                          </button>
+                          {readySubtitles.map((track) => (
+                            <button
+                              key={track.id || track.languageCode}
+                              type="button"
+                              onClick={() => handleSelectSubtitle(track.languageCode || null)}
+                              className={cn(
+                                "w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold transition hover:bg-white/10",
+                                activeSubtitleLang === track.languageCode ? "text-[#7872FD]" : "text-white/80"
+                              )}
+                            >
+                              {track.displayName || track.languageCode}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+                <button type="button" onClick={toggleFullscreen} className="flex size-9 items-center justify-center rounded-full bg-white/15 transition hover:bg-white/25" aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}>
+                  {isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+                </button>
+              </div>
+            </div>
+          </div>
+          {activeQuestion ? (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#111033]/60 px-4 backdrop-blur-sm">
+              <div className="w-full max-w-[560px] rounded-[28px] bg-white p-7 shadow-[0_28px_90px_rgba(17,16,51,0.28)]">
+                <p className="text-sm font-bold uppercase tracking-[0.12em] text-[#7872FD]">Video checkpoint</p>
+                <h3 className="mt-3 text-2xl font-black text-[#1D2026]">{activeQuestion.questionText || "Answer to continue"}</h3>
+                <div className="mt-6 grid gap-3">
+                  {(activeQuestion.options || []).map((option) => {
+                    const optionId = option.id || option.optionText || "";
+                    const selected = selectedAnswers.includes(optionId);
+                    const isMultiple = activeQuestion.questionType === "MULTI_CHOICE";
+                    return (
+                      <button
+                        key={optionId}
+                        type="button"
+                        onClick={() => toggleVideoAnswer(optionId)}
+                        className={cn(
+                          "flex items-center gap-3 rounded-[18px] border px-4 py-3 text-left text-sm font-semibold transition",
+                          selected ? "border-[#7872FD] bg-[#EBEBFF] text-[#1D2026]" : "border-[#E9EAF0] text-[#4E5566] hover:border-[#D8D6FF]",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "flex size-6 items-center justify-center border transition",
+                            isMultiple ? "rounded-[7px]" : "rounded-full",
+                            selected ? "border-[#7872FD] bg-[#7872FD] text-white" : "border-[#CED1D9] bg-white",
+                          )}
+                        >
+                          {selected ? <span className={cn("bg-white", isMultiple ? "h-3 w-3 rounded-[3px]" : "size-2.5 rounded-full")} /> : null}
+                        </span>
+                        {option.optionText || optionId}
+                      </button>
+                    );
+                  })}
+                </div>
+                {questionMessage ? <p className="mt-4 rounded-[14px] bg-[#FFF4E5] px-4 py-3 text-sm font-semibold text-[#9A5B00]">{questionMessage}</p> : null}
+                <button
+                  type="button"
+                  onClick={submitVideoAnswer}
+                  disabled={isSubmittingAnswer || selectedAnswers.length === 0}
+                  className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#7872FD] px-6 text-sm font-bold text-white transition hover:bg-[#635BFF] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSubmittingAnswer ? <Loader2 className="size-4 animate-spin" /> : null}
+                  Submit answer
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : (
         <div className="relative aspect-video w-full overflow-hidden">
@@ -327,47 +813,6 @@ export function LearningVideoLesson({
         <div className="flex items-center gap-2 bg-[#FFF4E5] px-5 py-3 text-sm font-semibold text-[#9A5B00]">
           <AlertCircle className="size-4" />
           {error}
-        </div>
-      ) : null}
-
-      {activeQuestion ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111033]/60 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-[560px] rounded-[28px] bg-white p-7 shadow-[0_28px_90px_rgba(17,16,51,0.28)]">
-            <p className="text-sm font-bold uppercase tracking-[0.12em] text-[#7872FD]">Video checkpoint</p>
-            <h3 className="mt-3 text-2xl font-black text-[#1D2026]">{activeQuestion.questionText || "Answer to continue"}</h3>
-            <div className="mt-6 grid gap-3">
-              {(activeQuestion.options || []).map((option) => {
-                const optionId = option.id || option.optionText || "";
-                const selected = selectedAnswers.includes(optionId);
-                return (
-                  <button
-                    key={optionId}
-                    type="button"
-                    onClick={() => toggleVideoAnswer(optionId)}
-                    className={cn(
-                      "flex items-center gap-3 rounded-[18px] border px-4 py-3 text-left text-sm font-semibold transition",
-                      selected ? "border-[#7872FD] bg-[#EBEBFF] text-[#1D2026]" : "border-[#E9EAF0] text-[#4E5566] hover:border-[#D8D6FF]",
-                    )}
-                  >
-                    <span className={cn("flex size-6 items-center justify-center rounded-full border", selected ? "border-[#7872FD] bg-[#7872FD] text-white" : "border-[#CED1D9]")}>
-                      {selected ? <CheckCircle2 className="size-4" /> : null}
-                    </span>
-                    {option.optionText || optionId}
-                  </button>
-                );
-              })}
-            </div>
-            {questionMessage ? <p className="mt-4 rounded-[14px] bg-[#FFF4E5] px-4 py-3 text-sm font-semibold text-[#9A5B00]">{questionMessage}</p> : null}
-            <button
-              type="button"
-              onClick={submitVideoAnswer}
-              disabled={isSubmittingAnswer || selectedAnswers.length === 0}
-              className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#7872FD] px-6 text-sm font-bold text-white transition hover:bg-[#635BFF] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSubmittingAnswer ? <Loader2 className="size-4 animate-spin" /> : null}
-              Submit answer
-            </button>
-          </div>
         </div>
       ) : null}
 

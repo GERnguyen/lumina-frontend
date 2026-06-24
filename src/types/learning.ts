@@ -60,6 +60,7 @@ export interface GradeEssayRequest {
 
 export interface QuizSessionResponse {
   id?: string;
+  userId?: string;
   quizLessonId?: string;
   startTime?: string;
   endTime?: string;
@@ -158,6 +159,18 @@ export interface UserStreakResponse {
   currentStreak?: number;
   highestStreak?: number;
   lastActivityDate?: string;
+}
+
+export interface PresignedUrlResponse {
+  fileKey?: string;
+  presignedUrl?: string;
+}
+
+export interface PaginatedMetadata {
+  page?: number;
+  limit?: number;
+  totalElements?: number;
+  totalPages?: number;
 }
 
 export interface QuizSessionOptionResponse {

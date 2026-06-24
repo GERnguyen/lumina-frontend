@@ -17,6 +17,7 @@ import type {
   LearningPathRequest,
   LearningPathResponse,
   QuizQuestionAnalyticsResponse,
+  PresignedUrlResponse,
   QuizSessionQuestionResponse,
   QuizSessionResponse,
   SetDailyGoalRequest,
@@ -313,5 +314,12 @@ export const LearningEngagementStatisticsApi = {
     }
   ): Promise<ApiResponse<CourseEngagementOverviewResponse>> {
     return apiClient.get(`/api/v1/learning/courses/${courseId}/engagement/overview`, { params });
+  },
+};
+
+// ── LearningPresignedUrlApi ──────────────────────────────────────────────
+export const LearningPresignedUrlApi = {
+  async getPresignedUrl(params: { fileName: string; contentType: string }): Promise<ApiResponse<PresignedUrlResponse>> {
+    return apiClient.get("/api/v1/learning/upload/presigned-url", { params });
   },
 };

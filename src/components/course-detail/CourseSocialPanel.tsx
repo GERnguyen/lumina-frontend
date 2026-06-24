@@ -2,8 +2,8 @@
 
 import { Loader2, Send, Star } from "lucide-react";
 import { useEffect, useState } from "react";
-import { ReviewService, SocialStatisticsService } from "@/services/socialService";
-import { UserService } from "@/services/userService";
+import { ReviewApi, SocialStatisticsApi } from "@/services/api/social-api";
+import { UserApi } from "@/services/api/user-api";
 import { getErrorMessage } from "@/lib/errors";
 import { cn } from "@/lib/utils";
 import type { ReviewResponse, ReviewStatisticsResponse } from "@/types";
@@ -54,8 +54,8 @@ export function CourseSocialPanel({
 
   async function loadReviews() {
     const [reviewsRes, statsRes] = await Promise.all([
-      ReviewService.getReviewsByCourseId({ courseId, page: 1, size: 6, sort: '{"createdAt":"DESC"}' }).catch(() => undefined),
-      SocialStatisticsService.getReviewStatistics({ courseId }).catch(() => undefined),
+      ReviewApi.getReviewsByCourseId({ courseId, page: 1, size: 6, sort: '{"createdAt":"DESC"}' }).catch(() => undefined),
+      SocialStatisticsApi.getReviewStatistics(courseId).catch(() => undefined),
     ]);
     if (reviewsRes?.data) setReviews(reviewsRes.data);
     if (statsRes?.data) setReviewStats(statsRes.data);
@@ -69,19 +69,33 @@ export function CourseSocialPanel({
     const missingIds = userIds.filter((userId) => !reviewUserProfiles[userId]);
     if (!missingIds.length) return;
 
-    const entries = await Promise.all(
-      missingIds.map(async (userId) => {
-        const response = await UserService.getUserById({ id: userId }).catch(() => undefined);
-        return [
-          userId,
-          {
-            name: response?.data?.name || "Lumina learner",
-            avatarUrl: response?.data?.avatarUrl,
-          },
-        ] as const;
-      }),
-    );
-    setReviewUserProfiles((current) => ({ ...current, ...Object.fromEntries(entries) }));
+    try {
+      const response = await UserApi.getUsersByIds(missingIds.join(",")).catch(() => undefined);
+      const users = response?.data || [];
+      const newEntries = users.reduce((acc, user) => {
+        if (user.userId) {
+          acc[user.userId] = {
+            name: user.name || "Lumina learner",
+            avatarUrl: user.avatarUrl,
+          };
+        }
+        return acc;
+      }, {} as Record<string, ReviewUserMeta>);
+
+      // Fallback for any IDs that weren't returned by the API
+      missingIds.forEach((id) => {
+        if (!newEntries[id]) {
+          newEntries[id] = {
+            name: "Lumina learner",
+            avatarUrl: undefined,
+          };
+        }
+      });
+
+      setReviewUserProfiles((current) => ({ ...current, ...newEntries }));
+    } catch (err) {
+      console.error("Failed to fetch reviewer profiles:", err);
+    }
   }
 
   useEffect(() => {
@@ -94,7 +108,7 @@ export function CourseSocialPanel({
     setPendingAction("review");
     setMessage("");
     try {
-      await ReviewService.createReview({ body: { courseId, rating, content } });
+      await ReviewApi.createReview({ courseId, rating, content });
       setReviewContent("");
       setMessage("Review posted.");
       await loadReviews();

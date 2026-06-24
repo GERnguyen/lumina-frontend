@@ -3,9 +3,6 @@
 // DO NOT EDIT MANUALLY — regenerate from the OpenAPI spec
 // =============================================================
 
-import { CourseResponse } from "./course";
-import { PaymentResponse } from "./payment";
-
 // ── Domain types ───────────────────────────────────────────────
 
 export interface UpdateVoucherRequest {
@@ -19,6 +16,10 @@ export interface UpdateVoucherRequest {
   validTo?: string;
 }
 
+export interface UpdatePaymentMethodRequest {
+  paymentMethod: "VN_PAY" | "MOMO" | "STRIPE";
+}
+
 export interface OrderDetailResponse {
   id?: string;
   userId?: string;
@@ -27,7 +28,7 @@ export interface OrderDetailResponse {
   discounted?: number;
   orderDate?: string;
   status?: "PENDING" | "PAID" | "CANCELLED" | "REFUNDED";
-  paymentMethod?: "MOMO" | "STRIPE";
+  paymentMethod?: "VN_PAY" | "MOMO" | "STRIPE";
   payment?: PaymentResponse;
   voucher?: VoucherResponse;
 }
@@ -38,6 +39,16 @@ export interface OrderItemResponse {
   title?: string;
   price?: number;
   discountedPrice?: number;
+}
+
+export interface PaymentResponse {
+  id?: string;
+  orderId?: string;
+  amount?: number;
+  status?: "PROCESSING" | "PAID" | "CANCELLED" | "REFUNDED";
+  paymentDate?: string;
+  paymentInfo?: string;
+  paymentMessage?: string;
 }
 
 export interface VoucherResponse {
@@ -70,26 +81,66 @@ export interface CartItemDto {
   course: CourseResponse;
 }
 
+export interface CategoryResponse {
+  id?: string;
+  name?: string;
+}
+
+export interface CourseImageResponse {
+  id?: string;
+  imageUrl?: string;
+}
+
+export interface CourseResponse {
+  id?: string;
+  title?: string;
+  description?: string;
+  category?: CategoryResponse;
+  instructor?: InstructorResponse;
+  images?: CourseImageResponse[];
+  price?: number;
+  discountedPrice?: number;
+  discountRate?: number;
+  rating?: number;
+  enrollmentCount?: number;
+  isInSubscription?: boolean;
+  duration?: number;
+  status?: string;
+  publishStatus?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface CreateOrderRequest {
   cartItems: CartItemDto[];
-  paymentMethod: "MOMO" | "STRIPE";
+  paymentMethod: "VN_PAY" | "MOMO" | "STRIPE";
   voucherCode?: string;
 }
 
-export interface OrderResponse {
+export interface InstructorResponse {
   id?: string;
-  userId?: string;
-  items?: OrderItemResponse[];
-  totalPrice?: number;
-  discounted?: number;
-  orderDate?: string;
-  status?: "PENDING" | "PAID" | "CANCELLED" | "REFUNDED";
-  paymentMethod?: "MOMO" | "STRIPE";
+  name?: string;
+  email?: string;
+  bio?: string;
+  profilePictureUrl?: string;
 }
 
 export interface CheckEnrollmentStatus {
   courseId?: string;
   isEnrolled?: boolean;
+}
+
+export interface PaginatedMetadata {
+  page?: number;
+  limit?: number;
+  totalElements?: number;
+  totalPages?: number;
+}
+
+export interface CourseRevenueStats {
+  courseId?: string;
+  title?: string;
+  revenue?: number;
 }
 
 export interface CourseStats {
@@ -110,7 +161,7 @@ export interface InstructorStatisticsResponse {
   distinctLearnersInRange?: number;
   revenueByTime?: RevenueByTimeResponse[];
   enrollmentsByTime?: EnrollmentByTimeResponse[];
-  topCoursesByRevenue?: CourseStats[];
+  topCoursesByRevenue?: CourseRevenueStats[];
   topCoursesByEnrollment?: CourseStats[];
 }
 
@@ -143,7 +194,7 @@ export interface AdminOverviewResponse {
   distinctLearnersInRange?: number;
   platformRevenueByTime?: RevenueByTimeResponse[];
   enrollmentsByTime?: EnrollmentByTimeResponse[];
-  topCoursesByRevenue?: CourseStats[];
+  topCoursesByRevenue?: CourseRevenueStats[];
   topCoursesByEnrollment?: CourseStats[];
 }
 

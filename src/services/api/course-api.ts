@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api-client";
+import { apiClient, type FetchOptions } from "@/lib/api-client";
 import { cache } from "react";
 import type {
   ApiResponse,
@@ -52,7 +52,9 @@ import type {
   UpdateVideoQuestionRequest,
   VideoLessonResponse,
   VideoQuestionResponse,
+  RejectCourseResponse,
 } from "@/types";
+
 
 // ── CourseApi ──────────────────────────────────────────────
 export const CourseApi = {
@@ -102,9 +104,10 @@ export const CourseApi = {
     return apiClient.patch(`/api/v1/courses/${id}/curriculum/lessons/${lessonId}/position`, body);
   },
 
-  async getRejectReason(id: string): Promise<ApiResponse<Record<string, unknown>>> {
+  async getRejectReason(id: string): Promise<ApiResponse<RejectCourseResponse>> {
     return apiClient.get(`/api/v1/courses/${id}/reject-reason`);
   },
+
 
   async getEditableCourseDraft(id: string): Promise<ApiResponse<CourseResponse>> {
     return apiClient.get(`/api/v1/courses/${id}/draft`);
@@ -170,8 +173,8 @@ export const LessonApi = {
 
 // ── VideoLessonApi ──────────────────────────────────────────────
 export const VideoLessonApi = {
-  async getVideoByLessonId(courseId: string, lessonId: string): Promise<ApiResponse<VideoLessonResponse>> {
-    return apiClient.get(`/api/v1/courses/${courseId}/lessons/${lessonId}/videos`);
+  async getVideoByLessonId(courseId: string, lessonId: string, options?: Omit<FetchOptions, "method" | "body">): Promise<ApiResponse<VideoLessonResponse>> {
+    return apiClient.get(`/api/v1/courses/${courseId}/lessons/${lessonId}/videos`, options);
   },
 
   async updateVideoLesson(courseId: string, lessonId: string, body: UpdateVideoLessonRequest): Promise<ApiResponse<Record<string, unknown>>> {
@@ -312,8 +315,8 @@ export const AssignmentLessonApi = {
 
 // ── ArticleLessonApi ──────────────────────────────────────────────
 export const ArticleLessonApi = {
-  async getArticleByLessonId(courseId: string, lessonId: string): Promise<ApiResponse<ArticleLessonResponse>> {
-    return apiClient.get(`/api/v1/courses/${courseId}/lessons/${lessonId}/articles`);
+  async getArticleByLessonId(courseId: string, lessonId: string, options?: Omit<FetchOptions, "method" | "body">): Promise<ApiResponse<ArticleLessonResponse>> {
+    return apiClient.get(`/api/v1/courses/${courseId}/lessons/${lessonId}/articles`, options);
   },
 
   async updateArticleLesson(courseId: string, lessonId: string, body: UpdateArticleLessonRequest): Promise<ApiResponse<Record<string, unknown>>> {
@@ -365,3 +368,11 @@ export const CourseStatisticsApi = {
     return apiClient.get("/api/v1/courses/mine/statistics/overview", { params });
   },
 };
+
+// ── CoursePresignedUrlApi ──────────────────────────────────────────────
+export const CoursePresignedUrlApi = {
+  async getPresignedUrl(params: { fileName: string; contentType: string }): Promise<ApiResponse<PresignedUrlResponse>> {
+    return apiClient.get("/api/v1/courses/upload/presigned-url", { params });
+  },
+};
+

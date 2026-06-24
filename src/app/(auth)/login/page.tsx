@@ -1,5 +1,6 @@
 import Image from "next/image";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import LoginForm from "@/components/features/auth/LoginForm";
 
 export const metadata: Metadata = {
@@ -22,7 +23,9 @@ const LoginPage = () => {
       </div>
 
       <div className="flex-1 bg-white flex items-center justify-center p-8">
-        <LoginForm />
+        <Suspense fallback={<div className="text-center text-sm text-[#8C94A3]">Loading...</div>}>
+          <LoginForm />
+        </Suspense>
       </div>
     </div>
   );

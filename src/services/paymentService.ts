@@ -10,7 +10,6 @@ import type {
   ApiResponse,
 } from '@/types';
 import type {
-  PaymentResponse,
   VNPayIPNResponse,
 } from '@/types';
 
@@ -19,13 +18,13 @@ import type {
 // ── PaymentService ──────────────────────────────────────────────
 export const PaymentService = {
 
-  async cancelPayment({ orderId, paymentMethod }: { orderId: string; paymentMethod: string }, config?: AxiosRequestConfig): Promise<ApiResponse<PaymentResponse>> {
-    const { data } = await axiosClient.put('/api/v1/payments/cancel', undefined, { params: { orderId, paymentMethod }, ...config });
+  async createCheckoutLink({ paymentId, paymentMethod }: { paymentId: string; paymentMethod: string }, config?: AxiosRequestConfig): Promise<ApiResponse<string>> {
+    const { data } = await axiosClient.post(`/api/v1/payments/${paymentId}/checkout-link`, undefined, { params: { paymentMethod }, ...config });
     return data;
   },
 
-  async createCheckoutLink({ paymentId, paymentMethod }: { paymentId: string; paymentMethod: string }, config?: AxiosRequestConfig): Promise<ApiResponse<string>> {
-    const { data } = await axiosClient.post(`/api/v1/payments/${paymentId}/checkout-link`, undefined, { params: { paymentMethod }, ...config });
+  async handleStripeWebhook({ body }: { body: string }, config?: AxiosRequestConfig): Promise<ApiResponse<Record<string, unknown>>> {
+    const { data } = await axiosClient.post('/api/v1/payments/stripe-webhook', body, config);
     return data;
   },
 

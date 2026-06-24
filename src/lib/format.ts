@@ -1,5 +1,21 @@
 import { API_BASE_URL } from "./api-base";
 
+type CourseLike = {
+  images?: Array<{ imageUrl?: string }>;
+  category?: { name?: string };
+  instructor?: { name?: string };
+};
+
+type UserLike = {
+  avatarUrl?: string;
+  name?: string;
+};
+
+type CourseProgressLike = {
+  totalItems?: number;
+  completedItems?: number;
+};
+
 export function money(value?: number): string {
   if (typeof value !== "number" || value === 0) return "Free";
   return new Intl.NumberFormat("en-US", {
@@ -16,6 +32,14 @@ export function moneyWithCurrency(value?: number): string {
     currency: "VND",
     maximumFractionDigits: 0,
   }).format(value);
+}
+
+export function formatMoney(value?: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "VND",
+    maximumFractionDigits: 0,
+  }).format(value || 0);
 }
 
 export function compactNumber(value?: number): string {
@@ -39,6 +63,19 @@ export function formatDuration(minutes?: number): string {
   return remaining ? `${hours}h ${remaining}m` : `${hours}h`;
 }
 
+export function formatShortDate(value?: string): string {
+  if (!value) return "Not set";
+  return new Date(value).toLocaleDateString("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  });
+}
+
+export function roundedRating(value = 0): number {
+  return Math.round(value);
+}
+
 export function formatCourseLength(minutes?: number): string {
   if (!minutes) return "Self-paced";
   if (minutes < 60) return `${minutes} minutes`;
@@ -56,14 +93,14 @@ export function splitDescription(description?: string): string[] {
     .filter(Boolean);
 }
 
-export function getCourseImage(course: any, index: number = 0): string {
-  const image = course?.images?.find((img: any) => img.imageUrl)?.imageUrl || 
+export function getCourseImage(course?: CourseLike, index: number = 0): string {
+  const image = course?.images?.find((img) => img.imageUrl)?.imageUrl ||
                 course?.images?.[0]?.imageUrl || 
                 `/courses/course-0${(index % 8) + 1}.png`;
   return image;
 }
 
-export function getCourseCategory(course: any): string {
+export function getCourseCategory(course?: CourseLike): string {
   return course?.category?.name || "Software Dev";
 }
 
@@ -71,7 +108,7 @@ export function getCourseRating(rating?: number): string {
   return typeof rating === "number" && rating > 0 ? rating.toFixed(1) : "No reviews yet";
 }
 
-export function getCourseInstructorName(course: any): string {
+export function getCourseInstructorName(course?: CourseLike): string {
   const instructor = course?.instructor;
   const name = instructor?.name?.trim?.();
   if (name) return name;
@@ -79,7 +116,7 @@ export function getCourseInstructorName(course: any): string {
   return "Course Instructor";
 }
 
-export function getProfileAvatar(user?: any, fallbackName = "Lumina Learner"): string {
+export function getProfileAvatar(user?: UserLike, fallbackName = "Lumina Learner"): string {
   const avatar = user?.avatarUrl?.trim();
   if (avatar) {
     if (/^(https?:|data:|blob:)/.test(avatar) || avatar.startsWith("/")) return avatar;
@@ -129,7 +166,7 @@ export function maskedPaymentAccount(paymentInfo?: string): string {
   return trimmed;
 }
 
-export function getCourseProgressPercentage(progress?: any): number {
+export function getCourseProgressPercentage(progress?: CourseProgressLike): number {
   if (!progress?.totalItems) return 0;
   return Math.round(((progress.completedItems || 0) / progress.totalItems) * 100);
 }

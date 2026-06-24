@@ -3,8 +3,6 @@
 // DO NOT EDIT MANUALLY — regenerate from the OpenAPI spec
 // =============================================================
 
-import { StatisticsByTimeResponse } from "./course";
-
 // ── Domain types ───────────────────────────────────────────────
 
 export interface UpdateProfileRequest {
@@ -35,15 +33,89 @@ export interface UserDto {
   updatedAt?: string;
   lastAccessAt?: string;
   instructorVerifiedAt?: string;
+  partnershipTerminatedAt?: string;
+  partnershipTerminationReasonType?: "POLICY_VIOLATION" | "FRAUD_OR_MISCONDUCT" | "COPYRIGHT_VIOLATION" | "INACTIVE_INSTRUCTOR" | "OTHER";
+  partnershipTerminationReasonDetail?: string;
+  isPartnershipTerminated?: boolean;
 }
 
 export interface UpdatePreferredCategoriesRequest {
   categoryIds: string[];
 }
 
+export interface PolicySectionRequest {
+  heading: string;
+  anchor?: string;
+  bodyMarkdown: string;
+  orderIndex: number;
+}
+
+export interface UpdatePolicyRequest {
+  policyType?: "PRIVACY" | "TERMS" | "REFUND" | "COOKIE" | "GENERAL";
+  title: string;
+  summary?: string;
+  effectiveAt?: string;
+  displayOrder?: number;
+  sections: PolicySectionRequest[];
+}
+
+export interface PolicyDetailResponse {
+  id?: string;
+  policyType?: "PRIVACY" | "TERMS" | "REFUND" | "COOKIE" | "GENERAL";
+  slug?: string;
+  title?: string;
+  summary?: string;
+  status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+  versionNumber?: number;
+  effectiveAt?: string;
+  publishedAt?: string;
+  displayOrder?: number;
+  sections?: PolicySectionResponse[];
+}
+
+export interface PolicySectionResponse {
+  id?: string;
+  heading?: string;
+  anchor?: string;
+  bodyMarkdown?: string;
+  orderIndex?: number;
+}
+
+export interface TerminatePartnershipRequest {
+  reasonType: "POLICY_VIOLATION" | "FRAUD_OR_MISCONDUCT" | "COPYRIGHT_VIOLATION" | "INACTIVE_INSTRUCTOR" | "OTHER";
+  reasonDetail?: string;
+}
+
 export interface DeviceTokenRequest {
   fcmToken: string;
   deviceInfo?: string;
+}
+
+export interface CreatePolicyRequest {
+  policyType: "PRIVACY" | "TERMS" | "REFUND" | "COOKIE" | "GENERAL";
+  slug: string;
+  title: string;
+  summary?: string;
+  effectiveAt?: string;
+  displayOrder?: number;
+  sections: PolicySectionRequest[];
+}
+
+export interface PaginatedMetadata {
+  page?: number;
+  limit?: number;
+  totalElements?: number;
+  totalPages?: number;
+}
+
+export interface PresignedUrlResponse {
+  fileKey?: string;
+  presignedUrl?: string;
+}
+
+export interface StatisticsByTimeResponse {
+  label?: string;
+  value?: number;
 }
 
 export interface UserStatisticsOverviewResponse {
@@ -52,4 +124,17 @@ export interface UserStatisticsOverviewResponse {
   instructorsByVerificationStatus?: Record<string, number>;
   newUsersByTime?: StatisticsByTimeResponse[];
   currentTotalUsers?: number;
+}
+
+export interface PolicySummaryResponse {
+  id?: string;
+  policyType?: "PRIVACY" | "TERMS" | "REFUND" | "COOKIE" | "GENERAL";
+  slug?: string;
+  title?: string;
+  summary?: string;
+  status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+  versionNumber?: number;
+  effectiveAt?: string;
+  publishedAt?: string;
+  displayOrder?: number;
 }

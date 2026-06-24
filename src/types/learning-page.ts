@@ -1,9 +1,10 @@
 import type {
+  CertificateRequestResponse,
   ArticleLessonResponse,
   AssignmentLessonResponse,
   QuizLessonResponse,
   VideoLessonResponse,
-} from "@/types/course";
+} from "@/types";
 
 export type LearningLessonType = "VIDEO" | "ARTICLE" | "QUIZ" | "ASSIGNMENT";
 
@@ -14,6 +15,8 @@ export type LearningLesson = {
   type: LearningLessonType;
   isCompleted: boolean;
   isCurrent: boolean;
+  isPassed?: boolean;
+  score?: number;
 };
 
 export type LearningSection = {
@@ -37,6 +40,11 @@ export type LearningPageData = {
   courseDescription?: string;
   coverUrl?: string;
   instructorName?: string;
+  hasCertificate?: boolean;
+  certificateTitle?: string;
+  certificate?: CertificateRequestResponse;
+  isCourseCompleted?: boolean;
+  isCoursePassed?: boolean;
   progressPercent: number;
   completedItems: number;
   totalItems: number;

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, PlayCircle, CheckSquare, Trophy, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getCourseProgressByCourseIdsAction } from "@/services/actions/learning";
 import type { UserDto, CourseResponse } from "@/types";
@@ -8,7 +8,6 @@ import { getProfileTabs, mockUserProfileDashboard } from "@/data/user-profile";
 import { getProfileAvatar } from "@/lib/format";
 import { UserProfileHero } from "./UserProfileHero";
 import { UserProfileLearningCard } from "./UserProfileLearningCard";
-import { UserProfileStatCard } from "./UserProfileStatCard";
 
 type UserProfileDashboardPageProps = {
   user: UserDto | undefined;
@@ -21,21 +20,19 @@ type UserProfileDashboardPageProps = {
 export function UserProfileDashboardPage({
   user,
   enrolledCourses,
-  totalEnrolled,
   header,
   footer,
 }: UserProfileDashboardPageProps) {
   const courseIds = enrolledCourses.map((c) => c.id).filter(Boolean) as string[];
 
   // Fetch learning progress client-side using React Query
-  const { data: progressRes, isLoading } = useQuery({
+  const { data: progressRes } = useQuery({
     queryKey: ["courseProgress", courseIds.join(",")],
     queryFn: () => getCourseProgressByCourseIdsAction(courseIds.join(",")),
     enabled: courseIds.length > 0,
   });
 
   const progressList = progressRes?.data || [];
-  const completedCount = progressList.filter((item) => item.isCompleted).length || 0;
 
   const dashboardHero = {
     user: {
@@ -45,13 +42,6 @@ export function UserProfileDashboardPage({
     },
     tabs: getProfileTabs("Dashboard"),
   };
-
-  const stats = [
-    { label: "Enrolled Courses", value: String(totalEnrolled), icon: PlayCircle, tone: "purple" as const },
-    { label: "Active Courses", value: isLoading ? "..." : String(Math.max(0, enrolledCourses.length - completedCount)), icon: CheckSquare, tone: "purple" as const },
-    { label: "Completed Courses", value: isLoading ? "..." : String(completedCount), icon: Trophy, tone: "green" as const },
-    { label: "Course Instructors", value: user?.role === "INSTRUCTOR" ? "1" : "0", icon: Users, tone: "orange" as const },
-  ];
 
   const learningCourses = enrolledCourses.map((course, index) => {
     const progressItem = progressList.find((item) => item.courseId === course.id);
@@ -85,13 +75,7 @@ export function UserProfileDashboardPage({
             <h2 className="text-2xl font-semibold tracking-normal text-[#1D2026]">Dashboard</h2>
           </div>
 
-          <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-            {stats.map((stat) => (
-              <UserProfileStatCard key={stat.label} stat={stat} />
-            ))}
-          </div>
-
-          <div className="mt-11 flex items-center justify-between gap-4">
+          <div className="mt-6 flex items-center justify-between gap-4">
             <h2 className="text-2xl font-semibold tracking-normal text-[#1D2026]">
               Let’s start learning, {dashboardHero.user.name.split(" ")[0]}
             </h2>

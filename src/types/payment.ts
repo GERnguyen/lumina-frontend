@@ -5,21 +5,6 @@
 
 // ── Domain types ───────────────────────────────────────────────
 
-export interface PaymentResponse {
-  id?: string;
-  orderId?: string;
-  amount?: number;
-  status?: "PROCESSING" | "PAID" | "CANCELLED" | "REFUNDED";
-  paymentDate?: string;
-  paymentInfo?: string;
-  paymentMessage?: string;
-}
-
-export interface PaymentRequest {
-  orderId: string;
-  paymentMethod: "MOMO" | "STRIPE";
-}
-
 export interface VNPayIPNResponse {
   RspCode?: string;
   Message?: string;

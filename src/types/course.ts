@@ -386,6 +386,13 @@ export interface LessonPositionResponse {
   orderIndex?: number;
 }
 
+export interface PaginatedMetadata {
+  page?: number;
+  limit?: number;
+  totalElements?: number;
+  totalPages?: number;
+}
+
 export interface RejectCourseResponse {
   courseId?: string;
   reason?: string;
@@ -434,6 +441,11 @@ export interface SubtitleWordConfidenceResponse {
 export interface SubtitleContentResponse {
   subtitleId?: string;
   content?: string;
+}
+
+export interface PresignedUrlResponse {
+  fileKey?: string;
+  presignedUrl?: string;
 }
 
 export interface QuizLessonResponse {
