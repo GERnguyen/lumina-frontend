@@ -1,12 +1,15 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Edit2, Eye, Star, Users, BookOpen } from "lucide-react";
+import { AlertTriangle, Edit2, Eye, Star, Users, BookOpen } from "lucide-react";
 import type { CourseResponse } from "@/types";
 import { getCourseImage, compactNumber, formatDuration } from "@/lib/format";
 import { InstructorBadge } from "@/components/ui/shared/InstructorBadge";
 import { InstructorCard } from "@/components/ui/shared/InstructorCard";
 import { Button } from "@/components/ui/Button";
+import { CourseApi } from "@/services/api/course-api";
+import { useEffect, useState } from "react";
+
 
 interface CourseHeaderProps {
   course: CourseResponse | null;
@@ -14,6 +17,24 @@ interface CourseHeaderProps {
 
 export function CourseHeader({ course }: CourseHeaderProps) {
   const image = getCourseImage(course || undefined);
+  const [rejectReason, setRejectReason] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (course?.id && course.publishStatus === "REJECTED") {
+      CourseApi.getRejectReason(course.id)
+        .then((res) => {
+          if (res?.data?.reason) {
+            setRejectReason(res.data.reason);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to load reject reason in header:", err);
+        });
+    } else {
+      setRejectReason(null);
+    }
+  }, [course?.id, course?.publishStatus]);
+
 
   return (
     <InstructorCard bodyClassName="p-0" className="border-zinc-200/50 shadow-xs">
@@ -81,6 +102,20 @@ export function CourseHeader({ course }: CourseHeaderProps) {
           </Button>
         </div>
       </div>
+      {rejectReason && (
+        <div className="border-t border-red-100 bg-red-50/50 px-6 py-4 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-start space-x-3">
+            <AlertTriangle className="size-5 text-red-500 shrink-0 mt-0.5" />
+            <div>
+              <h4 className="text-xs font-bold text-red-800 uppercase tracking-wider">Rejection Reason</h4>
+              <p className="mt-1 text-xs text-red-700 leading-relaxed font-semibold">
+                {rejectReason}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </InstructorCard>
   );
 }
+

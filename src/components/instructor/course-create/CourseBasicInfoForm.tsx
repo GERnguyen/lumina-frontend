@@ -45,7 +45,7 @@ export default function CourseBasicInfoForm({
       setDescription(course.description || "");
       setCategoryId(course.category?.id || "");
       setPrice(course.price || 0);
-      setDiscountedPrice(course.discountedPrice);
+      setDiscountedPrice(course.discountedPrice ?? course.price);
       setIsInSubscription(course.isInSubscription ?? true);
       setHasCertificate(course.hasCertificate || false);
       setCertificateTitle(course.certificateTitle || "");
@@ -60,20 +60,23 @@ export default function CourseBasicInfoForm({
   }));
 
   // Validation
-  const validateForm = () => {
+  const validateForm = (currentPrice: number, currentDiscountedPrice: number | undefined) => {
     const newErrors: Record<string, string> = {};
 
     if (!title.trim()) newErrors.title = "Course title is required.";
     if (title.length > 120) newErrors.title = "Title cannot exceed 120 characters.";
     if (!description.trim()) newErrors.description = "Course description is required.";
     if (!categoryId) newErrors.categoryId = "Please select a category.";
-    if (price < 0) newErrors.price = "Price cannot be negative.";
-    if (discountedPrice !== undefined && discountedPrice < 0) {
-      newErrors.discountedPrice = "Discounted price cannot be negative.";
+    if (currentPrice < 0) newErrors.price = "Price cannot be negative.";
+    if (currentDiscountedPrice !== undefined && currentDiscountedPrice !== null) {
+      if (currentDiscountedPrice < 0) {
+        newErrors.discountedPrice = "Discounted price cannot be negative.";
+      }
+      if (currentDiscountedPrice > currentPrice && currentPrice > 0) {
+        newErrors.discountedPrice = "Discounted price cannot exceed regular price.";
+      }
     }
-    if (discountedPrice !== undefined && discountedPrice >= price && price > 0) {
-      newErrors.discountedPrice = "Discounted price must be less than regular price.";
-    }
+
     if (hasCertificate && !certificateTitle.trim()) {
       newErrors.certificateTitle = "Certificate title is required if certificate is enabled.";
     }
@@ -87,7 +90,14 @@ export default function CourseBasicInfoForm({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    
+    // Auto-fill discountedPrice to price if not set
+    const finalDiscountedPrice = (discountedPrice === undefined || discountedPrice === null) ? price : discountedPrice;
+    if (discountedPrice === undefined || discountedPrice === null) {
+      setDiscountedPrice(price);
+    }
+
+    if (!validateForm(price, finalDiscountedPrice)) return;
 
     setLoading(true);
     setServerError(null);
@@ -97,8 +107,9 @@ export default function CourseBasicInfoForm({
       description,
       categoryId,
       price,
-      discountedPrice: discountedPrice || undefined,
+      discountedPrice: finalDiscountedPrice,
       isInSubscription,
+
       hasCertificate,
       certificateTitle: hasCertificate ? certificateTitle : undefined,
       duration: duration || undefined,
@@ -198,12 +209,18 @@ export default function CourseBasicInfoForm({
           <div>
             <Input
               id="price"
-              label="Price ($)"
+              label="Price (VND)"
               type="number"
               min="0"
-              step="0.01"
+              step="1"
               value={price}
-              onChange={(e) => setPrice(Number(e.target.value))}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                setPrice(val);
+                if (discountedPrice === undefined || discountedPrice === null || discountedPrice === price) {
+                  setDiscountedPrice(val);
+                }
+              }}
               error={errors.price}
               required
             />
@@ -213,18 +230,24 @@ export default function CourseBasicInfoForm({
           <div>
             <Input
               id="discountedPrice"
-              label="Discounted Price ($ - optional)"
+              label="Discounted Price (VND - optional)"
               type="number"
               min="0"
-              step="0.01"
-              value={discountedPrice !== undefined ? discountedPrice : ""}
+              step="1"
+              value={discountedPrice !== undefined && discountedPrice !== null ? discountedPrice : ""}
               placeholder="Leave empty if no discount"
               onChange={(e) =>
                 setDiscountedPrice(e.target.value ? Number(e.target.value) : undefined)
               }
+              onBlur={() => {
+                if (discountedPrice === undefined || discountedPrice === null) {
+                  setDiscountedPrice(price);
+                }
+              }}
               error={errors.discountedPrice}
             />
           </div>
+
         </div>
       </div>
 

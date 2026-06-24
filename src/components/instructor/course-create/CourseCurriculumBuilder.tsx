@@ -8,6 +8,8 @@ import { InstructorSwitch } from "@/components/ui/shared/InstructorSwitch";
 import { Input, Select } from "@/components/ui/shared";
 import { InstructorTextarea } from "@/components/ui/shared/InstructorTextarea";
 import type { CourseCurriculumResponse, CurriculumSectionResponse, LessonResponse } from "@/types";
+import { cn } from "@/lib/utils";
+
 import {
   Plus,
   Trash2,
@@ -59,6 +61,8 @@ export default function CourseCurriculumBuilder({
 
   // Drag and Drop tracking
   const [draggedItem, setDraggedItem] = useState<{ type: "section" | "lesson"; id: string; index: number; sectionId?: string } | null>(null);
+  const [dragOverItem, setDragOverItem] = useState<{ type: "section" | "lesson" | "lesson-placeholder"; id: string; index: number; sectionId?: string } | null>(null);
+
 
   const sections = curriculum?.sections || [];
 
@@ -279,10 +283,10 @@ export default function CourseCurriculumBuilder({
     }
   };
 
-  // ──────────────────────────────────────────────────────────────
   // Drag and Drop Logic
   // ──────────────────────────────────────────────────────────────
   const handleDragStart = (e: React.DragEvent, type: "section" | "lesson", id: string, index: number, sectionId?: string) => {
+    e.stopPropagation();
     setDraggedItem({ type, id, index, sectionId });
     e.dataTransfer.effectAllowed = "move";
   };
@@ -291,28 +295,115 @@ export default function CourseCurriculumBuilder({
     e.preventDefault();
   };
 
-  const handleDrop = async (e: React.DragEvent, targetType: "section" | "lesson", targetId: string, targetIndex: number, targetSectionId?: string) => {
+  const handleDragEnter = (e: React.DragEvent, type: "section" | "lesson" | "lesson-placeholder", id: string, index: number, sectionId?: string) => {
     e.preventDefault();
+    e.stopPropagation();
+    setDragOverItem({ type, id, index, sectionId });
+  };
+
+  const handleDragEnd = () => {
+    setDraggedItem(null);
+    setDragOverItem(null);
+  };
+
+  const handleDrop = async (
+    e: React.DragEvent,
+    targetType: "section" | "lesson" | "lesson-placeholder",
+    targetId: string,
+    targetIndex: number,
+    targetSectionId?: string
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverItem(null);
     if (!draggedItem) return;
 
-    // 1. Swapping Section
+    // 1. Moving Section
     if (draggedItem.type === "section" && targetType === "section") {
       if (draggedItem.index === targetIndex) return;
-      const direction = targetIndex < draggedItem.index ? "up" : "down";
-      await handleMoveSection(draggedItem.index, direction);
+
+      const reordered = [...sections];
+      const [movedSection] = reordered.splice(draggedItem.index, 1);
+      reordered.splice(targetIndex, 0, movedSection);
+
+      const previousSectionId = targetIndex > 0 ? reordered[targetIndex - 1].id : undefined;
+      const nextSectionId = targetIndex < reordered.length - 1 ? reordered[targetIndex + 1].id : undefined;
+
+      if (!movedSection.id) return;
+
+      setActionLoading(true);
+      try {
+        await CourseApi.moveSection(courseId, movedSection.id, {
+          previousSectionId,
+          nextSectionId,
+        });
+        onSuccess();
+      } catch (err: any) {
+        console.error("Failed to move section:", err);
+        setError(err?.message || "Failed to adjust section order.");
+      } finally {
+        setActionLoading(false);
+      }
     }
 
-    // 2. Swapping Lesson (only within same section for drag-and-drop simplicity)
-    if (draggedItem.type === "lesson" && targetType === "lesson" && draggedItem.sectionId === targetSectionId) {
-      if (draggedItem.index === targetIndex) return;
-      const targetSection = sections.find(s => s.id === targetSectionId);
-      if (!targetSection?.lessons) return;
-      const direction = targetIndex < draggedItem.index ? "up" : "down";
-      await handleMoveLesson(targetSectionId!, targetSection.lessons, draggedItem.index, direction);
+    // 2. Moving Lesson (both same section or across sections)
+    if (draggedItem.type === "lesson") {
+      const sourceSectionId = draggedItem.sectionId;
+      const destinationSectionId = targetType === "lesson-placeholder" ? targetId : targetSectionId;
+      if (!sourceSectionId || !destinationSectionId) return;
+
+      const sourceSection = sections.find(s => s.id === sourceSectionId);
+      const destSection = sections.find(s => s.id === destinationSectionId);
+      if (!sourceSection || !destSection) return;
+
+      const draggedLesson = sourceSection.lessons?.[draggedItem.index];
+      if (!draggedLesson || !draggedLesson.id) return;
+
+      let previousLessonId: string | undefined = undefined;
+      let nextLessonId: string | undefined = undefined;
+
+      if (targetType === "lesson-placeholder") {
+        // Drop on empty section placeholder -> put at the very beginning
+        previousLessonId = undefined;
+        nextLessonId = undefined;
+      } else if (sourceSectionId === destinationSectionId) {
+        // Reordering within the same section
+        if (draggedItem.index === targetIndex) return;
+        const reordered = [...(sourceSection.lessons || [])];
+        const [movedLesson] = reordered.splice(draggedItem.index, 1);
+        reordered.splice(targetIndex, 0, movedLesson);
+
+        previousLessonId = targetIndex > 0 ? reordered[targetIndex - 1].id : undefined;
+        nextLessonId = targetIndex < reordered.length - 1 ? reordered[targetIndex + 1].id : undefined;
+      } else {
+        // Moving to a different section
+        const targetLessons = [...(destSection.lessons || [])];
+        targetLessons.splice(targetIndex, 0, draggedLesson);
+
+        previousLessonId = targetIndex > 0 ? targetLessons[targetIndex - 1].id : undefined;
+        nextLessonId = targetIndex < targetLessons.length - 1 ? targetLessons[targetIndex + 1].id : undefined;
+      }
+
+      setActionLoading(true);
+      try {
+        await CourseApi.moveLesson(courseId, draggedLesson.id, {
+          targetSectionId: destinationSectionId,
+          previousLessonId,
+          nextLessonId,
+        });
+        onSuccess();
+      } catch (err: any) {
+        console.error("Failed to move lesson:", err);
+        setError(err?.message || "Failed to adjust lesson order.");
+      } finally {
+        setActionLoading(false);
+      }
     }
 
     setDraggedItem(null);
   };
+
+
 
   const getLessonIcon = (type?: string) => {
     switch (type) {
@@ -361,16 +452,26 @@ export default function CourseCurriculumBuilder({
           <div className="space-y-6">
             {sections.map((section, sIdx) => {
               const secLessons = section.lessons || [];
+              const isDragOver = dragOverItem?.type === "section" && dragOverItem.id === section.id;
+              const isDragged = draggedItem?.type === "section" && draggedItem.id === section.id;
 
               return (
                 <div
                   key={section.id}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, "section", section.id!, sIdx)}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, "section", section.id!, sIdx)}
-                  className="rounded-lg border border-gray-200 bg-white overflow-hidden shadow-xs hover:border-gray-200 transition-all"
-                >
+
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, "section", section.id!, sIdx)}
+                    onDragOver={handleDragOver}
+                    onDragEnter={(e) => handleDragEnter(e, "section", section.id!, sIdx)}
+                    onDragEnd={handleDragEnd}
+                    onDrop={(e) => handleDrop(e, "section", section.id!, sIdx)}
+                    className={cn(
+                      "rounded-lg border overflow-hidden shadow-xs transition-all duration-200",
+                      isDragged ? "opacity-40 border-dashed border-gray-300 bg-gray-50/10" : "bg-white border-gray-200",
+                      isDragOver && !isDragged ? "border-primary-400 bg-primary-50/5 scale-[1.005] shadow-md" : ""
+                    )}
+                  >
+
                   {/* Section Title Header */}
                   <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50/50 px-4 py-3">
                     <div className="flex items-center space-x-2.5">
@@ -435,15 +536,26 @@ export default function CourseCurriculumBuilder({
                   {/* Lessons list inside Section */}
                   <div className="space-y-2 px-3 py-3">
                     {secLessons.length > 0 ? (
-                      secLessons.map((lesson, lIdx) => (
-                        <div
-                          key={lesson.id}
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, "lesson", lesson.id!, lIdx, section.id)}
-                          onDragOver={handleDragOver}
-                          onDrop={(e) => handleDrop(e, "lesson", lesson.id!, lIdx, section.id)}
-                          className="group flex items-center justify-between rounded-lg border border-gray-200 p-3 transition-colors hover:bg-gray-50/50"
-                        >
+                      secLessons.map((lesson, lIdx) => {
+                        const isLessonDragOver = dragOverItem?.type === "lesson" && dragOverItem.id === lesson.id;
+                        const isLessonDragged = draggedItem?.type === "lesson" && draggedItem.id === lesson.id;
+
+                        return (
+                          <div
+                            key={lesson.id}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, "lesson", lesson.id!, lIdx, section.id)}
+                            onDragOver={handleDragOver}
+                            onDragEnter={(e) => handleDragEnter(e, "lesson", lesson.id!, lIdx, section.id)}
+                            onDragEnd={handleDragEnd}
+                            onDrop={(e) => handleDrop(e, "lesson", lesson.id!, lIdx, section.id)}
+                            className={cn(
+                              "group flex items-center justify-between rounded-lg border p-3 transition-all duration-200",
+                              isLessonDragged ? "opacity-35 border-dashed border-gray-300 bg-gray-50/20" : "border-gray-200 hover:bg-gray-50/50",
+                              isLessonDragOver && !isLessonDragged ? "border-primary-400 bg-primary-50/20 scale-[1.005]" : ""
+                            )}
+                          >
+
                           <div className="flex items-center space-x-2.5">
                             <div className="cursor-grab active:cursor-grabbing text-gray-350 p-1 rounded hover:bg-gray-100 group-hover:text-gray-400 transition-colors">
                               <Move className="size-4 shrink-0" />
@@ -496,13 +608,25 @@ export default function CourseCurriculumBuilder({
                               <Trash2 className="size-4" />
                             </button>
                           </div>
-                        </div>
-                      ))
+                          </div>
+                        );
+                      })
                     ) : (
-                      <div className="py-5 text-center text-gray-400 text-xs font-medium select-none bg-gray-50/10 border border-dashed border-gray-200 rounded-lg">
-                        No lessons yet. Click &quot;Add Lesson&quot; to begin.
+                      <div
+                        onDragOver={handleDragOver}
+                        onDragEnter={(e) => handleDragEnter(e, "lesson-placeholder", section.id!, 0, section.id)}
+                        onDrop={(e) => handleDrop(e, "lesson-placeholder", section.id!, 0, section.id)}
+                        className={cn(
+                          "py-5 text-center text-gray-400 text-xs font-medium select-none border border-dashed rounded-lg transition-colors duration-200",
+                          dragOverItem?.type === "lesson-placeholder" && dragOverItem.id === section.id
+                            ? "border-primary-400 bg-primary-50/20 text-primary-600"
+                            : "border-gray-200 bg-gray-50/10"
+                        )}
+                      >
+                        No lessons yet. Click &quot;Add Lesson&quot; or drag a lesson here.
                       </div>
                     )}
+
                   </div>
                 </div>
               );

@@ -9,6 +9,8 @@ import { InstructorSwitch } from "@/components/ui/shared/InstructorSwitch";
 import { Video, Trash2, Plus, Play, Pause, Save, Loader2, FileVideo, Subtitles } from "lucide-react";
 import type { VideoLessonResponse, VideoQuestionResponse, CreateVideoOptionRequest } from "@/types";
 import VideoSubtitleEditor from "./VideoSubtitleEditor";
+import { useToastStore } from "@/stores/toast-store";
+
 
 interface VideoLessonEditorProps {
   courseId: string;
@@ -16,7 +18,9 @@ interface VideoLessonEditorProps {
 }
 
 export default function VideoLessonEditor({ courseId, lessonId }: VideoLessonEditorProps) {
+  const addToast = useToastStore((state) => state.addToast);
   const [videoData, setVideoData] = useState<VideoLessonResponse | null>(null);
+
   const [questions, setQuestions] = useState<VideoQuestionResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -112,6 +116,22 @@ export default function VideoLessonEditor({ courseId, lessonId }: VideoLessonEdi
     fetchVideoDetails();
   }, [courseId, lessonId]);
 
+  // Helper to extract duration from video file
+  const getVideoDuration = (file: File): Promise<number> => {
+    return new Promise((resolve) => {
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.onloadedmetadata = () => {
+        window.URL.revokeObjectURL(video.src);
+        resolve(Math.round(video.duration));
+      };
+      video.onerror = () => {
+        resolve(0);
+      };
+      video.src = URL.createObjectURL(file);
+    });
+  };
+
   // Handle Video Upload
   const handleUploadVideo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -126,6 +146,9 @@ export default function VideoLessonEditor({ courseId, lessonId }: VideoLessonEdi
     setError(null);
 
     try {
+      // Get actual video duration from file metadata
+      const duration = await getVideoDuration(file);
+
       // 1. Upload raw file to S3
       const fileKey = await uploadFileWithPresignedUrl(file, {
         prepareError: "Could not prepare video upload slot.",
@@ -139,7 +162,7 @@ export default function VideoLessonEditor({ courseId, lessonId }: VideoLessonEdi
         fileName: file.name,
         fileType: file.type,
         fileSize: file.size,
-        duration: 0, // Backend will recalculate or update later
+        duration,
       };
 
       if (videoData?.videoUrl) {
@@ -189,9 +212,10 @@ export default function VideoLessonEditor({ courseId, lessonId }: VideoLessonEdi
     if (!newQuestionText.trim() || options.some((o) => !o.optionText.trim())) return;
 
     if (!options.some((o) => o.isCorrect)) {
-      alert("At least one option must be marked as correct.");
+      addToast("At least one option must be marked as correct.", "warning", "Validation Error");
       return;
     }
+
 
     setSavingQuestion(true);
     try {
@@ -217,8 +241,9 @@ export default function VideoLessonEditor({ courseId, lessonId }: VideoLessonEdi
       }
     } catch (err: any) {
       console.error("Failed to save interactive question:", err);
-      alert(err?.message || "Could not save question.");
+      addToast(err?.message || "Could not save question.", "error", "Saving Failed");
     } finally {
+
       setSavingQuestion(false);
     }
   };
@@ -232,8 +257,9 @@ export default function VideoLessonEditor({ courseId, lessonId }: VideoLessonEdi
       setQuestions(questions.filter((q) => q.id !== questionId));
     } catch (err: any) {
       console.error("Failed to delete question:", err);
-      alert("Could not delete question marker.");
+      addToast("Could not delete question marker.", "error", "Deletion Failed");
     }
+
   };
 
   // Capture current timestamp from video player

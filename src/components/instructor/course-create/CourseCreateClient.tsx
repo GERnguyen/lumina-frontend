@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, BookOpen, Image, ListTodo, Settings, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, BookOpen, Image, ListTodo, Settings, CheckCircle, Loader2, AlertTriangle } from "lucide-react";
+
 import { CourseApi } from "@/services/api/course-api";
 import type { CategoryResponse, CourseCurriculumResponse, CourseResponse } from "@/types";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,8 @@ export default function CourseCreateClient({ categories, courseId: initialCourse
   const [curriculum, setCurriculum] = useState<CourseCurriculumResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(!!initialCourseId);
   const [error, setError] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState<string | null>(null);
+
 
   // Sync step from search params
   useEffect(() => {
@@ -89,7 +92,21 @@ export default function CourseCreateClient({ categories, courseId: initialCourse
       if (curriculumData) {
         setCurriculum(curriculumData);
       }
+
+      let rejectReasonData = null;
+      if (courseData && courseData.publishStatus === "REJECTED") {
+        try {
+          const rejectRes = await CourseApi.getRejectReason(id);
+          if (rejectRes?.data?.reason) {
+            rejectReasonData = rejectRes.data.reason;
+          }
+        } catch (e) {
+          console.error("Failed to load reject reason:", e);
+        }
+      }
+      setRejectReason(rejectReasonData);
     } catch (err: any) {
+
       console.error("Failed to load course details:", err);
       setError("Failed to load course details. Please try again.");
     } finally {
@@ -236,6 +253,23 @@ export default function CourseCreateClient({ categories, courseId: initialCourse
           </div>
         )}
       </div>
+
+      {rejectReason && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-5 shadow-2xs animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex items-start space-x-3">
+            <AlertTriangle className="size-5 text-red-500 shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-bold text-red-800">This Course was Rejected by Admin</h3>
+              <p className="mt-1 text-xs text-red-700 leading-relaxed font-semibold">
+                Reason: {rejectReason}
+              </p>
+              <p className="mt-2 text-[11px] text-red-500 font-medium">
+                Please fix the issues outlined above and submit the course again for approval.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stepper Progress Bar */}
       <div className="mb-6 rounded-xl border border-zinc-150 bg-white p-5 shadow-2xs select-none">

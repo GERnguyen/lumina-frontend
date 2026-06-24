@@ -107,8 +107,9 @@ export function InstructorCourseDetailClient({
         <OverviewTab course={course} curriculum={curriculum} overview={overview} />
       )}
       {tab === "learners" && (
-        <LearnersTab courseId={courseId} learners={learners} />
+        <LearnersTab courseId={courseId} learners={learners} curriculum={curriculum} />
       )}
+
       {tab === "assignments" && (
         <AssignmentsTab courseId={courseId} assignments={assignments} />
       )}

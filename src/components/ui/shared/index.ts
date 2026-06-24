@@ -18,3 +18,5 @@ export * from "./InstructorDialog";
 export * from "./InstructorSwitch";
 export * from "./InstructorTabs";
 export * from "./data-table";
+export * from "./ToastContainer";
+
