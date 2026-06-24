@@ -28,7 +28,12 @@ export async function getInstructorEngagementData(courseId: string) {
   try {
     const [reviewsRes, questionsRes, certsRes] = await Promise.all([
       ReviewApi.getReviewsByCourseId({ courseId, page: 1, size: 50 }).catch(() => ({ data: [] })),
-      CourseQnAApi.getQuestions({ courseId, page: 1, size: 50 }).catch(() => ({ data: [] })),
+      CourseQnAApi.getQuestions({
+        courseId,
+        page: 1,
+        size: 50,
+        sort: JSON.stringify({ createdAt: "DESC" }),
+      }).catch(() => ({ data: [] })),
       CertificateApi.getRequestsByCourse(courseId, { page: 1, size: 50 }).catch(() => ({ data: [] })),
     ]);
 

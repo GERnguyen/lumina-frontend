@@ -8,6 +8,7 @@ import { InstructorDialog } from "@/components/ui/shared/InstructorDialog";
 import { InstructorButton } from "@/components/ui/shared/InstructorButton";
 import { Button } from "@/components/ui/Button";
 import { Textarea, DataTableEmptyState } from "@/components/ui/shared";
+import { InstructorQnADialog } from "./InstructorQnADialog";
 
 interface EngagementData {
   reviews: ReviewResponse[];
@@ -26,6 +27,7 @@ export function EngagementTab({ courseId, data }: EngagementTabProps) {
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
   const [userProfiles, setUserProfiles] = useState<Record<string, { name: string; avatarUrl?: string }>>({});
+  const [selectedQuestion, setSelectedQuestion] = useState<QuestionDto | null>(null);
 
   useEffect(() => {
     async function hydrateUsers() {
@@ -191,7 +193,8 @@ export function EngagementTab({ courseId, data }: EngagementTabProps) {
             data.questions.map((question) => (
               <div
                 key={question.id}
-                className="rounded-xl border border-zinc-150 bg-zinc-50/30 p-4 hover:bg-white hover:border-zinc-200 hover:shadow-xs transition-all duration-200"
+                onClick={() => setSelectedQuestion(question)}
+                className="rounded-xl border border-zinc-150 bg-zinc-50/30 p-4 hover:bg-white hover:border-zinc-200 hover:shadow-xs transition-all duration-200 cursor-pointer"
               >
                 <p className="text-sm font-extrabold text-zinc-950 leading-snug">{question.title || "Câu hỏi không tiêu đề"}</p>
                 <p className="mt-2 text-xs text-zinc-600 line-clamp-3 leading-relaxed font-medium">{question.content || "--"}</p>
@@ -203,13 +206,13 @@ export function EngagementTab({ courseId, data }: EngagementTabProps) {
                     variant="ghost"
                     size="sm"
                     className="text-xs font-bold text-zinc-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all"
-                    onClick={() => {
-                      setTarget({ type: "question", id: question.id || "" });
-                      setContent("");
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedQuestion(question);
                     }}
                   >
                     <MessageSquare className="size-3.5 mr-1 shrink-0" />
-                    Trả lời
+                    Xem & Trả lời
                   </Button>
                 </div>
               </div>
@@ -312,6 +315,16 @@ export function EngagementTab({ courseId, data }: EngagementTabProps) {
           </div>
         </div>
       </InstructorDialog>
+
+      {/* Q&A Thread Management Dialog */}
+      <InstructorQnADialog
+        isOpen={Boolean(selectedQuestion)}
+        onClose={() => setSelectedQuestion(null)}
+        question={selectedQuestion}
+        onAnswerAdded={() => {
+          router.refresh();
+        }}
+      />
     </>
   );
 }

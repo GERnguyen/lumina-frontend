@@ -15,6 +15,7 @@ import { LearningAssignmentLesson } from "./LearningAssignmentLesson";
 import { LearningCurriculumDrawer } from "./LearningCurriculumDrawer";
 import { LearningQuizLesson } from "./LearningQuizLesson";
 import { LearningVideoLesson } from "./LearningVideoLesson";
+import { LearningQnAPanel } from "./LearningQnAPanel";
 
 type LearningPageProps = {
   data: LearningPageData;
@@ -302,6 +303,8 @@ export function LearningPage({ data }: LearningPageProps) {
                   </span>
                 </div>
               </div>
+
+              <LearningQnAPanel courseId={data.courseId} lessonId={data.currentLesson.id} />
 
 
 

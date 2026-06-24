@@ -16,7 +16,31 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const { questionId } = await params;
   const url = new URL(`/api/v1/course-qna/questions/${questionId}/answers`, API_BASE_URL);
   request.nextUrl.searchParams.forEach((value, key) => {
-    url.searchParams.set(key, value);
+    if (key === "sort" && value) {
+      let normalizedSort = value;
+      if (!value.startsWith("{")) {
+        const parts = value.split(",");
+        if (parts.length === 2) {
+          normalizedSort = JSON.stringify({ [parts[0]]: parts[1].toUpperCase() });
+        } else {
+          normalizedSort = JSON.stringify({ [value]: "DESC" });
+        }
+      } else {
+        try {
+          const parsed = JSON.parse(value);
+          const normalizedObj: Record<string, string> = {};
+          for (const [k, v] of Object.entries(parsed)) {
+            normalizedObj[k] = String(v).toUpperCase();
+          }
+          normalizedSort = JSON.stringify(normalizedObj);
+        } catch {
+          // fallback if parsing fails
+        }
+      }
+      url.searchParams.set(key, normalizedSort);
+    } else {
+      url.searchParams.set(key, value);
+    }
   });
 
   const response = await fetch(url, {
