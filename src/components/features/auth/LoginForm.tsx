@@ -78,7 +78,9 @@ export default function LoginForm() {
         }
       }
 
-      if (!returnUrl && typeof window !== "undefined") {
+      const isLogout = searchParams ? searchParams.get("logout") === "true" : false;
+
+      if (!isLogout && !returnUrl && typeof window !== "undefined") {
         try {
           const referrer = document.referrer;
           if (referrer && referrer.startsWith(window.location.origin)) {

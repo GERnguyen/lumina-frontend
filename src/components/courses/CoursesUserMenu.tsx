@@ -21,7 +21,7 @@ export function CoursesUserMenu({ user }: { user: UserDto }) {
     await clearAuthSession();
     clearSession();
     setIsOpen(false);
-    router.push("/login");
+    router.push("/login?logout=true");
     router.refresh();
   }
 

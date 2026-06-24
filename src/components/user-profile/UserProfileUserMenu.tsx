@@ -18,7 +18,7 @@ export function UserProfileUserMenu({ avatar }: { avatar: string }) {
     await clearAuthSession();
     clearSession();
     setIsOpen(false);
-    router.push("/login");
+    router.push("/login?logout=true");
     router.refresh();
   }
 

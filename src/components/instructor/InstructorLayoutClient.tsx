@@ -74,7 +74,7 @@ export function InstructorLayoutClient({ children, user }: InstructorLayoutClien
     try {
       await clearAuthSession();
       clearSession();
-      router.push("/login");
+      router.push("/login?logout=true");
       router.refresh();
     } catch (error) {
       console.error("Failed to log out:", error);
