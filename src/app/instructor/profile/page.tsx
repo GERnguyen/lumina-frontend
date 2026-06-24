@@ -5,7 +5,7 @@ import { getProfileAvatar } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Thông tin cá nhân - Giảng viên",
-  description: "Cài đặt tài khoản cá nhân dành cho giảng viên Lumina.",
+  description: "Cài đặt tài khoản cá nhân dành cho giảng viên Cinx.",
 };
 
 export default async function Page() {

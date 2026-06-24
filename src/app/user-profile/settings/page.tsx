@@ -6,7 +6,7 @@ import { getProfileAvatar } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Profile Settings",
-  description: "Update your Lumina account profile and password settings.",
+  description: "Update your Cinx account profile and password settings.",
   alternates: {
     canonical: "/user-profile/settings",
   },
@@ -28,8 +28,8 @@ export default async function Page() {
       name,
       fullName: name,
       username,
-      email: user?.email || "learner@lumina.local",
-      headline: user?.role === "INSTRUCTOR" ? "Instructor on Lumina" : user?.bio || fallbackUser.headline,
+      email: user?.email || "learner@cinx.local",
+      headline: user?.role === "INSTRUCTOR" ? "Instructor on Cinx" : user?.bio || fallbackUser.headline,
       avatar: getProfileAvatar(user),
       bio: user?.bio || "",
     },

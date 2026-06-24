@@ -8,8 +8,8 @@ import { getProfileTabs, mockUserProfileDashboard, mockProfileWishlist } from "@
 import { getProfileAvatar, money, getCourseRating, getCourseImage, getCourseInstructorName } from "@/lib/format";
 
 export const metadata: Metadata = {
-  title: "Wishlist - Lumina",
-  description: "Review saved Lumina courses in your wishlist.",
+  title: "Wishlist - Cinx",
+  description: "Review saved Cinx courses in your wishlist.",
   alternates: {
     canonical: "/user-profile/wishlist",
   },
@@ -69,8 +69,8 @@ export default async function Page() {
 
   const wishlistPage = {
     user: {
-      name: user.name || "Lumina Learner",
-      headline: user.role === "INSTRUCTOR" ? "Instructor on Lumina" : user.bio || "Lifelong learner on Lumina",
+      name: user.name || "Cinx Learner",
+      headline: user.role === "INSTRUCTOR" ? "Instructor on Cinx" : user.bio || "Lifelong learner on Cinx",
       avatar: getProfileAvatar(user),
     },
     tabs: getProfileTabs("Wishlist"),

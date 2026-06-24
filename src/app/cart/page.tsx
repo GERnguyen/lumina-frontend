@@ -7,7 +7,7 @@ import type { CartItemResponse } from "@/types";
 
 export const metadata: Metadata = {
   title: "Shopping Cart",
-  description: "Review courses in your Lumina cart and proceed to checkout.",
+  description: "Review courses in your Cinx cart and proceed to checkout.",
   alternates: {
     canonical: "/cart",
   },

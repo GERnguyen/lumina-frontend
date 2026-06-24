@@ -25,6 +25,6 @@ function base64UrlEncode(buffer: Uint8Array): string {
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 }
 
-export const PKCE_VERIFIER_KEY = "lumina:oauth:code_verifier";
-export const PKCE_ROLE_KEY = "lumina:oauth:role";
-export const PKCE_RETURN_URL_KEY = "lumina:oauth:return_url";
+export const PKCE_VERIFIER_KEY = "cinx:oauth:code_verifier";
+export const PKCE_ROLE_KEY = "cinx:oauth:role";
+export const PKCE_RETURN_URL_KEY = "cinx:oauth:return_url";

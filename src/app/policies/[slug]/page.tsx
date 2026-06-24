@@ -17,8 +17,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const policy = res.data;
 
   return {
-    title: policy ? `${policy.title} - Lumina Policies` : "Điều khoản & Chính sách - Lumina",
-    description: policy?.summary || "Các văn bản điều khoản thỏa thuận và chính sách bảo mật của hệ thống Lumina.",
+    title: policy ? `${policy.title} - Cinx Policies` : "Điều khoản & Chính sách - Cinx",
+    description: policy?.summary || "Các văn bản điều khoản thỏa thuận và chính sách bảo mật của hệ thống Cinx.",
   };
 }
 
@@ -62,7 +62,7 @@ export default async function PolicyDetailPage({ params }: PageProps) {
             <div className="relative z-10 space-y-3.5 max-w-3xl">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-100/50 border border-primary-200 px-3 py-1 text-xs font-bold text-primary-700">
                 <Shield className="size-3.5" />
-                Lumina Legal Center
+                Cinx Legal Center
               </span>
               <h1 className="text-3xl font-black text-zinc-950 tracking-tight leading-tight md:text-4xl">
                 {policy.title}
@@ -91,11 +91,10 @@ export default async function PolicyDetailPage({ params }: PageProps) {
                       <Link
                         key={item.id}
                         href={`/policies/${item.slug}`}
-                        className={`flex items-center gap-3 rounded-xl px-4 py-3 text-xs font-bold transition-all ${
-                          isActive
+                        className={`flex items-center gap-3 rounded-xl px-4 py-3 text-xs font-bold transition-all ${isActive
                             ? "bg-primary-50 text-[#564FFD] border border-primary-200/50 shadow-2xs"
                             : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 border border-transparent"
-                        }`}
+                          }`}
                       >
                         <FileText className={`size-4 shrink-0 ${isActive ? "text-[#564FFD]" : "text-zinc-400"}`} />
                         <span className="truncate">{item.title}</span>

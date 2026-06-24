@@ -76,7 +76,7 @@ export function QuizzesTab({ quizzes }: QuizzesTabProps) {
         const newEntries = users.reduce((acc, user) => {
           if (user.userId) {
             acc[user.userId] = {
-              name: user.name || "Lumina learner",
+              name: user.name || "Cinx learner",
               email: user.email,
             };
           }
@@ -86,7 +86,7 @@ export function QuizzesTab({ quizzes }: QuizzesTabProps) {
         missingIds.forEach((id) => {
           if (!newEntries[id]) {
             newEntries[id] = {
-              name: "Lumina learner",
+              name: "Cinx learner",
               email: undefined,
             };
           }

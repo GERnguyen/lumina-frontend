@@ -84,7 +84,7 @@ export function CourseReviews({
         {reviews.length ? (
           reviews.map((review, index) => {
             const reviewer = review.userId ? userProfiles?.[review.userId] : undefined;
-            const reviewerName = reviewer?.name || "Lumina learner";
+            const reviewerName = reviewer?.name || "Cinx learner";
             const avatar = reviewer?.avatarUrl ? getProfileAvatar({ avatarUrl: reviewer.avatarUrl, name: reviewerName }, reviewerName) : undefined;
             return (
               <article key={review.id || index} className="flex gap-4 p-5">

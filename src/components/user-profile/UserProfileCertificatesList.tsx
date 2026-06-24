@@ -71,7 +71,7 @@ export function UserProfileCertificatesList({ courses }: UserProfileCertificates
         </div>
         <h3 className="mt-6 text-lg font-semibold text-[#1D2026]">Chưa có chứng chỉ nào</h3>
         <p className="mt-2 text-sm text-[#6E7485] max-w-md mx-auto">
-          Hoàn thành các khóa học trên Lumina và đạt yêu cầu để nhận chứng chỉ chính thức.
+          Hoàn thành các khóa học trên Cinx và đạt yêu cầu để nhận chứng chỉ chính thức.
         </p>
       </div>
     );
@@ -82,18 +82,18 @@ export function UserProfileCertificatesList({ courses }: UserProfileCertificates
       <h2 className="text-2xl font-semibold tracking-normal text-[#1D2026] flex items-center gap-3">
         Certificates <span className="font-normal text-lg">({certificates.length})</span>
       </h2>
-      
+
       <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {certificates.map((cert) => {
           // Resolve course title
-          const courseTitle = cert.course?.title || 
-            courses.find(c => c.id === cert.courseId)?.title || 
+          const courseTitle = cert.course?.title ||
+            courses.find(c => c.id === cert.courseId)?.title ||
             `Khóa học ID: ${cert.courseId?.substring(0, 8)}...`;
 
           const status = cert.status || "PENDING";
           const isApproved = status === "APPROVED";
           const isRejected = status === "REJECTED";
-          
+
           let badgeBg = "bg-[#FFF4E5] text-[#B85C00]"; // PENDING
           let badgeText = "Chờ duyệt";
           if (isApproved) {
@@ -107,8 +107,8 @@ export function UserProfileCertificatesList({ courses }: UserProfileCertificates
           const displayDate = cert.approvedAt || cert.requestedAt;
 
           return (
-            <article 
-              key={cert.id} 
+            <article
+              key={cert.id}
               className="group flex flex-col justify-between overflow-hidden rounded-[18px] border border-[#E9EAF0] bg-white p-6 transition duration-300 hover:-translate-y-1 hover:shadow-[0_12px_24px_rgba(29,32,38,0.08)]"
             >
               <div>

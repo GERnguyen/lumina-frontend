@@ -20,12 +20,12 @@ export async function generateMetadata({ params, searchParams }: LearningRoutePr
     const data = await getLearningPageData(courseId, lessonId);
     return {
       title: `${data.currentLesson.title} - ${data.courseTitle}`,
-      description: `Continue learning ${data.courseTitle} on Lumina.`,
+      description: `Continue learning ${data.courseTitle} on Cinx.`,
       robots: { index: false, follow: false },
     };
   } catch {
     return {
-      title: "Learning - Lumina",
+      title: "Learning - Cinx",
       robots: { index: false, follow: false },
     };
   }

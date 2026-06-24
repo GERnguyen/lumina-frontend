@@ -17,8 +17,8 @@ import {
 } from "@/lib/format";
 
 export const metadata: Metadata = {
-  title: "Purchase History - Lumina",
-  description: "Review your Lumina purchase history, order details, and payment information.",
+  title: "Purchase History - Cinx",
+  description: "Review your Cinx purchase history, order details, and payment information.",
   alternates: {
     canonical: "/user-profile/purchase-history",
   },
@@ -73,7 +73,7 @@ export default async function Page() {
         image: course ? getCourseImage(course) : `/courses/course-0${(itemIndex % 8) + 1}.png`,
         rating: course ? getCourseRating(course.rating) : "No reviews yet",
         reviews: course?.enrollmentCount ? new Intl.NumberFormat("en-US").format(course.enrollmentCount) : "",
-        instructor: course ? getCourseInstructorName(course) : "Lumina Instructor",
+        instructor: course ? getCourseInstructorName(course) : "Cinx Instructor",
         price: typeof price === "number" ? money(price) : "Free",
       };
     });
@@ -88,7 +88,7 @@ export default async function Page() {
       total: moneyWithCurrency(total),
       paymentMethod: paymentMethodLabel(order.paymentMethod),
       status: order.status || "PENDING",
-      paymentName: "Lumina Learner",
+      paymentName: "Cinx Learner",
       paymentAccount: maskedPaymentAccount(paymentInfo),
       paymentExpiry: undefined,
       courses: mappedCourses,
@@ -97,8 +97,8 @@ export default async function Page() {
 
   const purchaseHistoryPage = {
     user: {
-      name: user.name || "Lumina Learner",
-      headline: user.role === "INSTRUCTOR" ? "Instructor on Lumina" : user.bio || "Lifelong learner on Lumina",
+      name: user.name || "Cinx Learner",
+      headline: user.role === "INSTRUCTOR" ? "Instructor on Cinx" : user.bio || "Lifelong learner on Cinx",
       avatar: getProfileAvatar(user),
     },
     tabs: getProfileTabs("Purchase History"),

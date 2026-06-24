@@ -149,7 +149,7 @@ const RegisterForm = () => {
       <form onSubmit={handleSubmit} className="flex w-full max-w-xl flex-col gap-4">
         <div className="space-y-2 text-center">
           <h1>Create your account</h1>
-          <p>Start learning or build your first course on Lumina.</p>
+          <p>Start learning or build your first course on Cinx.</p>
         </div>
 
         {formError && (

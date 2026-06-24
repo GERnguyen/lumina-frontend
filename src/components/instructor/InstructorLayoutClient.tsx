@@ -35,7 +35,7 @@ export function InstructorLayoutClient({ children, user }: InstructorLayoutClien
 
   const avatar = getProfileAvatar(user, "Giảng viên");
   const name = user.name || "Giảng viên";
-  const email = user.email || "instructor@lumina.local";
+  const email = user.email || "instructor@cinx.local";
 
   const navigationItems = [
     {
@@ -98,7 +98,7 @@ export function InstructorLayoutClient({ children, user }: InstructorLayoutClien
       <div className="flex h-[72px] items-center border-b border-primary-900/60 px-6">
         <Link href="/instructor/dashboard" className="flex items-center gap-2.5">
           <span className="font-logo text-2xl font-bold tracking-wide text-white">
-            LM <span className="text-primary-400">Lumina</span>
+            LM <span className="text-primary-400">Cinx</span>
           </span>
           <span className="rounded-md border border-primary-500/30 bg-primary-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-300">
             Giảng viên
@@ -162,7 +162,7 @@ export function InstructorLayoutClient({ children, user }: InstructorLayoutClien
 
       <div className="fixed left-0 right-0 top-0 z-40 flex h-[60px] items-center justify-between border-b border-primary-900/60 bg-primary-950 px-4 text-white md:hidden">
         <span className="font-logo text-xl font-bold tracking-wide">
-          LM <span className="text-primary-400">Lumina</span>
+          LM <span className="text-primary-400">Cinx</span>
         </span>
         <Button
           type="button"

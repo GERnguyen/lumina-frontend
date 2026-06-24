@@ -16,7 +16,7 @@ type PageProps = {
 };
 
 export const metadata: Metadata = {
-  title: "Quản lý khóa học - Lumina Instructor",
+  title: "Quản lý khóa học - Cinx Instructor",
   description: "Xem thống kê, học viên, bài tập, quiz và tương tác của khóa học.",
 };
 

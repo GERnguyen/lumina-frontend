@@ -32,13 +32,13 @@ export function InstructorQnADialog({ isOpen, onClose, question, onAnswerAdded }
       const res = await getAnswersForQuestionAction(question.id);
       if (res.success && res.data) {
         setAnswers(res.data);
-        
+
         // Hydrate usernames
         const userIds = [
           question.userId,
           ...res.data.map((a) => a.userId)
         ].filter(Boolean) as string[];
-        
+
         hydrateUsers(userIds);
       } else {
         setErrorMsg(res.error || "Không thể tải danh sách phản hồi.");
@@ -71,7 +71,7 @@ export function InstructorQnADialog({ isOpen, onClose, question, onAnswerAdded }
       const newEntries = users.reduce((acc, user) => {
         if (user.userId) {
           acc[user.userId] = {
-            name: user.name || "Lumina learner",
+            name: user.name || "Cinx learner",
             avatarUrl: user.avatarUrl,
           };
         }
@@ -81,7 +81,7 @@ export function InstructorQnADialog({ isOpen, onClose, question, onAnswerAdded }
       missingIds.forEach((id) => {
         if (!newEntries[id]) {
           newEntries[id] = {
-            name: "Lumina learner",
+            name: "Cinx learner",
             avatarUrl: undefined,
           };
         }
@@ -236,7 +236,7 @@ export function InstructorQnADialog({ isOpen, onClose, question, onAnswerAdded }
                   >
                     <div className="flex items-center justify-between border-b border-zinc-100 pb-1.5">
                       <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-zinc-900">{profile?.name || answer.userId || "Lumina Learner"}</span>
+                        <span className="font-extrabold text-zinc-900">{profile?.name || answer.userId || "Cinx Learner"}</span>
                         {isInstructor && (
                           <span className="rounded-full bg-primary-100 px-1.5 py-0.5 text-[8px] font-black uppercase text-primary-850 tracking-wider">
                             Giảng viên
@@ -245,7 +245,7 @@ export function InstructorQnADialog({ isOpen, onClose, question, onAnswerAdded }
                         <span className="text-zinc-300 font-normal">•</span>
                         <span className="text-zinc-400 font-medium text-[10px]">{formatDate(answer.createdAt)}</span>
                       </div>
-                      
+
                       {/* Delete is allowed for instructor on all posts */}
                       <button
                         onClick={() => handleDeleteAnswer(answer.id!)}

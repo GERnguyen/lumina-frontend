@@ -38,7 +38,7 @@ export async function PaymentReturnHandler({
         <p className="text-sm font-semibold uppercase text-[#7872FD]">Payment redirect</p>
         <h1 className="mt-3 text-3xl font-semibold text-[#1D2026]">We received the payment redirect.</h1>
         <p className="mt-3 text-sm leading-6 text-[#6E7485]">
-          Lumina could not find an order id in the redirect URL. Please open your purchase history to check the latest payment status.
+          Cinx could not find an order id in the redirect URL. Please open your purchase history to check the latest payment status.
         </p>
         <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
           <Link href="/user-profile/purchase-history" className="inline-flex h-11 items-center justify-center rounded-[16px] bg-[#564FFD] px-5 text-sm font-semibold text-white transition hover:bg-[#453FCA]">

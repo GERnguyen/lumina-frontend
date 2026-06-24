@@ -46,10 +46,10 @@ export function CoursePurchaseCard({
   const price = course.discountedPrice ?? course.price ?? 0;
   const original = course.discountedPrice && course.price && course.discountedPrice < course.price ? money(course.price) : undefined;
   const priceLabel = money(price);
-  
+
   const discountRate = course.discountRate || 0;
   const discount = original && discountRate ? `${Math.round(discountRate)}% OFF` : original ? "On sale" : "Best value";
-  const urgency = course.isInSubscription ? "Included in Lumina subscription" : "Enroll anytime and learn at your pace";
+  const urgency = course.isInSubscription ? "Included in Cinx subscription" : "Enroll anytime and learn at your pace";
 
   const facts = [
     { label: "Course Duration", value: formatCourseLength(course.duration) },

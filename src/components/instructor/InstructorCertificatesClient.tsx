@@ -78,7 +78,7 @@ export function InstructorCertificatesClient({
           const newEntries = users.reduce((acc, user) => {
             if (user.userId) {
               acc[user.userId] = {
-                name: user.name || "Lumina learner",
+                name: user.name || "Cinx learner",
                 email: user.email,
               };
             }
@@ -87,7 +87,7 @@ export function InstructorCertificatesClient({
 
           missingUserIds.forEach((id) => {
             if (!newEntries[id]) {
-              newEntries[id] = { name: "Lumina learner" };
+              newEntries[id] = { name: "Cinx learner" };
             }
           });
           setUserProfiles((current) => ({ ...current, ...newEntries }));

@@ -58,7 +58,7 @@ export function HowItWorksSection() {
               <Image
                 key={avatar}
                 src={`/landing/figma/${avatar}`}
-                alt={`Lumina learner ${index + 1}`}
+                alt={`Cinx learner ${index + 1}`}
                 width={44}
                 height={44}
                 className="-mr-3 size-11 rounded-full border-2 border-white object-cover"

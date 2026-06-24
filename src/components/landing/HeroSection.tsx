@@ -15,31 +15,31 @@ export function HeroSection() {
       <LandingNavbar />
 
       <div className="animate-fade-up absolute left-1/2 top-[145px] z-10 flex w-full max-w-[900px] -translate-x-1/2 flex-col items-center px-5 text-center">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#FCFDFF] bg-white px-6 py-2 text-base text-[#002B6B] shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_38px_rgba(0,43,107,0.12)]">
-            <Sparkles className="size-5" />
-            Your #1 Platform for Courses
-          </div>
-          <h1 className="max-w-[846px] font-general text-5xl font-semibold leading-[1.2] text-[#002B6B] sm:text-6xl lg:text-[72px]">
-            Achieve your career goals with Lumina
-          </h1>
-          <p className="mt-4 max-w-[430px] text-base leading-6 text-[#414D60]">
-            Find every skills you need to conquer your IT career
-          </p>
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#FCFDFF] bg-white px-6 py-2 text-base text-[#002B6B] shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_38px_rgba(0,43,107,0.12)]">
+          <Sparkles className="size-5" />
+          Your #1 Platform for Courses
+        </div>
+        <h1 className="max-w-[846px] font-general text-5xl font-semibold leading-[1.2] text-[#002B6B] sm:text-6xl lg:text-[72px]">
+          Achieve your career goals with Cinx
+        </h1>
+        <p className="mt-4 max-w-[430px] text-base leading-6 text-[#414D60]">
+          Find every skills you need to conquer your IT career
+        </p>
 
-          <div className="mt-12 flex flex-col items-center gap-2 sm:flex-row">
-            <label className="flex h-16 w-full max-w-[499px] items-center gap-4 rounded-full border border-[#EDEDED] bg-white py-4 pl-6 pr-8 shadow-[8px_8px_28px_rgba(0,0,0,0.05)] transition duration-300 focus-within:-translate-y-0.5 focus-within:border-[#8AB9FF] focus-within:shadow-[0_18px_46px_rgba(0,102,255,0.16)] sm:w-[499px]">
-              <Search className="size-6 text-[#0066FF]" />
-              <span className="sr-only">Search courses</span>
-              <input
-                className="h-8 flex-1 border-0 bg-transparent p-0 text-base font-medium text-[#172033] placeholder:text-[#848D9B] focus:ring-0"
-                placeholder="e.g. UX Designer"
-                type="search"
-              />
-            </label>
-            <LandingButton href="/courses" size="lg" className="h-14 px-12">
-              Search
-            </LandingButton>
-          </div>
+        <div className="mt-12 flex flex-col items-center gap-2 sm:flex-row">
+          <label className="flex h-16 w-full max-w-[499px] items-center gap-4 rounded-full border border-[#EDEDED] bg-white py-4 pl-6 pr-8 shadow-[8px_8px_28px_rgba(0,0,0,0.05)] transition duration-300 focus-within:-translate-y-0.5 focus-within:border-[#8AB9FF] focus-within:shadow-[0_18px_46px_rgba(0,102,255,0.16)] sm:w-[499px]">
+            <Search className="size-6 text-[#0066FF]" />
+            <span className="sr-only">Search courses</span>
+            <input
+              className="h-8 flex-1 border-0 bg-transparent p-0 text-base font-medium text-[#172033] placeholder:text-[#848D9B] focus:ring-0"
+              placeholder="e.g. UX Designer"
+              type="search"
+            />
+          </label>
+          <LandingButton href="/courses" size="lg" className="h-14 px-12">
+            Search
+          </LandingButton>
+        </div>
       </div>
 
       <div className="absolute inset-x-0 top-[582px] h-[338px] w-full overflow-hidden bg-[#FDFDFF] shadow-[0_18px_80px_rgba(0,43,107,0.05)]">

@@ -40,7 +40,7 @@ export function AssignmentsTab({ courseId, assignments }: AssignmentsTabProps) {
         const newEntries = users.reduce((acc, user) => {
           if (user.userId) {
             acc[user.userId] = {
-              name: user.name || "Lumina learner",
+              name: user.name || "Cinx learner",
               email: user.email,
             };
           }
@@ -51,7 +51,7 @@ export function AssignmentsTab({ courseId, assignments }: AssignmentsTabProps) {
         missingIds.forEach((id) => {
           if (!newEntries[id]) {
             newEntries[id] = {
-              name: "Lumina learner",
+              name: "Cinx learner",
               email: undefined,
             };
           }
@@ -115,11 +115,10 @@ export function AssignmentsTab({ courseId, assignments }: AssignmentsTabProps) {
         header: "Điểm",
         cell: ({ row }) => (
           <span
-            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold border ${
-              typeof row.original.score === "number"
+            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold border ${typeof row.original.score === "number"
                 ? "bg-emerald-50 text-emerald-700 border-emerald-250/50"
                 : "bg-amber-50 text-amber-700 border-amber-250/50"
-            }`}
+              }`}
           >
             {typeof row.original.score === "number" ? row.original.score : "Chưa chấm"}
           </span>

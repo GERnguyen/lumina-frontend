@@ -138,9 +138,9 @@ export function getProfileTabs(activeLabel: string): ProfileTab[] {
 
 export const mockUserProfileDashboard: UserProfileDashboardData = {
   user: {
-    name: "Lumina Learner",
-    headline: "Lifelong learner on Lumina",
-    avatar: "https://ui-avatars.com/api/?name=Lumina+Learner&background=EBEBFF&color=564FFD&bold=true",
+    name: "Cinx Learner",
+    headline: "Lifelong learner on Cinx",
+    avatar: "https://ui-avatars.com/api/?name=Cinx+Learner&background=EBEBFF&color=564FFD&bold=true",
   },
   tabs: getProfileTabs("Dashboard"),
   stats: [
@@ -152,7 +152,7 @@ export const mockUserProfileDashboard: UserProfileDashboardData = {
   learningCourses: [
     {
       id: "fallback-course",
-      title: "Start learning with Lumina",
+      title: "Start learning with Cinx",
       lesson: "Choose a course to begin",
       image: "/courses/course-01.png",
       href: "/courses",
@@ -163,12 +163,12 @@ export const mockUserProfileDashboard: UserProfileDashboardData = {
 export const mockProfileCourses: ProfileCourseItem[] = [
   {
     id: "fallback-course",
-    title: "Start learning with Lumina",
+    title: "Start learning with Cinx",
     lesson: "Choose a course to begin",
     image: "/courses/course-01.png",
     progress: 0,
     href: "/courses",
-    teacher: "Lumina Instructor",
+    teacher: "Cinx Instructor",
     status: "active",
   },
 ];
@@ -181,7 +181,7 @@ export const mockProfileWishlist: ProfileWishlistItem[] = [
     image: "/courses/course-02.png",
     rating: "No reviews yet",
     reviews: "",
-    instructors: ["Lumina Instructor"],
+    instructors: ["Cinx Instructor"],
     price: "Free",
   },
 ];

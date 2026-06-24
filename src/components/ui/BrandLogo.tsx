@@ -37,7 +37,7 @@ export function BrandLogo({ className = "", tone = "dark", size = "sm" }: BrandL
         <span className="block translate-y-[1px]">LM</span>
       </span>
       <span className={`flex h-full items-center font-general ${scale.word} font-semibold leading-none`}>
-        Lumina
+        Cinx
       </span>
     </Link>
   );

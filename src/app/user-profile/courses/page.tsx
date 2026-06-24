@@ -12,8 +12,8 @@ type UserProfileCoursesRouteProps = {
 };
 
 export const metadata: Metadata = {
-  title: "My Courses - Lumina",
-  description: "Browse and continue your enrolled Lumina courses.",
+  title: "My Courses - Cinx",
+  description: "Browse and continue your enrolled Cinx courses.",
   alternates: {
     canonical: "/user-profile/courses",
   },
@@ -87,7 +87,7 @@ export default async function Page({ searchParams }: UserProfileCoursesRouteProp
       progress,
       href: `/learning/${course.id}`,
       featured: index === 3 || index === 11,
-      teacher: course.instructor?.name || "Lumina Instructor",
+      teacher: course.instructor?.name || "Cinx Instructor",
       status: progressItem?.isCompleted ? ("completed" as const) : ("active" as const),
     };
   });
@@ -111,8 +111,8 @@ export default async function Page({ searchParams }: UserProfileCoursesRouteProp
 
   const coursesPage = {
     user: {
-      name: user.name || "Lumina Learner",
-      headline: user.role === "INSTRUCTOR" ? "Instructor on Lumina" : user.bio || "Lifelong learner on Lumina",
+      name: user.name || "Cinx Learner",
+      headline: user.role === "INSTRUCTOR" ? "Instructor on Cinx" : user.bio || "Lifelong learner on Cinx",
       avatar: getProfileAvatar(user),
     },
     tabs: getProfileTabs("Courses"),

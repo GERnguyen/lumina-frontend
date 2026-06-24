@@ -17,7 +17,7 @@ export function CourseSuggestionLinks({ suggestions }: CourseSuggestionLinksProp
           key={item.label}
           href={item.href}
           onClick={() => {
-            window.dispatchEvent(new CustomEvent("lumina:courses-search", { detail: item.label }));
+            window.dispatchEvent(new CustomEvent("cinx:courses-search", { detail: item.label }));
           }}
           className="text-[#7872FD] transition hover:text-[#5F58F0]"
         >

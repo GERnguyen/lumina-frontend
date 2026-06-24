@@ -4,7 +4,7 @@ import { InstructorDashboardClient } from "@/components/instructor/InstructorDas
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Tổng quan giảng viên - Lumina",
+  title: "Tổng quan giảng viên - Cinx",
   description: "Trang tổng quan thống kê khóa học và doanh thu dành cho giảng viên.",
 };
 

@@ -12,8 +12,8 @@ import { NotificationApi } from "@/services/api/notification-api";
 import { UserApi } from "@/services/api/user-api";
 
 export const metadata: Metadata = {
-  title: "My Learning - Lumina",
-  description: "Continue your Lumina courses, goals, calendar, recommendations, and learning updates.",
+  title: "My Learning - Cinx",
+  description: "Continue your Cinx courses, goals, calendar, recommendations, and learning updates.",
   alternates: {
     canonical: "/my-learning",
   },

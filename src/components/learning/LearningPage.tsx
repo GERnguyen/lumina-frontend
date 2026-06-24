@@ -22,7 +22,7 @@ type LearningPageProps = {
 };
 
 function completionModalStorageKey(courseId: string) {
-  return `lumina:completion-modal-shown:${courseId}`;
+  return `cinx:completion-modal-shown:${courseId}`;
 }
 
 export function LearningPage({ data }: LearningPageProps) {
@@ -299,7 +299,7 @@ export function LearningPage({ data }: LearningPageProps) {
                     Progress: <strong className="font-medium text-[#1D2026]">{data.progressPercent}% Completed</strong>
                   </span>
                   <span>
-                    Instructor: <strong className="font-medium text-[#1D2026]">{data.instructorName || "Lumina Instructor"}</strong>
+                    Instructor: <strong className="font-medium text-[#1D2026]">{data.instructorName || "Cinx Instructor"}</strong>
                   </span>
                 </div>
               </div>
@@ -344,7 +344,7 @@ export function LearningPage({ data }: LearningPageProps) {
         <div className="fixed inset-0 z-50 bg-black/40 xl:hidden">
           <div className="absolute right-0 top-0 h-full w-full max-w-[420px] overflow-y-auto bg-white p-4">
             <button
-                type="button"
+              type="button"
               onClick={() => setDrawerOpen(false)}
               className="mb-4 inline-flex size-11 items-center justify-center rounded-full bg-[#F5F7FA] text-[#1D2026]"
               aria-label="Close lessons drawer"

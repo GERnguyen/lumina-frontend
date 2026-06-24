@@ -75,7 +75,7 @@ export function CourseSocialPanel({
       const newEntries = users.reduce((acc, user) => {
         if (user.userId) {
           acc[user.userId] = {
-            name: user.name || "Lumina learner",
+            name: user.name || "Cinx learner",
             avatarUrl: user.avatarUrl,
           };
         }
@@ -86,7 +86,7 @@ export function CourseSocialPanel({
       missingIds.forEach((id) => {
         if (!newEntries[id]) {
           newEntries[id] = {
-            name: "Lumina learner",
+            name: "Cinx learner",
             avatarUrl: undefined,
           };
         }

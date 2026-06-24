@@ -60,9 +60,9 @@ export function InstructorNotificationsPage({
       }
     };
 
-    window.addEventListener("lumina:notifications-changed", handleSync);
+    window.addEventListener("cinx:notifications-changed", handleSync);
     return () => {
-      window.removeEventListener("lumina:notifications-changed", handleSync);
+      window.removeEventListener("cinx:notifications-changed", handleSync);
     };
   }, []);
 
@@ -90,7 +90,7 @@ export function InstructorNotificationsPage({
       const target = notifications.find((n) => n.id === id);
       if (target) {
         window.dispatchEvent(
-          new CustomEvent("lumina:notifications-changed", {
+          new CustomEvent("cinx:notifications-changed", {
             detail: {
               action: "toggle-read",
               id,
@@ -109,7 +109,7 @@ export function InstructorNotificationsPage({
     try {
       await NotificationApi.deleteNotification(id);
       window.dispatchEvent(
-        new CustomEvent("lumina:notifications-changed", {
+        new CustomEvent("cinx:notifications-changed", {
           detail: {
             action: "delete",
             id,
@@ -126,7 +126,7 @@ export function InstructorNotificationsPage({
     try {
       await NotificationApi.markAllAsRead();
       window.dispatchEvent(
-        new CustomEvent("lumina:notifications-changed", {
+        new CustomEvent("cinx:notifications-changed", {
           detail: {
             action: "mark-all-read",
           },
@@ -143,7 +143,7 @@ export function InstructorNotificationsPage({
       await NotificationApi.markAllAsUnread();
       const countRes = await NotificationApi.countUnreadNotifications();
       window.dispatchEvent(
-        new CustomEvent("lumina:notifications-changed", {
+        new CustomEvent("cinx:notifications-changed", {
           detail: {
             action: "mark-all-unread",
             count: countRes?.data ?? 0,

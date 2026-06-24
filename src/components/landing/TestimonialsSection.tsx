@@ -19,7 +19,7 @@ export function TestimonialsSection() {
               </p>
             </div>
             <p className="max-w-[528px] font-general text-[40px] font-semibold leading-[1.2]">
-              “Courses at Lumina are built different. They gave me all the knowledges needed to boost my career”
+              “Courses at Cinx are built different. They gave me all the knowledges needed to boost my career”
             </p>
             <div className="flex gap-4">
               <button className="flex size-16 items-center justify-center rounded-full bg-[#EDEEF0] text-[#1E242C]" aria-label="Previous testimonial">

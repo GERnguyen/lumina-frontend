@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Quản lý chứng chỉ - Giảng viên",
-  description: "Phê duyệt và quản lý yêu cầu cấp chứng chỉ của học viên trên Lumina.",
+  description: "Phê duyệt và quản lý yêu cầu cấp chứng chỉ của học viên trên Cinx.",
 };
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
