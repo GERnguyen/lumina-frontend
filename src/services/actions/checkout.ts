@@ -99,3 +99,12 @@ export async function verifyVoucherAction(code: string) {
     return { success: false, error: error?.message || "Failed to verify coupon code" };
   }
 }
+
+export async function getPublishedVouchersAction() {
+  try {
+    const res = await VoucherApi.getVouchers({ page: 1, size: 100 });
+    return { success: true, data: res.data || [] };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to fetch vouchers" };
+  }
+}
