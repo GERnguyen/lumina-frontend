@@ -396,6 +396,7 @@ export interface PaginatedMetadata {
 export interface RejectCourseResponse {
   courseId?: string;
   reason?: string;
+  rejectedAt?: string;
 }
 
 export interface CourseCurriculumResponse {

@@ -17,21 +17,21 @@ interface CourseHeaderProps {
 
 export function CourseHeader({ course }: CourseHeaderProps) {
   const image = getCourseImage(course || undefined);
-  const [rejectReason, setRejectReason] = useState<string | null>(null);
+  const [rejectData, setRejectData] = useState<{ reason?: string; rejectedAt?: string } | null>(null);
 
   useEffect(() => {
     if (course?.id && course.publishStatus === "REJECTED") {
       CourseApi.getRejectReason(course.id)
         .then((res) => {
-          if (res?.data?.reason) {
-            setRejectReason(res.data.reason);
+          if (res?.data) {
+            setRejectData(res.data);
           }
         })
         .catch((err) => {
           console.error("Failed to load reject reason in header:", err);
         });
     } else {
-      setRejectReason(null);
+      setRejectData(null);
     }
   }, [course?.id, course?.publishStatus]);
 
@@ -102,14 +102,21 @@ export function CourseHeader({ course }: CourseHeaderProps) {
           </Button>
         </div>
       </div>
-      {rejectReason && (
+      {rejectData?.reason && (
         <div className="border-t border-red-100 bg-red-50/50 px-6 py-4 animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="flex items-start space-x-3">
             <AlertTriangle className="size-5 text-red-500 shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-xs font-bold text-red-800 uppercase tracking-wider">Rejection Reason</h4>
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs font-bold text-red-800 uppercase tracking-wider">Rejection Reason</h4>
+                {rejectData.rejectedAt && (
+                  <span className="text-[10px] text-red-650 font-bold">
+                    ({new Date(rejectData.rejectedAt).toLocaleDateString("vi-VN")})
+                  </span>
+                )}
+              </div>
               <p className="mt-1 text-xs text-red-700 leading-relaxed font-semibold">
-                {rejectReason}
+                {rejectData.reason}
               </p>
             </div>
           </div>

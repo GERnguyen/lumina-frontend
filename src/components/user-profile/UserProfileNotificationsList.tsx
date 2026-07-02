@@ -6,6 +6,7 @@ import type { UserNotificationResponse } from "@/types";
 import { getNotificationHelper, mapNotificationUrl } from "@/lib/notifications";
 import { Bell, Check, Trash2, MailOpen, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatShortDate } from "@/lib/format";
 
 export function UserProfileNotificationsList() {
   const [notifications, setNotifications] = useState<UserNotificationResponse[]>([]);
@@ -217,11 +218,16 @@ export function UserProfileNotificationsList() {
                   <div className="space-y-1 min-w-0">
                     <p
                       className={cn(
-                        "text-sm leading-normal transition-colors group-hover/item:text-primary-600",
+                        "text-sm leading-normal transition-colors group-hover/item:text-primary-600 flex items-center justify-between gap-2",
                         !n.isRead ? "font-bold text-gray-900" : "font-semibold text-gray-700"
                       )}
                     >
-                      {displayTitle}
+                      <span>{displayTitle}</span>
+                      {n.sentAt && (
+                        <span className="text-[10px] font-normal text-gray-400 shrink-0 whitespace-nowrap">
+                          {formatShortDate(n.sentAt)}
+                        </span>
+                      )}
                     </p>
                     <p className="text-xs text-gray-500 leading-normal">{displayMessage}</p>
                   </div>

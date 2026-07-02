@@ -46,9 +46,10 @@ export function LearningPathCreateClient({ header, footer }: LearningPathCreateC
         setLoadingCourses(true);
         const res = await EnrollmentApi.getEnrolledCourses({ page: 1, size: 100 });
         if (res?.data) {
-          setEnrolledCourses(res.data);
-          if (res.data.length > 0) {
-            setSelectedCourseId(res.data[0].id || "");
+          const courses = res.data.map((item) => item.course).filter(Boolean) as CourseResponse[];
+          setEnrolledCourses(courses);
+          if (courses.length > 0) {
+            setSelectedCourseId(courses[0].id || "");
           }
         }
       } catch (err) {

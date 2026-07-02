@@ -12,6 +12,7 @@ import type {
   OrderDetailResponse,
   UpdateVoucherRequest,
   VoucherResponse,
+  EnrolledCourseResponse,
 } from "@/types";
 
 // ── VoucherApi ──────────────────────────────────────────────
@@ -79,7 +80,7 @@ export const EnrollmentApi = {
   async getEnrolledCourses(params: {
     page?: number;
     size?: number;
-  }): Promise<PaginatedApiResponse<CourseResponse>> {
+  }): Promise<PaginatedApiResponse<EnrolledCourseResponse>> {
     return apiClient.get("/api/v1/enrollments", { params });
   },
 };
