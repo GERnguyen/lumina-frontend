@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ProfileCourseItem } from "@/data/user-profile";
+import { formatShortDate } from "@/lib/format";
 
 export function UserProfileCourseCard({ course }: { course: ProfileCourseItem }) {
   return (
@@ -11,7 +12,14 @@ export function UserProfileCourseCard({ course }: { course: ProfileCourseItem })
 
       <div className="flex flex-1 flex-col gap-4 p-4">
         <div className="space-y-1.5">
-          <p className="line-clamp-1 text-xs leading-4 text-[#6E7485]">{course.title}</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="line-clamp-1 text-xs leading-4 text-[#6E7485]">{course.title}</p>
+            {course.enrolledAt && (
+              <span className="text-[10px] text-gray-400 shrink-0 font-medium">
+                {formatShortDate(course.enrolledAt)}
+              </span>
+            )}
+          </div>
           <h3 className="line-clamp-2 min-h-10 text-sm font-medium leading-5 tracking-normal text-[#1D2026]">{course.lesson}</h3>
         </div>
 

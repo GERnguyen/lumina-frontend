@@ -10,7 +10,7 @@ function pageHref(page: number, filters: ProfileCourseFilter) {
   if (filters.teacher && filters.teacher !== "all") params.set("teacher", filters.teacher);
   if (page > 1) params.set("page", String(page));
   const query = params.toString();
-  return query ? `/user-profile/courses?${query}` : "/user-profile/courses";
+  return query ? `/user-profile?tab=courses&${query}` : "/user-profile?tab=courses";
 }
 
 export function UserProfileCoursesPagination({ currentPage, totalPages, filters }: { currentPage: number; totalPages: number; filters: ProfileCourseFilter }) {

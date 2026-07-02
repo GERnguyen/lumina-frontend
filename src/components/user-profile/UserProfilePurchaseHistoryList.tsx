@@ -228,10 +228,8 @@ function ExpandedPurchaseContent({ purchase }: { purchase: ProfilePurchaseHistor
           </div>
         </div>
 
-        <div className="mt-8 grid gap-4 text-sm tracking-normal text-[#1D2026] sm:grid-cols-[120px_minmax(0,1fr)_80px] sm:items-center">
-          <span>{purchase.paymentName}</span>
-          <span className="text-lg leading-6 tracking-normal">{purchase.paymentAccount}</span>
-          {purchase.paymentExpiry ? <span className="sm:text-right">{purchase.paymentExpiry}</span> : null}
+        <div className="mt-8 text-sm tracking-normal text-[#1D2026]">
+          <span>Purchased by: <strong>{purchase.paymentName}</strong></span>
         </div>
 
         {error && (

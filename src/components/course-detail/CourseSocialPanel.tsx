@@ -8,6 +8,8 @@ import { getErrorMessage } from "@/lib/errors";
 import { cn } from "@/lib/utils";
 import type { ReviewResponse, ReviewStatisticsResponse } from "@/types";
 import { CourseReviews } from "./CourseReviews";
+import { InstructorDialog } from "@/components/ui/shared/InstructorDialog";
+import { useToastStore } from "@/stores/toast-store";
 
 type CourseSocialPanelProps = {
   courseId: string;
@@ -51,6 +53,23 @@ export function CourseSocialPanel({
   const [reviewContent, setReviewContent] = useState("");
   const [pendingAction, setPendingAction] = useState<string>();
   const [message, setMessage] = useState("");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Report states
+  const [reportTargetId, setReportTargetId] = useState<string | null>(null);
+  const [reportReason, setReportReason] = useState("");
+  const [submittingReport, setSubmittingReport] = useState(false);
+  const addToast = useToastStore((state) => state.addToast);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      UserApi.getCurrentUser()
+        .then((res) => {
+          if (res.data?.userId) setCurrentUserId(res.data.userId);
+        })
+        .catch(() => undefined);
+    }
+  }, [isAuthenticated]);
 
   async function loadReviews() {
     const [reviewsRes, statsRes] = await Promise.all([
@@ -110,12 +129,51 @@ export function CourseSocialPanel({
     try {
       await ReviewApi.createReview({ courseId, rating, content });
       setReviewContent("");
-      setMessage("Review posted.");
+      addToast("Đăng đánh giá thành công.", "success");
       await loadReviews();
     } catch (error) {
-      setMessage(getErrorMessage(error, "Could not post review."));
+      addToast(getErrorMessage(error, "Could not post review."), "error");
     } finally {
       setPendingAction(undefined);
+    }
+  }
+
+  async function handleReactReview(reviewId: string) {
+    if (!isAuthenticated) return;
+    try {
+      const review = reviews.find((r) => r.id === reviewId);
+      if (!review) return;
+      const reactions = review.reactions || [];
+      const hasLiked = currentUserId ? reactions.some((r) => r.userId === currentUserId && r.liked) : false;
+
+      await ReviewApi.reactReview(reviewId, { liked: !hasLiked });
+      await loadReviews();
+      addToast(hasLiked ? "Đã bỏ hữu ích." : "Đã đánh dấu hữu ích.", "success");
+    } catch (error) {
+      console.error("Failed to react to review:", error);
+      addToast("Không thể thực hiện tương tác.", "error");
+    }
+  }
+
+  async function handleReportReview(reviewId: string) {
+    if (!isAuthenticated) return;
+    setReportTargetId(reviewId);
+    setReportReason("");
+  }
+
+  async function submitReport() {
+    if (!reportTargetId || !reportReason.trim() || submittingReport) return;
+    setSubmittingReport(true);
+    try {
+      await ReviewApi.reportReview(reportTargetId, { reason: reportReason.trim() });
+      addToast("Cảm ơn bạn đã gửi báo cáo. Chúng tôi sẽ xem xét đánh giá này.", "success");
+      setReportTargetId(null);
+      setReportReason("");
+    } catch (error) {
+      console.error("Failed to report review:", error);
+      addToast("Đã xảy ra lỗi khi gửi báo cáo.", "error");
+    } finally {
+      setSubmittingReport(false);
     }
   }
 
@@ -146,7 +204,51 @@ export function CourseSocialPanel({
         </section>
       ) : null}
 
-      <CourseReviews reviews={reviews} reviewStats={reviewStats} userProfiles={reviewUserProfiles} />
+      <CourseReviews
+        reviews={reviews}
+        reviewStats={reviewStats}
+        userProfiles={reviewUserProfiles}
+        isAuthenticated={isAuthenticated}
+        currentUserId={currentUserId}
+        onReact={handleReactReview}
+        onReport={handleReportReview}
+      />
+
+      {/* Report Modal */}
+      <InstructorDialog
+        isOpen={Boolean(reportTargetId)}
+        onClose={() => setReportTargetId(null)}
+        title="Báo cáo đánh giá vi phạm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-zinc-500">
+            Vui lòng cho biết lý do bạn báo cáo đánh giá này. Báo cáo của bạn sẽ được xem xét kỹ lưỡng.
+          </p>
+          <textarea
+            value={reportReason}
+            onChange={(e) => setReportReason(e.target.value)}
+            placeholder="Nhập lý do chi tiết..."
+            className="w-full min-h-24 rounded-xl border border-zinc-200 p-3 text-sm outline-none transition focus:border-[#7872FD]"
+          />
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setReportTargetId(null)}
+              className="h-10 px-4 rounded-xl border border-[#E9EAF0] bg-white text-xs font-bold text-gray-600 hover:bg-gray-50 transition cursor-pointer"
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              onClick={submitReport}
+              disabled={!reportReason.trim() || submittingReport}
+              className="h-10 px-4 rounded-xl bg-red-500 text-xs font-bold text-white hover:bg-red-650 transition disabled:opacity-50 cursor-pointer"
+            >
+              {submittingReport ? "Đang gửi..." : "Gửi báo cáo"}
+            </button>
+          </div>
+        </div>
+      </InstructorDialog>
     </section>
   );
 }

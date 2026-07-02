@@ -3,7 +3,7 @@
 import { AssignmentApi, CertificateApi, DailyGoalApi, LearningProgressApi, QuizSessionApi, VideoNoteApi, VideoTrackingApi } from "@/services/api/learning-api";
 import { CourseApi, VideoQuestionApi } from "@/services/api/course-api";
 import { EnrollmentApi } from "@/services/api/enrollment-api";
-import type { CreateAssignmentSubmissionRequest, CreateVideoNoteRequest, ChooseQuizAnswerRequest, SetDailyGoalRequest, SubmitQuizSessionRequest, SubmitVideoQuestionRequest, TrackingVideoLessonRequest, UpdateVideoNoteRequest, GradeEssayRequest } from "@/types";
+import type { CreateAssignmentSubmissionRequest, CreateVideoNoteRequest, ChooseQuizAnswerRequest, SetDailyGoalRequest, SubmitQuizSessionRequest, SubmitVideoQuestionRequest, TrackingVideoLessonRequest, UpdateVideoNoteRequest, GradeEssayRequest, CourseResponse } from "@/types";
 import { revalidatePath } from "next/cache";
 
 export async function setDailyGoalAction(body: SetDailyGoalRequest) {
@@ -76,7 +76,7 @@ export async function getMyCourseProgressAction(courseId: string) {
 export async function getIncompleteEnrolledLessonsAction() {
   try {
     const enrolledRes = await EnrollmentApi.getEnrolledCourses({ page: 1, size: 50 });
-    const courses = enrolledRes.data || [];
+    const courses = (enrolledRes.data || []).map((item) => item.course).filter(Boolean) as CourseResponse[];
     const items = await Promise.all(
       courses
         .filter((course) => course.id)

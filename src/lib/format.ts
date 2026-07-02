@@ -154,18 +154,6 @@ export function paymentMethodLabel(method?: string): string {
   return "Payment provider";
 }
 
-export function maskedPaymentAccount(paymentInfo?: string): string {
-  if (!paymentInfo) return "Payment details unavailable";
-  const trimmed = paymentInfo.trim();
-  const digits = trimmed.replace(/\D/g, "");
-
-  if (digits.length >= 4) {
-    return `**** **** **** ${digits.slice(-4)}`;
-  }
-
-  return trimmed;
-}
-
 export function getCourseProgressPercentage(progress?: CourseProgressLike): number {
   if (!progress?.totalItems) return 0;
   return Math.round(((progress.completedItems || 0) / progress.totalItems) * 100);

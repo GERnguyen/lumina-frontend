@@ -206,13 +206,14 @@ export function InstructorNotificationsPage({
       {
         id: "createdAt",
         header: "Thời gian nhận",
-        cell: ({ row }) => (
-          <span className="text-xs font-medium text-gray-500">
-            {(row.original as NotificationWithTimestamp).createdAt
-              ? formatShortDate((row.original as NotificationWithTimestamp).createdAt!)
-              : "Vừa xong"}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const timestamp = row.original.sentAt || (row.original as NotificationWithTimestamp).createdAt;
+          return (
+            <span className="text-xs font-medium text-gray-500">
+              {timestamp ? formatShortDate(timestamp) : "Vừa xong"}
+            </span>
+          );
+        },
       },
       {
         id: "actions",

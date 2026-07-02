@@ -16,6 +16,7 @@ import {
   getCourseInstructorName,
   getCourseProgressPercentage,
   money,
+  formatShortDate,
 } from "@/lib/format";
 
 export function HomeSectionHeader({ title, action }: { title: string; action?: string }) {
@@ -87,12 +88,14 @@ export function ContinueCourseCard({
   index = 0,
   compact = false,
   isLoading = false,
+  enrolledAt,
 }: {
   course: CourseResponse;
   progress?: CourseProgressResponse;
   index?: number;
   compact?: boolean;
   isLoading?: boolean;
+  enrolledAt?: string;
 }) {
   const image = getCourseImage(course, index);
   const category = getCourseCategory(course);
@@ -109,7 +112,15 @@ export function ContinueCourseCard({
       <div className="min-w-0 flex-1">
         <p className="text-xs font-semibold uppercase text-[#7872FD]">{category}</p>
         <h3 className="mt-1 line-clamp-2 text-sm font-semibold leading-5 text-[#1D2026]">{title}</h3>
-        <p className="mt-1 text-xs text-[#6E7485]">By {instructor}</p>
+        <div className="flex flex-wrap items-center gap-x-2 text-xs text-[#6E7485]">
+          <span>By {instructor}</span>
+          {enrolledAt && (
+            <>
+              <span className="text-gray-300">•</span>
+              <span className="text-[10px] text-gray-400">Enrolled {formatShortDate(enrolledAt)}</span>
+            </>
+          )}
+        </div>
         {isLoading ? (
           <div className="mt-3 animate-pulse space-y-2">
             <div className="h-1.5 rounded-full bg-[#E2E8F0]" />
@@ -172,8 +183,15 @@ export function NotificationList({ notifications }: { notifications: UserNotific
         <div key={item.id} className="rounded-[18px] border border-[#E9EAF0] bg-white p-4">
           <div className="flex items-start gap-3">
             <span className={cn("mt-1 size-2 shrink-0 rounded-full", item.isRead ? "bg-[#C6CAD1]" : "bg-[#7872FD]")} />
-            <div>
-              <h3 className="text-sm font-semibold text-[#1D2026]">{item.title}</h3>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-x-2">
+                <h3 className="text-sm font-semibold text-[#1D2026]">{item.title}</h3>
+                {item.sentAt && (
+                  <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">
+                    {formatShortDate(item.sentAt)}
+                  </span>
+                )}
+              </div>
               <p className="mt-1 text-sm leading-6 text-[#6E7485]">{item.message}</p>
             </div>
           </div>

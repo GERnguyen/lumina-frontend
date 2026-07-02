@@ -14,6 +14,7 @@ import type {
   CourseProgressResponse,
   DailyGoalResponse,
   UserNotificationResponse,
+  EnrolledCourseResponse,
 } from "@/types";
 import {
   ContinueCourseCard,
@@ -29,7 +30,7 @@ import { getCourseProgressPercentage } from "@/lib/format";
 type StudentHomePageProps = {
   user?: UserDto;
   streak?: UserStreakResponse;
-  enrolledCourses: CourseResponse[];
+  enrolledCourses: EnrolledCourseResponse[];
   recommendations: CourseResponse[];
   goals: DailyGoalResponse[];
   monthGoals: DailyGoalResponse[];
@@ -179,7 +180,7 @@ export function StudentHomePage({
     };
   }, []);
 
-  const courseIds = enrolledCourses.map((c) => c.id).filter(Boolean) as string[];
+  const courseIds = enrolledCourses.map((c) => c.course?.id).filter(Boolean) as string[];
 
   // Fetch course progress client-side using React Query
   const { data: progressRes, isLoading } = useQuery({
@@ -240,7 +241,7 @@ function RoadmapStudio({
 }: {
   goals: DailyGoalResponse[];
   monthGoals: DailyGoalResponse[];
-  enrolledCourses: CourseResponse[];
+  enrolledCourses: EnrolledCourseResponse[];
   courseProgresses: CourseProgressResponse[];
   recommendations: CourseResponse[];
   isLoading?: boolean;
@@ -251,14 +252,16 @@ function RoadmapStudio({
     { title: "Set today's target", copy: "Use daily goals to define the next measurable learning block.", icon: CalendarDays },
     { title: "Keep the streak alive", copy: "Review progress and return tomorrow with less friction.", icon: Sparkles },
   ];
-  const inProgressCourses = enrolledCourses.filter((course) => {
-    const progress = courseProgresses.find((item) => item.courseId === course.id);
+  const inProgressCourses = enrolledCourses.filter((item) => {
+    const course = item.course;
+    if (!course?.id) return false;
+    const progress = courseProgresses.find((p) => p.courseId === course.id);
     const percentage = getCourseProgressPercentage(progress);
     return progress && !progress.isCompleted && percentage > 0 && percentage < 100;
   });
   const activeCourses = inProgressCourses.length
     ? inProgressCourses
-    : enrolledCourses.filter((course) => !courseProgresses.find((item) => item.courseId === course.id)?.isCompleted);
+    : enrolledCourses.filter((item) => !courseProgresses.find((p) => p.courseId === item.course?.id)?.isCompleted);
 
   return (
     <div className="grid gap-8">
@@ -302,18 +305,19 @@ function RoadmapStudio({
 
       <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
         <section>
-          <HomeSectionHeader title="In progress courses" action="/user-profile/courses" />
+          <HomeSectionHeader title="In progress courses" action="/user-profile?tab=courses" />
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {activeCourses.length ? (
-              activeCourses.slice(0, 4).map((course, index) => {
-                const progress = courseProgresses.find((p) => p.courseId === course.id);
+              activeCourses.slice(0, 4).map((item, index) => {
+                const progress = courseProgresses.find((p) => p.courseId === item.course?.id);
                 return (
                   <ContinueCourseCard
-                    key={course.id || index}
-                    course={course}
+                    key={item.course?.id || index}
+                    course={item.course!}
                     progress={progress}
                     index={index}
                     isLoading={isLoading}
+                    enrolledAt={item.enrolledAt}
                   />
                 );
               })
@@ -333,7 +337,7 @@ function RoadmapStudio({
       <section>
         <HomeSectionHeader
           title={activePath ? `Lộ trình học: ${activePath.title}` : "Next courses in your path"}
-          action={activePath ? "/learning-paths" : "/user-profile/courses"}
+          action={activePath ? "/learning-paths" : "/user-profile?tab=courses"}
         />
         {activePath ? (
           <div className="mt-4 rounded-[18px] border border-[#E9EAF0] bg-white p-6">
@@ -394,16 +398,17 @@ function RoadmapStudio({
         ) : (
           <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {enrolledCourses.length ? (
-              enrolledCourses.slice(0, 4).map((course, index) => {
-                const progress = courseProgresses.find((p) => p.courseId === course.id);
+              enrolledCourses.slice(0, 4).map((item, index) => {
+                const progress = courseProgresses.find((p) => p.courseId === item.course?.id);
                 return (
                   <ContinueCourseCard
-                    key={course.id || index}
-                    course={course}
+                    key={item.course?.id || index}
+                    course={item.course!}
                     progress={progress}
                     index={index}
                     compact
                     isLoading={isLoading}
+                    enrolledAt={item.enrolledAt}
                   />
                 );
               })

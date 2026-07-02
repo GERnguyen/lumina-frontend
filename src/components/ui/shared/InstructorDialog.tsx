@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,8 +20,11 @@ export function InstructorDialog({
   children,
   className,
 }: InstructorDialogProps) {
+  const [mounted, setMounted] = useState(false);
+
   // Prevent background scrolling when modal is open
   useEffect(() => {
+    setMounted(true);
     if (isOpen) {
       document.body.style.overflow = "hidden";
     } else {
@@ -31,9 +35,9 @@ export function InstructorDialog({
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
@@ -68,6 +72,7 @@ export function InstructorDialog({
         {/* Body */}
         <div className="max-h-[70vh] overflow-y-auto pr-1">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

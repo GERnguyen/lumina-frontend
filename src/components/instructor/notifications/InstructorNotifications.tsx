@@ -8,6 +8,7 @@ import { Client } from "@stomp/stompjs";
 import { readClientAuthSession } from "@/lib/auth-session";
 import { API_BASE_URL } from "@/lib/api-base";
 import { mapNotificationUrl, getNotificationHelper } from "@/lib/notifications";
+import { formatShortDate } from "@/lib/format";
 
 interface InstructorNotificationsProps {
   emptyDescription?: string;
@@ -348,9 +349,14 @@ export function InstructorNotifications({
                         <div className={`size-7 rounded-lg border flex items-center justify-center shrink-0 mt-0.5 ${typeColor}`}>
                           <TypeIcon className="size-3.5" />
                         </div>
-                        <div className="space-y-0.5 min-w-0">
-                          <p className={`text-xs text-gray-900 leading-normal group-hover/item:text-primary-600 transition-colors ${!n.isRead ? "font-bold" : "font-medium"}`}>
-                            {displayTitle}
+                        <div className="space-y-0.5 min-w-0 flex-1">
+                          <p className={`text-xs text-gray-900 leading-normal group-hover/item:text-primary-600 transition-colors flex items-center justify-between gap-2 ${!n.isRead ? "font-bold" : "font-medium"}`}>
+                            <span>{displayTitle}</span>
+                            {n.sentAt && (
+                              <span className="text-[9px] font-normal text-gray-400 shrink-0 whitespace-nowrap">
+                                {formatShortDate(n.sentAt)}
+                              </span>
+                            )}
                           </p>
                           <p className="text-[10px] text-gray-400 leading-normal text-wrap">
                             {displayMessage}

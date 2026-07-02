@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 export async function addToWishlistAction(courseId: string) {
   try {
     const res = await WishlistApi.addToWishlist({ courseId });
-    revalidatePath("/user-profile/wishlist");
+    revalidatePath("/user-profile");
     revalidatePath(`/courses/${courseId}`);
     revalidatePath("/");
     return { success: true, data: res.data };
@@ -18,7 +18,7 @@ export async function addToWishlistAction(courseId: string) {
 export async function removeFromWishlistAction(courseId: string) {
   try {
     const res = await WishlistApi.removeFromWishlist(courseId);
-    revalidatePath("/user-profile/wishlist");
+    revalidatePath("/user-profile");
     revalidatePath(`/courses/${courseId}`);
     revalidatePath("/");
     return { success: true, data: res.data };

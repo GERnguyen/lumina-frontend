@@ -111,18 +111,25 @@ export default async function PolicyDetailPage({ params }: PageProps) {
                     Mục lục bài viết
                   </p>
                   <nav className="space-y-2">
-                    {policy.sections.map((section, idx) => {
-                      const anchor = section.anchor || `section-${idx}`;
-                      return (
-                        <a
-                          key={section.id || idx}
-                          href={`#${anchor}`}
-                          className="block text-xs font-semibold text-zinc-500 hover:text-[#564FFD] transition-colors leading-relaxed px-2 hover:underline"
-                        >
-                          {idx + 1}. {section.heading || `Phần ${idx + 1}`}
-                        </a>
-                      );
-                    })}
+                    {[...policy.sections]
+                      .sort((a, b) => {
+                        const orderA = a.orderIndex ?? 0;
+                        const orderB = b.orderIndex ?? 0;
+                        if (orderA !== orderB) return orderA - orderB;
+                        return a.id && b.id ? a.id.localeCompare(b.id) : 0;
+                      })
+                      .map((section, idx) => {
+                        const anchor = section.anchor || `section-${idx}`;
+                        return (
+                          <a
+                            key={section.id || idx}
+                            href={`#${anchor}`}
+                            className="block text-xs font-semibold text-zinc-500 hover:text-[#564FFD] transition-colors leading-relaxed px-2 hover:underline"
+                          >
+                            {section.heading || `Phần ${idx + 1}`}
+                          </a>
+                        );
+                      })}
                   </nav>
                 </div>
               )}
@@ -158,8 +165,13 @@ export default async function PolicyDetailPage({ params }: PageProps) {
               {/* Document Content */}
               <div className="rounded-[24px] border border-[#E9EAF0] bg-white p-8 md:p-10 shadow-2xs space-y-8">
                 {policy.sections && policy.sections.length > 0 ? (
-                  policy.sections
-                    .sort((a, b) => (a.id && b.id ? a.id.localeCompare(b.id) : 0)) // Fallback stable sort
+                  [...policy.sections]
+                    .sort((a, b) => {
+                      const orderA = a.orderIndex ?? 0;
+                      const orderB = b.orderIndex ?? 0;
+                      if (orderA !== orderB) return orderA - orderB;
+                      return a.id && b.id ? a.id.localeCompare(b.id) : 0;
+                    })
                     .map((section, idx) => {
                       const anchor = section.anchor || `section-${idx}`;
                       return (

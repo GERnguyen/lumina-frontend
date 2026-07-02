@@ -30,6 +30,7 @@ export interface QuestionDto {
   hasUpvoted?: boolean;
   answersCount?: number;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface UpdateAnswerRequest {
@@ -48,6 +49,7 @@ export interface AnswerDto {
   depth?: number;
   repliesCount?: number;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AddToWishlistRequest {
@@ -129,6 +131,8 @@ export interface ReviewResponse {
   rating?: number;
   reply?: ReviewReplyDto;
   reactions?: ReviewReactionResponse[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface UserSummaryResponse {

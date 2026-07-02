@@ -32,12 +32,17 @@ export function AIAssistant() {
   const [isProposalPending, startProposalTransition] = useTransition();
   const [proposalError, setProposalError] = useState<string | null>(null);
 
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const currentMsgIdRef = useRef<string | null>(null);
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
   }, [messages, isStreaming]);
 
   // Resolve Candidate Courses details when activeProposal changes
@@ -209,7 +214,16 @@ export function AIAssistant() {
 
                 case "citation_added": {
                   const citationData = payload.data as Citation;
-                  if (!updatedCitations.some((c) => c.courseId === citationData.courseId)) {
+                  const isDuplicate = updatedCitations.some((c) => {
+                    if (c.sourceUrl && citationData.sourceUrl) {
+                      return c.sourceUrl === citationData.sourceUrl;
+                    }
+                    if (c.courseId && citationData.courseId) {
+                      return c.courseId === citationData.courseId;
+                    }
+                    return c.title === citationData.title;
+                  });
+                  if (!isDuplicate) {
                     updatedCitations.push(citationData);
                   }
                   break;
@@ -394,7 +408,7 @@ export function AIAssistant() {
         <ChatHeader sessionId={sessionId} />
 
         {/* Chat message flow */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-6 space-y-6">
           {messages.length === 0 ? (
             <EmptyState onSendMessage={handleSendMessage} />
           ) : (
@@ -429,8 +443,6 @@ export function AIAssistant() {
               <p>Lỗi: {error}</p>
             </div>
           )}
-
-          <div ref={chatEndRef} />
         </div>
 
         {/* Input box */}

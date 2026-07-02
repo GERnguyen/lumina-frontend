@@ -50,14 +50,16 @@ export default async function Home() {
     EnrollmentApi.getEnrolledCourses({ page: 1, size: 8 }).catch(() => ({ data: [] })),
   ]);
   const enrolledCourses = enrolledRes.data || [];
-  const enrolledIds = enrolledCourses.map((course) => course.id).filter(Boolean) as string[];
+  const enrolledIds = enrolledCourses.map((item) => item.course?.id).filter(Boolean) as string[];
   const progressRes = enrolledIds.length
     ? await LearningProgressApi.getCourseProgressByCourseIds(enrolledIds.join(",")).catch(() => ({ data: [] }))
     : { data: [] };
   const progressList = progressRes.data || [];
   const continueLearningCourses = enrolledCourses
-    .map((course, index) => {
-      const progress = progressList.find((item) => item.courseId === course.id);
+    .map((item, index) => {
+      const course = item.course;
+      if (!course) return null;
+      const progress = progressList.find((p) => p.courseId === course.id);
       const progressPercent = progress?.totalItems
         ? Math.round(((progress.completedItems || 0) / progress.totalItems) * 100)
         : 0;
@@ -70,7 +72,7 @@ export default async function Home() {
         index,
       };
     })
-    .filter((item) => item.progressPercent < 100);
+    .filter((item): item is NonNullable<typeof item> => !!item && item.progressPercent < 100);
 
   return (
     <HomeMarketplacePage

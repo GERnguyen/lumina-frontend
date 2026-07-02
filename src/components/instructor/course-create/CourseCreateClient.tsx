@@ -30,7 +30,7 @@ export default function CourseCreateClient({ categories, courseId: initialCourse
   const [curriculum, setCurriculum] = useState<CourseCurriculumResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(!!initialCourseId);
   const [error, setError] = useState<string | null>(null);
-  const [rejectReason, setRejectReason] = useState<string | null>(null);
+  const [rejectData, setRejectData] = useState<{ reason?: string; rejectedAt?: string } | null>(null);
 
 
   // Sync step from search params
@@ -97,14 +97,14 @@ export default function CourseCreateClient({ categories, courseId: initialCourse
       if (courseData && courseData.publishStatus === "REJECTED") {
         try {
           const rejectRes = await CourseApi.getRejectReason(id);
-          if (rejectRes?.data?.reason) {
-            rejectReasonData = rejectRes.data.reason;
+          if (rejectRes?.data) {
+            rejectReasonData = rejectRes.data;
           }
         } catch (e) {
           console.error("Failed to load reject reason:", e);
         }
       }
-      setRejectReason(rejectReasonData);
+      setRejectData(rejectReasonData);
     } catch (err: any) {
 
       console.error("Failed to load course details:", err);
@@ -254,14 +254,21 @@ export default function CourseCreateClient({ categories, courseId: initialCourse
         )}
       </div>
 
-      {rejectReason && (
+      {rejectData?.reason && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-5 shadow-2xs animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="flex items-start space-x-3">
             <AlertTriangle className="size-5 text-red-500 shrink-0 mt-0.5" />
             <div>
-              <h3 className="text-sm font-bold text-red-800">This Course was Rejected by Admin</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-red-800">This Course was Rejected by Admin</h3>
+                {rejectData.rejectedAt && (
+                  <span className="text-xs text-red-600 font-semibold">
+                    ({new Date(rejectData.rejectedAt).toLocaleDateString("vi-VN")})
+                  </span>
+                )}
+              </div>
               <p className="mt-1 text-xs text-red-700 leading-relaxed font-semibold">
-                Reason: {rejectReason}
+                Reason: {rejectData.reason}
               </p>
               <p className="mt-2 text-[11px] text-red-500 font-medium">
                 Please fix the issues outlined above and submit the course again for approval.

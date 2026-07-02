@@ -49,7 +49,7 @@ export async function CoursesPage({ filters }: CoursesPageProps) {
   const enrolledRes = token
     ? await EnrollmentApi.getEnrolledCourses({ page: 1, size: 100 }).catch(() => ({ data: [] }))
     : { data: [] };
-  const enrolledIds = new Set((enrolledRes.data || []).map((c) => c.id).filter(Boolean));
+  const enrolledIds = new Set((enrolledRes.data || []).map((c) => c.course?.id).filter(Boolean) as string[]);
 
   const [catalogRes, categoriesRes] = await Promise.all([
     CourseApi.getAllCourses(filters).catch(() => ({ data: [], meta: { page: filters.page || 1, totalElements: 0, totalPages: 1 } })),

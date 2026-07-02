@@ -94,10 +94,10 @@ export default async function Page({ params, searchParams }: ThankYouPageProps) 
         </div>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <Link href="/user-profile/courses" className="inline-flex h-12 items-center justify-center rounded-[18px] bg-[#564FFD] px-6 text-sm font-semibold text-white transition hover:bg-[#453FCA]">
+          <Link href="/user-profile?tab=courses" className="inline-flex h-12 items-center justify-center rounded-[18px] bg-[#564FFD] px-6 text-sm font-semibold text-white transition hover:bg-[#453FCA]">
             Go to My Courses
           </Link>
-          <Link href="/user-profile/purchase-history" className="inline-flex h-12 items-center justify-center rounded-[18px] bg-[#EBEBFF] px-6 text-sm font-semibold text-[#564FFD] transition hover:bg-[#D8D6FF]">
+          <Link href="/user-profile?tab=purchase-history" className="inline-flex h-12 items-center justify-center rounded-[18px] bg-[#EBEBFF] px-6 text-sm font-semibold text-[#564FFD] transition hover:bg-[#D8D6FF]">
             View Purchase History
           </Link>
         </div>

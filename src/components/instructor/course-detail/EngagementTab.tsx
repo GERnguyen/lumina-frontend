@@ -140,10 +140,17 @@ export function EngagementTab({ courseId, data }: EngagementTabProps) {
                 className="rounded-xl border border-zinc-150 bg-zinc-50/30 p-4 hover:bg-white hover:border-zinc-200 hover:shadow-xs transition-all duration-200"
               >
                 <div className="flex items-center justify-between gap-3 border-b border-zinc-100 pb-2">
-                  <p className="text-xs font-bold text-zinc-950 font-general">
-                    {review.userId ? (userProfiles[review.userId]?.name || "Loading...") : "Học viên ẩn danh"}
-                  </p>
-                  <span className="inline-flex items-center rounded-full bg-amber-50 border border-amber-200/50 px-2 py-0.5 text-[10px] font-extrabold text-amber-700">
+                  <div>
+                    <p className="text-xs font-bold text-zinc-950 font-general">
+                      {review.userId ? (userProfiles[review.userId]?.name || "Loading...") : "Học viên ẩn danh"}
+                    </p>
+                    {review.createdAt && (
+                      <span className="text-[10px] font-normal text-zinc-400">
+                        {formatDate(review.createdAt)}
+                      </span>
+                    )}
+                  </div>
+                  <span className="inline-flex items-center rounded-full bg-amber-50 border border-amber-200/50 px-2 py-0.5 text-[10px] font-extrabold text-amber-700 font-semibold">
                     <Star className="size-3 mr-0.5 fill-amber-500 text-amber-500" />
                     {review.rating || 0}/5
                   </span>

@@ -22,4 +22,5 @@ export interface UserNotificationResponse {
   actionUrl?: string;
   metadata?: Record<string, Record<string, unknown>>;
   isRead?: boolean;
+  sentAt?: string;
 }
