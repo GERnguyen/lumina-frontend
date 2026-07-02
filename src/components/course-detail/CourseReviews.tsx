@@ -1,6 +1,8 @@
 import type { ReviewResponse, ReviewStatisticsResponse } from "@/types";
 import { CourseRatingStars } from "./CourseRatingStars";
-import { getCourseRating, fullNumber, getProfileAvatar } from "@/lib/format";
+import { getCourseRating, fullNumber, getProfileAvatar, formatShortDate } from "@/lib/format";
+import { ThumbsUp, Flag } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type ReviewUserMeta = {
   name: string;
@@ -22,10 +24,18 @@ export function CourseReviews({
   reviews,
   reviewStats,
   userProfiles,
+  isAuthenticated,
+  currentUserId,
+  onReact,
+  onReport,
 }: {
   reviews: ReviewResponse[];
   reviewStats?: ReviewStatisticsResponse;
   userProfiles?: Record<string, ReviewUserMeta>;
+  isAuthenticated: boolean;
+  currentUserId?: string | null;
+  onReact?: (reviewId: string) => void;
+  onReport?: (reviewId: string) => void;
 }) {
   const ratingText = getCourseRating(reviewStats?.averageRating);
   const ratingValue = reviewStats?.averageRating || 0;
@@ -86,6 +96,12 @@ export function CourseReviews({
             const reviewer = review.userId ? userProfiles?.[review.userId] : undefined;
             const reviewerName = reviewer?.name || "Cinx learner";
             const avatar = reviewer?.avatarUrl ? getProfileAvatar({ avatarUrl: reviewer.avatarUrl, name: reviewerName }, reviewerName) : undefined;
+            
+            // Calculate reactions
+            const reactions = review.reactions || [];
+            const likedCount = reactions.filter((r) => r.liked).length;
+            const hasLiked = currentUserId ? reactions.some((r) => r.userId === currentUserId && r.liked) : false;
+
             return (
               <article key={review.id || index} className="flex gap-4 p-5">
                 {avatar ? (
@@ -98,20 +114,52 @@ export function CourseReviews({
                     {getInitials(reviewerName)}
                   </div>
                 )}
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <h3 className="text-sm font-semibold text-[#1D2026]">{reviewerName}</h3>
-                    <span className="text-xs font-medium text-[#6E7485]">Recently</span>
+                    <span className="text-xs font-medium text-[#6E7485]">
+                      {review.createdAt ? formatShortDate(review.createdAt) : "Recently"}
+                    </span>
                   </div>
                   <div className="mt-1">
                     <CourseRatingStars rating={review.rating || 0} />
                   </div>
                   <p className="mt-2 text-sm leading-6 text-[#363B47]">{review.content || "No written feedback."}</p>
+                  
                   {review.reply?.content ? (
                     <div className="mt-3 rounded-[14px] border-l-2 border-[#7872FD] bg-[#F8F8FF] px-4 py-3 text-sm leading-6 text-[#363B47]">
                       <strong className="text-[#1D2026]">Instructor reply:</strong> {review.reply.content}
                     </div>
                   ) : null}
+
+                  {/* Reaction and Report footer */}
+                  <div className="mt-3.5 flex items-center gap-4 text-xs font-bold text-gray-500">
+                    <button
+                      type="button"
+                      onClick={() => onReact && review.id && onReact(review.id)}
+                      className={cn(
+                        "flex items-center gap-1.5 transition-colors cursor-pointer select-none",
+                        hasLiked ? "text-[#564FFD]" : "text-gray-400 hover:text-gray-600"
+                      )}
+                      disabled={!isAuthenticated}
+                      title={isAuthenticated ? "Helpful" : "Log in to react"}
+                    >
+                      <ThumbsUp className="size-3.5" />
+                      <span>Helpful ({likedCount})</span>
+                    </button>
+                    
+                    {isAuthenticated && (
+                      <button
+                        type="button"
+                        onClick={() => onReport && review.id && onReport(review.id)}
+                        className="flex items-center gap-1 text-gray-400 hover:text-red-500 transition-colors cursor-pointer select-none"
+                        title="Report review"
+                      >
+                        <Flag className="size-3.5" />
+                        <span>Report</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </article>
             );

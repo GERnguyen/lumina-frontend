@@ -1,11 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useTransition } from "react";
-import { Search, MessageSquare, ThumbsUp, ArrowLeft, Send, Trash2, PlusCircle, User, Calendar, Loader2, HelpCircle } from "lucide-react";
+import { Search, MessageSquare, ThumbsUp, ArrowLeft, Send, Trash2, PlusCircle, User, Calendar, Loader2, HelpCircle, Flag } from "lucide-react";
 import { getQuestionsAction, createQuestionAction, upvoteQuestionAction, deleteQuestionAction, getAnswersForQuestionAction, createAnswerAction, upvoteAnswerAction, deleteAnswerAction } from "@/services/actions/social";
 import { UserApi } from "@/services/api/user-api";
+import { CourseQnAApi } from "@/services/api/social-api";
 import type { QuestionDto, AnswerDto, UserDto } from "@/types";
 import { cn } from "@/lib/utils";
+import { InstructorDialog } from "@/components/ui/shared/InstructorDialog";
+import { useToastStore } from "@/stores/toast-store";
 
 interface LearningQnAPanelProps {
   courseId: string;
@@ -16,6 +19,13 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
   const [currentUser, setCurrentUser] = useState<UserDto | null>(null);
   const [questions, setQuestions] = useState<QuestionDto[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
+
+  // Report states
+  const [reportType, setReportType] = useState<"question" | "answer" | null>(null);
+  const [reportTargetId, setReportTargetId] = useState<string | null>(null);
+  const [reportReason, setReportReason] = useState("");
+  const [submittingReport, setSubmittingReport] = useState(false);
+  const addToast = useToastStore((state) => state.addToast);
 
   // Filtering & Search
   const [filterMode, setFilterMode] = useState<"this-lesson" | "all-lessons">("this-lesson");
@@ -267,6 +277,41 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
     }
   };
 
+  const handleReportQuestion = async (qId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setReportType("question");
+    setReportTargetId(qId);
+    setReportReason("");
+  };
+
+  const handleReportAnswer = async (ansId: string) => {
+    setReportType("answer");
+    setReportTargetId(ansId);
+    setReportReason("");
+  };
+
+  const submitReport = async () => {
+    if (!reportType || !reportTargetId || !reportReason.trim() || submittingReport) return;
+    setSubmittingReport(true);
+    try {
+      if (reportType === "question") {
+        await CourseQnAApi.reportQuestion(reportTargetId, { reason: reportReason.trim() });
+        addToast("Báo cáo câu hỏi thành công. Chúng tôi sẽ sớm xem xét.", "success");
+      } else {
+        await CourseQnAApi.reportAnswer(reportTargetId, { reason: reportReason.trim() });
+        addToast("Báo cáo câu trả lời thành công. Chúng tôi sẽ sớm xem xét.", "success");
+      }
+      setReportType(null);
+      setReportTargetId(null);
+      setReportReason("");
+    } catch (err) {
+      console.error(err);
+      addToast("Không thể gửi báo cáo.", "error");
+    } finally {
+      setSubmittingReport(false);
+    }
+  };
+
   const formatDate = (val?: string) => {
     if (!val) return "--";
     try {
@@ -347,6 +392,16 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
                   <span>Xóa</span>
                 </button>
               )}
+
+              {currentUser?.userId !== selectedQuestion.userId && (
+                <button
+                  onClick={(e) => handleReportQuestion(selectedQuestion.id!, e)}
+                  className="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-bold text-zinc-500 hover:bg-zinc-50 transition cursor-pointer select-none"
+                >
+                  <Flag className="size-3.5" />
+                  <span>Báo cáo</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -409,7 +464,7 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
                       {answer.content}
                     </p>
 
-                    <div className="flex items-center">
+                    <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleUpvoteAnswer(answer.id!)}
                         className={cn(
@@ -422,6 +477,17 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
                         <ThumbsUp className="size-3" />
                         <span>{answer.upvoteCount || 0}</span>
                       </button>
+
+                      {currentUser?.userId !== answer.userId && (
+                        <button
+                          onClick={() => handleReportAnswer(answer.id!)}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold border border-zinc-200 bg-white text-zinc-400 hover:bg-zinc-50 hover:text-red-500 hover:border-red-100 transition cursor-pointer select-none"
+                          title="Báo cáo câu trả lời"
+                        >
+                          <Flag className="size-3" />
+                          <span>Báo cáo</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -621,6 +687,47 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
           )}
         </div>
       )}
+      {/* Report Modal */}
+      <InstructorDialog
+        isOpen={Boolean(reportType && reportTargetId)}
+        onClose={() => {
+          setReportType(null);
+          setReportTargetId(null);
+        }}
+        title={`Báo cáo ${reportType === "question" ? "câu hỏi" : "câu trả lời"} vi phạm`}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-zinc-500">
+            Vui lòng cho biết lý do bạn báo cáo nội dung này. Báo cáo của bạn sẽ được xem xét kỹ lưỡng.
+          </p>
+          <textarea
+            value={reportReason}
+            onChange={(e) => setReportReason(e.target.value)}
+            placeholder="Nhập lý do chi tiết..."
+            className="w-full min-h-24 rounded-xl border border-zinc-200 p-3 text-sm outline-none transition focus:border-[#7872FD]"
+          />
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setReportType(null);
+                setReportTargetId(null);
+              }}
+              className="h-10 px-4 rounded-xl border border-[#E9EAF0] bg-white text-xs font-bold text-gray-600 hover:bg-gray-50 transition cursor-pointer"
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              onClick={submitReport}
+              disabled={!reportReason.trim() || submittingReport}
+              className="h-10 px-4 rounded-xl bg-red-500 text-xs font-bold text-white hover:bg-red-650 transition disabled:opacity-50 cursor-pointer"
+            >
+              {submittingReport ? "Đang gửi..." : "Gửi báo cáo"}
+            </button>
+          </div>
+        </div>
+      </InstructorDialog>
     </div>
   );
 }
