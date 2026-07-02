@@ -22,6 +22,7 @@ export type ProfileLearningCourse = {
   progress?: number;
   href: string;
   featured?: boolean;
+  enrolledAt?: string;
 };
 
 export type ProfileCourseFilter = {
@@ -70,8 +71,6 @@ export type ProfilePurchaseHistoryItem = {
   paymentMethod: string;
   status: "PENDING" | "PAID" | "CANCELLED" | "REFUNDED";
   paymentName: string;
-  paymentAccount: string;
-  paymentExpiry?: string;
   courses: ProfilePurchaseCourse[];
   paymentId?: string;
   rawPaymentMethod?: string;

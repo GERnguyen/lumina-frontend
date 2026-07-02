@@ -54,7 +54,8 @@ export function UserProfileCourseFilters({
   };
 
   return (
-    <form className="grid gap-6 lg:grid-cols-[minmax(280px,528px)_repeat(3,minmax(180px,240px))_auto]" action="/user-profile/courses" method="get">
+    <form className="grid gap-6 lg:grid-cols-[minmax(280px,528px)_repeat(3,minmax(180px,240px))_auto]" action="/user-profile" method="get">
+      <input type="hidden" name="tab" value="courses" />
       <label className="flex min-w-0 flex-col gap-2">
         <span className="text-xs leading-4 text-[#6E7485]">Search:</span>
         <span className="flex h-12 items-center gap-3 rounded-[18px] border border-[#E9EAF0] bg-white px-4 transition focus-within:border-[#564FFD]">

@@ -62,7 +62,7 @@ export async function CoursesTopNav() {
                 iconClassName="size-6"
               />
             ) : null}
-            <Link href="/user-profile/wishlist" aria-label="Wishlist" className="relative hidden text-[#1D2026] transition hover:text-[#7872FD] md:block">
+            <Link href="/user-profile?tab=wishlist" aria-label="Wishlist" className="relative hidden text-[#1D2026] transition hover:text-[#7872FD] md:block">
               <Heart className="size-6" />
               {counts.wishlistCount > 0 ? (
                 <span className="absolute -right-2 -top-2 flex size-5 items-center justify-center rounded-full bg-[#564FFD] text-[10px] font-medium text-white">

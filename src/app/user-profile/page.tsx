@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { getServerAccessToken } from "@/lib/server-auth";
 import { CoursesFooter } from "@/components/courses/CoursesFooter";
-import { UserProfileTopNav } from "@/components/user-profile/UserProfileTopNav";
+import { CoursesTopNav } from "@/components/courses/CoursesTopNav";
 import { UserProfileSpaShell } from "@/components/user-profile/UserProfileSpaShell";
 import { mockProfileCourses, mockProfilePurchaseHistory, mockProfileWishlist, mockUserProfileDashboard } from "@/data/user-profile";
 import { EnrollmentApi, OrderApi } from "@/services/api/enrollment-api";
@@ -20,7 +20,6 @@ import {
   getProfileAvatar,
   money,
   moneyWithCurrency,
-  maskedPaymentAccount,
   paymentMethodLabel,
 } from "@/lib/format";
 
@@ -74,15 +73,16 @@ export default async function Page() {
     };
 
     const enrolledCourses = enrolledRes.data || [];
-    const enrolledIds = enrolledCourses.map((course) => course.id).filter(Boolean) as string[];
+    const enrolledIds = enrolledCourses.map((item) => item.course?.id).filter(Boolean) as string[];
     const progressRes = enrolledIds.length
       ? await LearningProgressApi.getCourseProgressByCourseIds(enrolledIds.join(",")).catch(() => ({ data: [] }))
       : { data: [] };
     const progressList = progressRes.data || [];
     const completedCourses = progressList.filter((item) => item.isCompleted).length;
 
-    const mappedCourses = enrolledCourses.map((course, index) => {
-      const progressItem = progressList.find((item) => item.courseId === course.id);
+    const mappedCourses = enrolledCourses.map((item, index) => {
+      const course = item.course || {};
+      const progressItem = progressList.find((p) => p.courseId === course.id);
       const progress = progressItem?.totalItems
         ? Math.round(((progressItem.completedItems || 0) / progressItem.totalItems) * 100)
         : undefined;
@@ -96,7 +96,8 @@ export default async function Page() {
         href: `/learning/${course.id}`,
         featured: index === 3,
         teacher: getCourseInstructorName(course),
-        status: progressItem?.isCompleted ? ("completed" as const) : ("active" as const),
+        status: (progressItem?.isCompleted ? "completed" as const : "active" as const) as "all" | "active" | "completed",
+        enrolledAt: item.enrolledAt,
       };
     });
 
@@ -109,19 +110,28 @@ export default async function Page() {
       });
     });
 
+    const enrolledWishlistIds = new Set<string>();
+    if (wishlistCourseIds.length) {
+      const checkRes = await EnrollmentApi.checkEnrollmentStatus(wishlistCourseIds).catch(() => ({ data: [] }));
+      (checkRes.data || []).forEach((status) => {
+        if (status.courseId && status.isEnrolled) {
+          enrolledWishlistIds.add(status.courseId);
+        }
+      });
+    }
+
     const relatedCourseIds = Array.from(new Set([...wishlistCourseIds, ...Array.from(orderCourseIds)]));
     const relatedCoursesRes = relatedCourseIds.length
       ? await CourseApi.getCoursesByIds(relatedCourseIds.join(",")).catch(() => ({ data: [] }))
       : { data: [] };
     const relatedCourses = relatedCoursesRes.data || [];
 
-    const purchasedCourseIds = new Set([...enrolledIds, ...Array.from(orderCourseIds)]);
     const hydratedWishlist = wishlistItems.map((item, index) => {
       const course = relatedCourses.find((candidate) => candidate.id === item.courseId);
       const mock = mockProfileWishlist[index % mockProfileWishlist.length];
       const price = course?.discountedPrice ?? course?.price;
       const originalPrice = course?.discountedPrice && course?.price && course.discountedPrice < course.price ? course.price : undefined;
-      const isPurchased = item.courseId ? purchasedCourseIds.has(item.courseId) : false;
+      const isPurchased = item.courseId ? enrolledWishlistIds.has(item.courseId) : false;
 
       return {
         id: item.id || `${item.courseId}-${index}`,
@@ -165,8 +175,6 @@ export default async function Page() {
         paymentMethod: paymentMethodLabel(order.paymentMethod),
         status: order.status || "PENDING",
         paymentName: profileUser.name,
-        paymentAccount: maskedPaymentAccount(order.payment?.paymentInfo),
-        paymentExpiry: undefined,
         courses: mappedOrderCourses,
       };
     });
@@ -188,7 +196,7 @@ export default async function Page() {
 
     return (
       <main className="min-h-screen bg-white">
-        <UserProfileTopNav avatar={profileUser.avatar} />
+        <CoursesTopNav />
         <Suspense fallback={
           <div className="flex h-96 items-center justify-center">
             <div className="size-8 animate-spin rounded-full border-4 border-[#7872FD] border-t-transparent" />
