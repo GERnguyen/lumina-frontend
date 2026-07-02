@@ -39,11 +39,11 @@ export function CheckoutOrderSummary({
     if (voucher.minPurchaseAmount && subtotal < voucher.minPurchaseAmount) {
       voucherMessage = `This coupon requires at least ${money(voucher.minPurchaseAmount)}.`;
     } else {
-      discount = Math.min(
-        voucher.discountAmount || 0,
-        voucher.maxDiscountAmount || voucher.discountAmount || 0,
-        subtotal
-      );
+      let calculatedDiscount = (subtotal * (voucher.discountAmount || 0)) / 100;
+      if (voucher.maxDiscountAmount && voucher.maxDiscountAmount > 0) {
+        calculatedDiscount = Math.min(calculatedDiscount, voucher.maxDiscountAmount);
+      }
+      discount = Math.min(calculatedDiscount, subtotal);
       voucherMessage = discount ? "Coupon applied." : "Coupon is available but does not reduce this order.";
     }
   } else if (voucherError) {
