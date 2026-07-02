@@ -349,7 +349,7 @@ export function InstructorNotifications({
                         <div className={`size-7 rounded-lg border flex items-center justify-center shrink-0 mt-0.5 ${typeColor}`}>
                           <TypeIcon className="size-3.5" />
                         </div>
-                        <div className="space-y-0.5 min-w-0">
+                        <div className="space-y-0.5 min-w-0 flex-1">
                           <p className={`text-xs text-gray-900 leading-normal group-hover/item:text-primary-600 transition-colors flex items-center justify-between gap-2 ${!n.isRead ? "font-bold" : "font-medium"}`}>
                             <span>{displayTitle}</span>
                             {n.sentAt && (

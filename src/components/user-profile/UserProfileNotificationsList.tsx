@@ -215,7 +215,7 @@ export function UserProfileNotificationsList() {
                   <div className={cn("mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl border", typeColor)}>
                     <TypeIcon className="size-4" />
                   </div>
-                  <div className="space-y-1 min-w-0">
+                  <div className="space-y-1 min-w-0 flex-1">
                     <p
                       className={cn(
                         "text-sm leading-normal transition-colors group-hover/item:text-primary-600 flex items-center justify-between gap-2",
