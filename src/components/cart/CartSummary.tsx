@@ -74,7 +74,11 @@ export function CartSummary({
         throw new Error(`Mã giảm giá này yêu cầu đơn hàng từ ${money(voucher.minPurchaseAmount)}.`);
       }
 
-      const nextDiscount = Math.min(voucher.discountAmount || 0, voucher.maxDiscountAmount || voucher.discountAmount || 0, subtotal);
+      let calculatedDiscount = (subtotal * (voucher.discountAmount || 0)) / 100;
+      if (voucher.maxDiscountAmount && voucher.maxDiscountAmount > 0) {
+        calculatedDiscount = Math.min(calculatedDiscount, voucher.maxDiscountAmount);
+      }
+      const nextDiscount = Math.min(calculatedDiscount, subtotal);
       setDiscount(nextDiscount);
       setAppliedCode(voucher.code || code);
       setMessage("Áp dụng mã giảm giá thành công.");
@@ -103,7 +107,11 @@ export function CartSummary({
         throw new Error(`This coupon requires at least ${money(voucher.minPurchaseAmount)}.`);
       }
 
-      const nextDiscount = Math.min(voucher.discountAmount || 0, voucher.maxDiscountAmount || voucher.discountAmount || 0, subtotal);
+      let calculatedDiscount = (subtotal * (voucher.discountAmount || 0)) / 100;
+      if (voucher.maxDiscountAmount && voucher.maxDiscountAmount > 0) {
+        calculatedDiscount = Math.min(calculatedDiscount, voucher.maxDiscountAmount);
+      }
+      const nextDiscount = Math.min(calculatedDiscount, subtotal);
       setDiscount(nextDiscount);
       setAppliedCode(voucher.code || code);
       setMessage("Coupon applied.");
@@ -217,7 +225,7 @@ export function CartSummary({
               const code = voucher.code || "";
               const minAmount = voucher.minPurchaseAmount || 0;
               const isEligible = subtotal >= minAmount;
-              const discountLabel = voucher.discountAmount ? money(voucher.discountAmount) : "";
+              const discountLabel = voucher.discountAmount ? `${voucher.discountAmount}%` : "";
               const isCurrentlyApplied = appliedCode === code;
 
               return (
@@ -243,7 +251,7 @@ export function CartSummary({
                       )}
                     </div>
                     <p className="mt-2.5 text-sm font-bold text-[#1D2026]">
-                      Giảm {discountLabel} cho đơn hàng
+                      Giảm {discountLabel} cho đơn hàng {voucher.maxDiscountAmount ? `(tối đa ${money(voucher.maxDiscountAmount)})` : ""}
                     </p>
                     {minAmount > 0 ? (
                       <p className="mt-1 text-xs text-gray-500 font-medium">
