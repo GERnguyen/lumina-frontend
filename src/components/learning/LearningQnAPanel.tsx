@@ -9,6 +9,7 @@ import type { QuestionDto, AnswerDto, UserDto } from "@/types";
 import { cn } from "@/lib/utils";
 import { InstructorDialog } from "@/components/ui/shared/InstructorDialog";
 import { useToastStore } from "@/stores/toast-store";
+import { useConfirmStore } from "@/stores/confirm-store";
 
 interface LearningQnAPanelProps {
   courseId: string;
@@ -26,6 +27,7 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
   const [reportReason, setReportReason] = useState("");
   const [submittingReport, setSubmittingReport] = useState(false);
   const addToast = useToastStore((state) => state.addToast);
+  const confirm = useConfirmStore((state) => state.confirm);
 
   // Filtering & Search
   const [filterMode, setFilterMode] = useState<"this-lesson" | "all-lessons">("this-lesson");
@@ -243,7 +245,14 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
 
   const handleDeleteQuestion = async (qId: string, event: React.MouseEvent) => {
     event.stopPropagation();
-    if (!window.confirm("Bạn có chắc chắn muốn xóa câu hỏi này?")) return;
+    const confirmed = await confirm({
+      title: "Xóa câu hỏi",
+      message: "Bạn có chắc chắn muốn xóa câu hỏi này không?",
+      confirmText: "Xóa",
+      cancelText: "Hủy",
+      type: "danger",
+    });
+    if (!confirmed) return;
     try {
       const res = await deleteQuestionAction(qId);
       if (res.success) {
@@ -258,7 +267,14 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
   };
 
   const handleDeleteAnswer = async (ansId: string) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa câu trả lời này?")) return;
+    const confirmed = await confirm({
+      title: "Xóa câu trả lời",
+      message: "Bạn có chắc chắn muốn xóa câu trả lời này không?",
+      confirmText: "Xóa",
+      cancelText: "Hủy",
+      type: "danger",
+    });
+    if (!confirmed) return;
     try {
       const res = await deleteAnswerAction(ansId);
       if (res.success) {

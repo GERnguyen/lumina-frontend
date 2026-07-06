@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ChevronDown, CreditCard, DollarSign, PlayCircle, Search, Star } from "lucide-react";
+import { useConfirmStore } from "@/stores/confirm-store";
 import type { ProfilePurchaseCourse, ProfilePurchaseHistoryItem } from "@/data/user-profile";
 import { OrderService } from "@/services/enrollmentService";
 import { PaymentService } from "@/services/paymentService";
@@ -161,13 +162,21 @@ function PurchaseCourseRow({ course }: { course: ProfilePurchaseCourse }) {
 }
 
 function ExpandedPurchaseContent({ purchase }: { purchase: ProfilePurchaseHistoryItem }) {
+  const confirm = useConfirmStore((state) => state.confirm);
   const [isActionPending, setIsActionPending] = useState(false);
   const [error, setError] = useState<string>();
   const [selectedMethod, setSelectedMethod] = useState<"MOMO" | "STRIPE">("MOMO");
   const [showMethodSelect, setShowMethodSelect] = useState(false);
 
   async function handleCancelOrder() {
-    if (!window.confirm("Are you sure you want to cancel this order?")) return;
+    const confirmed = await confirm({
+      title: "Hủy đơn hàng",
+      message: "Bạn có chắc chắn muốn hủy đơn hàng này không? Hành động này không thể hoàn tác.",
+      confirmText: "Hủy đơn hàng",
+      cancelText: "Không",
+      type: "danger",
+    });
+    if (!confirmed) return;
     setIsActionPending(true);
     setError(undefined);
     try {

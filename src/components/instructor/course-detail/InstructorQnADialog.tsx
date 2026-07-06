@@ -7,6 +7,7 @@ import { getAnswersForQuestionAction, createAnswerAction, deleteAnswerAction, up
 import { UserApi } from "@/services/api/user-api";
 import type { QuestionDto, AnswerDto } from "@/types";
 import { cn } from "@/lib/utils";
+import { useConfirmStore } from "@/stores/confirm-store";
 
 interface InstructorQnADialogProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ interface InstructorQnADialogProps {
 }
 
 export function InstructorQnADialog({ isOpen, onClose, question, onAnswerAdded }: InstructorQnADialogProps) {
+  const confirm = useConfirmStore((state) => state.confirm);
   const [answers, setAnswers] = useState<AnswerDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [newAnswer, setNewAnswer] = useState("");
@@ -114,7 +116,14 @@ export function InstructorQnADialog({ isOpen, onClose, question, onAnswerAdded }
   };
 
   const handleDeleteAnswer = async (ansId: string) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa phản hồi này?")) return;
+    const confirmed = await confirm({
+      title: "Xóa phản hồi",
+      message: "Bạn có chắc chắn muốn xóa phản hồi này không?",
+      confirmText: "Xóa",
+      cancelText: "Hủy",
+      type: "danger",
+    });
+    if (!confirmed) return;
     try {
       setErrorMsg(undefined);
       const res = await deleteAnswerAction(ansId);

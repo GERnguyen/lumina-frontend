@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import type { QuizLessonResponse, QuizQuestionResponse, CreateQuizOptionRequest } from "@/types";
 import { useToastStore } from "@/stores/toast-store";
+import { useConfirmStore } from "@/stores/confirm-store";
 
 
 interface QuizLessonEditorProps {
@@ -26,6 +27,7 @@ interface QuizLessonEditorProps {
 
 export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEditorProps) {
   const addToast = useToastStore((state) => state.addToast);
+  const confirm = useConfirmStore((state) => state.confirm);
   const [quizData, setQuizData] = useState<QuizLessonResponse | null>(null);
   const [hasQuiz, setHasQuiz] = useState(false);
   const [deletedQuestionIds, setDeletedQuestionIds] = useState<string[]>([]);
@@ -314,8 +316,15 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
   };
 
   // Delete Question (Locally in-memory)
-  const handleDeleteQuestion = (qId: string) => {
-    if (!confirm("Are you sure you want to remove this question locally?")) return;
+  const handleDeleteQuestion = async (qId: string) => {
+    const confirmed = await confirm({
+      title: "Remove Question",
+      message: "Are you sure you want to remove this question locally?",
+      confirmText: "Remove",
+      cancelText: "Cancel",
+      type: "danger",
+    });
+    if (!confirmed) return;
 
     setError(null);
     setSuccessMsg(null);

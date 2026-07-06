@@ -9,6 +9,7 @@ import { Input, Select } from "@/components/ui/shared";
 import { InstructorTextarea } from "@/components/ui/shared/InstructorTextarea";
 import type { CourseCurriculumResponse, CurriculumSectionResponse, LessonResponse } from "@/types";
 import { cn } from "@/lib/utils";
+import { useConfirmStore } from "@/stores/confirm-store";
 
 import {
   Plus,
@@ -41,6 +42,7 @@ export default function CourseCurriculumBuilder({
   onNext,
   onBack,
 }: CourseCurriculumBuilderProps) {
+  const confirm = useConfirmStore((state) => state.confirm);
   // Modal states
   const [sectionModalOpen, setSectionModalOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<CurriculumSectionResponse | null>(null);
@@ -115,7 +117,14 @@ export default function CourseCurriculumBuilder({
 
   // Delete Section
   const handleDeleteSection = async (sectionId: string) => {
-    if (!confirm("Are you sure you want to delete this section and all of its lessons? This cannot be undone.")) return;
+    const confirmed = await confirm({
+      title: "Delete Section",
+      message: "Are you sure you want to delete this section and all of its lessons? This cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      type: "danger",
+    });
+    if (!confirmed) return;
 
     setActionLoading(true);
     setError(null);
@@ -187,7 +196,14 @@ export default function CourseCurriculumBuilder({
 
   // Delete Lesson
   const handleDeleteLesson = async (sectionId: string, lessonId: string) => {
-    if (!confirm("Are you sure you want to delete this lesson?")) return;
+    const confirmed = await confirm({
+      title: "Delete Lesson",
+      message: "Are you sure you want to delete this lesson?",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      type: "danger",
+    });
+    if (!confirmed) return;
 
     setActionLoading(true);
     setError(null);

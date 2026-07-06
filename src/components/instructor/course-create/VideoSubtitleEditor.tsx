@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import type { SubtitleTrackResponse, SubtitleJobResponse } from "@/types";
 import { cn } from "@/lib/utils";
+import { useConfirmStore } from "@/stores/confirm-store";
 
 interface VideoSubtitleEditorProps {
   courseId: string;
@@ -43,6 +44,7 @@ export default function VideoSubtitleEditor({
   subtitles = [],
   onRefresh,
 }: VideoSubtitleEditorProps) {
+  const confirm = useConfirmStore((state) => state.confirm);
   // Upload states
   const [uploadLanguageCode, setUploadLanguageCode] = useState("en");
   const [uploadDisplayName, setUploadDisplayName] = useState("English");
@@ -290,7 +292,14 @@ export default function VideoSubtitleEditor({
 
   // Delete subtitle track
   const handleDelete = async (subtitleId: string, displayName?: string) => {
-    if (!confirm(`Are you sure you want to delete the ${displayName || "selected"} subtitle track?`)) return;
+    const confirmed = await confirm({
+      title: "Delete Subtitle Track",
+      message: `Are you sure you want to delete the ${displayName || "selected"} subtitle track?`,
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      type: "danger",
+    });
+    if (!confirmed) return;
 
     setActionError(null);
     try {
