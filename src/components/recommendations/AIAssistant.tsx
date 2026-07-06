@@ -106,6 +106,8 @@ export function AIAssistant() {
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
     setIsStreaming(true);
 
+    let activeSessionId = sessionId;
+
     try {
       await sendAgentMessage({
         sessionId,
@@ -117,6 +119,7 @@ export function AIAssistant() {
           // Update sessionId if provided
           if (payload.sessionId && payload.sessionId !== sessionId) {
             setSessionId(payload.sessionId);
+            activeSessionId = payload.sessionId;
           }
 
           setMessages((prevMessages) => {
@@ -184,6 +187,14 @@ export function AIAssistant() {
                     }
                     if (updateData.result) {
                       updatedPart.result = updateData.result;
+                      // Close the editor if the proposal status is CREATED or a learning path was successfully created
+                      const resProposal = updateData.result.proposal || updateData.result;
+                      const hasCreatedProposal = resProposal && resProposal.proposalId && resProposal.status === "CREATED";
+                      const hasCreatedPath = updateData.result.learningPath || updateData.result.learningPathId || (updateData.result.id && updateData.result.title && !updateData.result.proposalId);
+                      
+                      if (hasCreatedProposal || hasCreatedPath) {
+                        setActiveProposal(null);
+                      }
                     }
                     if (updateData.error) {
                       updatedPart.error = updateData.error;
@@ -263,6 +274,27 @@ export function AIAssistant() {
       setError(err?.message || "Lỗi khi kết nối với Assistant.");
     } finally {
       setIsStreaming(false);
+      // Synchronize proposal status after agent run
+      if (activeSessionId) {
+        try {
+          const latestProposal = await RecommendationApi.getProposal(activeSessionId);
+          if (latestProposal) {
+            if (latestProposal.status === "CREATED") {
+              setActiveProposal(null);
+            } else {
+              setActiveProposal(latestProposal);
+            }
+          } else {
+            setActiveProposal(null);
+          }
+        } catch (syncErr: any) {
+          console.error("Failed to sync proposal status after agent run:", syncErr);
+          const status = syncErr?.response?.status || syncErr?.status;
+          if (status === 404) {
+            setActiveProposal(null);
+          }
+        }
+      }
     }
   };
 

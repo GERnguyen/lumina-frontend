@@ -22,6 +22,8 @@ import {
 import { cn } from "@/lib/utils";
 import { LearningPathApi } from "@/services/api/learning-api";
 import { CourseApi } from "@/services/api/course-api";
+import { EnrollmentApi } from "@/services/api/enrollment-api";
+import { CartApi } from "@/services/api/cart-api";
 import type { LearningPathResponse, CourseResponse, CourseCurriculumResponse } from "@/types";
 import { useConfirmStore } from "@/stores/confirm-store";
 import { useToastStore } from "@/stores/toast-store";
@@ -49,6 +51,35 @@ export function LearningPathsDashboard() {
   const [historyPaths, setHistoryPaths] = useState<LearningPathResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [checkingCourseId, setCheckingCourseId] = useState<string | null>(null);
+
+  const handleGoToStudy = async (courseId: string, lessonId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    if (checkingCourseId) return;
+
+    try {
+      setCheckingCourseId(courseId);
+      const res = await EnrollmentApi.checkEnrollmentStatus([courseId]);
+      const status = res?.data?.[0];
+
+      if (status?.isEnrolled) {
+        router.push(`/learning/${courseId}?lessonId=${lessonId}`);
+      } else {
+        addToast("Khóa học chưa được đăng ký. Đang chuyển đến giỏ hàng...", "info", "Thông báo");
+        try {
+          await CartApi.addToCart({ courseId });
+        } catch (cartErr) {
+          console.error("Failed to add course to cart", cartErr);
+        }
+        router.push("/cart");
+      }
+    } catch (err) {
+      console.error("Failed to check enrollment status", err);
+      addToast("Có lỗi xảy ra khi kiểm tra trạng thái khóa học.", "error", "Lỗi");
+    } finally {
+      setCheckingCourseId(null);
+    }
+  };
 
   // Resolved active path items with titles and types
   const [resolvedItems, setResolvedItems] = useState<ResolvedPathItem[]>([]);
@@ -433,12 +464,18 @@ export function LearningPathsDashboard() {
                             </div>
 
                             {/* Go to study link */}
-                            <Link
-                              href={`/learning/${item.courseId}?lessonId=${item.lessonId}`}
-                              className="h-9 rounded-lg bg-white border border-[#E9EAF0] hover:border-[#7872FD] px-3.5 text-xs font-semibold text-[#1D2026] hover:text-[#564FFD] transition flex items-center gap-1 shrink-0"
+                            <button
+                              onClick={(e) => handleGoToStudy(item.courseId || "", item.lessonId || "", e)}
+                              disabled={checkingCourseId !== null}
+                              className="h-9 rounded-lg bg-white border border-[#E9EAF0] hover:border-[#7872FD] px-3.5 text-xs font-semibold text-[#1D2026] hover:text-[#564FFD] transition flex items-center gap-1 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              Vào học <ArrowRight className="size-3" />
-                            </Link>
+                              <span>Vào học</span>
+                              {checkingCourseId === item.courseId ? (
+                                <Loader2 className="size-3 animate-spin" />
+                              ) : (
+                                <ArrowRight className="size-3" />
+                              )}
+                            </button>
                           </div>
                         </div>
                       );
@@ -666,12 +703,18 @@ export function LearningPathsDashboard() {
                               </p>
                             </div>
 
-                            <Link
-                              href={`/learning/${item.courseId}?lessonId=${item.lessonId}`}
-                              className="h-8 rounded-lg bg-white border border-[#E9EAF0] hover:border-[#7872FD] px-3 text-[11px] font-semibold text-[#1D2026] hover:text-[#564FFD] transition flex items-center gap-1 shrink-0"
+                            <button
+                              onClick={(e) => handleGoToStudy(item.courseId || "", item.lessonId || "", e)}
+                              disabled={checkingCourseId !== null}
+                              className="h-8 rounded-lg bg-white border border-[#E9EAF0] hover:border-[#7872FD] px-3 text-[11px] font-semibold text-[#1D2026] hover:text-[#564FFD] transition flex items-center gap-1 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              Vào học <ArrowRight className="size-3" />
-                            </Link>
+                              <span>Vào học</span>
+                              {checkingCourseId === item.courseId ? (
+                                <Loader2 className="size-3 animate-spin" />
+                              ) : (
+                                <ArrowRight className="size-3" />
+                              )}
+                            </button>
                           </div>
                         </div>
                       );
