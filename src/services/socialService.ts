@@ -12,6 +12,7 @@ import type {
 } from '@/types';
 import type {
   AddToWishlistRequest,
+  AdminReportResponse,
   AnswerDto,
   CourseQnAStatisticsResponse,
   CreateAnswerRequest,
@@ -22,7 +23,6 @@ import type {
   CreateReviewReplyRequest,
   CreateReviewRequest,
   QuestionDto,
-  Report,
   ReportStatisticsOverviewResponse,
   ReviewResponse,
   ReviewStatisticsResponse,
@@ -115,8 +115,8 @@ export const CourseQnAService = {
     return data;
   },
 
-  async getQuestions({ courseId, lessonId, page, size, sort }: { courseId: string; lessonId?: string; page?: number; size?: number; sort?: string }, config?: AxiosRequestConfig): Promise<PaginatedApiResponse<QuestionDto>> {
-    const { data } = await axiosClient.get('/api/v1/course-qna/questions', { params: { courseId, lessonId, page, size, sort }, ...config });
+  async getQuestions({ courseId, lessonId, page, size, query, sort }: { courseId: string; lessonId?: string; page?: number; size?: number; query?: string; sort?: string }, config?: AxiosRequestConfig): Promise<PaginatedApiResponse<QuestionDto>> {
+    const { data } = await axiosClient.get('/api/v1/course-qna/questions', { params: { courseId, lessonId, page, size, query, sort }, ...config });
     return data;
   },
 
@@ -205,8 +205,8 @@ export const SocialStatisticsService = {
 // ── AdminReportService ──────────────────────────────────────────────
 export const AdminReportService = {
 
-  async getReports({ type, page, size, sort }: { type?: string; page?: number; size?: number; sort?: string }, config?: AxiosRequestConfig): Promise<PaginatedApiResponse<Report>> {
-    const { data } = await axiosClient.get('/api/v1/reports', { params: { type, page, size, sort }, ...config });
+  async getReports({ type, page, size, query, sort }: { type?: string; page?: number; size?: number; query?: string; sort?: string }, config?: AxiosRequestConfig): Promise<PaginatedApiResponse<AdminReportResponse>> {
+    const { data } = await axiosClient.get('/api/v1/reports', { params: { type, page, size, query, sort }, ...config });
     return data;
   },
 

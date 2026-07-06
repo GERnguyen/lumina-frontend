@@ -1,7 +1,6 @@
 "use client";
 
 import { ChevronDown, Search } from "lucide-react";
-import type { ProfileCourseFilter, ProfileCourseItem } from "@/data/user-profile";
 
 function SelectField({
   label,
@@ -41,30 +40,28 @@ function SelectField({
 
 export function UserProfileCourseFilters({
   filters,
-  courses,
   onChange,
 }: {
-  filters: ProfileCourseFilter;
-  courses: ProfileCourseItem[];
-  onChange?: (filters: ProfileCourseFilter) => void;
+  filters: { query: string; sort: string };
+  onChange?: (filters: { query: string; sort: string }) => void;
 }) {
-  const teachers = Array.from(new Set(courses.map((course) => course.teacher))).filter(Boolean);
-  const updateFilter = (key: keyof ProfileCourseFilter, value: string) => {
-    onChange?.({ ...filters, [key]: value, page: 1 });
+  const updateFilter = (key: "query" | "sort", value: string) => {
+    onChange?.({ ...filters, [key]: value });
   };
 
   return (
-    <form className="grid gap-6 lg:grid-cols-[minmax(280px,528px)_repeat(3,minmax(180px,240px))_auto]" action="/user-profile" method="get">
-      <input type="hidden" name="tab" value="courses" />
+    <form
+      className="grid gap-6 sm:grid-cols-[1fr_240px]"
+      onSubmit={(e) => e.preventDefault()}
+    >
       <label className="flex min-w-0 flex-col gap-2">
         <span className="text-xs leading-4 text-[#6E7485]">Search:</span>
         <span className="flex h-12 items-center gap-3 rounded-[18px] border border-[#E9EAF0] bg-white px-4 transition focus-within:border-[#564FFD]">
           <Search className="size-6 text-[#8C94A3]" />
           <input
             name="query"
-            {...(onChange
-              ? { value: filters.query || "", onChange: (event) => updateFilter("query", event.target.value) }
-              : { defaultValue: filters.query || "" })}
+            value={filters.query || ""}
+            onChange={(event) => updateFilter("query", event.target.value)}
             className="w-full border-0 p-0 text-base text-[#1D2026] placeholder:text-[#8C94A3] focus:ring-0"
             placeholder="Search in your courses..."
           />
@@ -77,33 +74,10 @@ export function UserProfileCourseFilters({
         value={filters.sort}
         onValueChange={(value) => updateFilter("sort", value)}
         options={[
-          { label: "Latest", value: "latest" },
-          { label: "Progress", value: "progress" },
-          { label: "Title", value: "title" },
+          { label: "Latest", value: JSON.stringify({ enrolledAt: "DESC" }) },
+          { label: "Oldest", value: JSON.stringify({ enrolledAt: "ASC" }) },
         ]}
       />
-      <SelectField
-        label="Status:"
-        name="status"
-        value={filters.status}
-        onValueChange={(value) => updateFilter("status", value)}
-        options={[
-          { label: "All Courses", value: "all" },
-          { label: "Active Courses", value: "active" },
-          { label: "Completed Courses", value: "completed" },
-        ]}
-      />
-      <SelectField
-        label="Teacher:"
-        name="teacher"
-        value={filters.teacher}
-        onValueChange={(value) => updateFilter("teacher", value)}
-        options={[{ label: "All Teachers", value: "all" }, ...teachers.map((teacher) => ({ label: teacher, value: teacher }))]}
-      />
-
-      <button type="submit" className="self-end rounded-[18px] bg-[#564FFD] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#453FCA]">
-        Apply filters
-      </button>
     </form>
   );
 }

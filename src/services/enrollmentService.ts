@@ -106,8 +106,8 @@ export const EnrollmentService = {
     return data;
   },
 
-  async getEnrolledCourses({ page, size }: { page?: number; size?: number }, config?: AxiosRequestConfig): Promise<PaginatedApiResponse<EnrolledCourseResponse>> {
-    const { data } = await axiosClient.get('/api/v1/enrollments', { params: { page, size }, ...config });
+  async getEnrolledCourses({ page, size, query, sort }: { page?: number; size?: number; query?: string; sort?: string }, config?: AxiosRequestConfig): Promise<PaginatedApiResponse<EnrolledCourseResponse>> {
+    const { data } = await axiosClient.get('/api/v1/enrollments', { params: { page, size, query, sort }, ...config });
     return data;
   },
 };

@@ -4,13 +4,14 @@ import { CourseQnAApi } from "@/services/api/social-api";
 import type { CreateQuestionRequest, CreateAnswerRequest, UpdateQuestionRequest, UpdateAnswerRequest } from "@/types";
 import { revalidatePath } from "next/cache";
 
-export async function getQuestionsAction(courseId: string, lessonId?: string, page: number = 1, size: number = 20) {
+export async function getQuestionsAction(courseId: string, lessonId?: string, page: number = 1, size: number = 20, query?: string) {
   try {
     const res = await CourseQnAApi.getQuestions({
       courseId,
       lessonId: lessonId || undefined,
       page,
       size,
+      query,
       sort: JSON.stringify({ createdAt: "DESC" }),
     });
     return { success: true, data: res.data || [] };

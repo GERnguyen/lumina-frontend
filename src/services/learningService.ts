@@ -181,13 +181,13 @@ export const QuizSessionService = {
     return data;
   },
 
-  async getQuizSessionQuestions({ quizSessionId, page, size, query, sort }: { quizSessionId: string; page?: number; size?: number; query?: string; sort?: string }, config?: AxiosRequestConfig): Promise<PaginatedApiResponse<QuizSessionQuestionResponse>> {
-    const { data } = await axiosClient.get(`/api/v1/learning/quiz-sessions/${quizSessionId}/questions`, { params: { page, size, query, sort }, ...config });
+  async getQuizSessionQuestions({ quizSessionId, page, size, sort }: { quizSessionId: string; page?: number; size?: number; sort?: string }, config?: AxiosRequestConfig): Promise<PaginatedApiResponse<QuizSessionQuestionResponse>> {
+    const { data } = await axiosClient.get(`/api/v1/learning/quiz-sessions/${quizSessionId}/questions`, { params: { page, size, sort }, ...config });
     return data;
   },
 
-  async getQuizSessions({ lessonId, userId, page, size, query, sort }: { lessonId: string; userId?: string; page?: number; size?: number; query?: string; sort?: string }, config?: AxiosRequestConfig): Promise<PaginatedApiResponse<QuizSessionResponse>> {
-    const { data } = await axiosClient.get(`/api/v1/learning/lessons/${lessonId}/quiz-sessions`, { params: { userId, page, size, query, sort }, ...config });
+  async getQuizSessions({ lessonId, userId, page, size, sort }: { lessonId: string; userId?: string; page?: number; size?: number; sort?: string }, config?: AxiosRequestConfig): Promise<PaginatedApiResponse<QuizSessionResponse>> {
+    const { data } = await axiosClient.get(`/api/v1/learning/lessons/${lessonId}/quiz-sessions`, { params: { userId, page, size, sort }, ...config });
     return data;
   },
 
@@ -201,8 +201,8 @@ export const QuizSessionService = {
 // ── VideoTrackingService ──────────────────────────────────────────────
 export const VideoTrackingService = {
 
-  async getVideoLessonTrackingHistories({ courseId, lessonId, page, size, query, sort }: { courseId: string; lessonId: string; page?: number; size?: number; query?: string; sort?: string }, config?: AxiosRequestConfig): Promise<PaginatedApiResponse<VideoLessonTrackingHistoryResponse>> {
-    const { data } = await axiosClient.get(`/api/v1/learning/courses/${courseId}/lessons/${lessonId}/video-tracking`, { params: { page, size, query, sort }, ...config });
+  async getVideoLessonTrackingHistories({ courseId, lessonId, page, size, sort }: { courseId: string; lessonId: string; page?: number; size?: number; sort?: string }, config?: AxiosRequestConfig): Promise<PaginatedApiResponse<VideoLessonTrackingHistoryResponse>> {
+    const { data } = await axiosClient.get(`/api/v1/learning/courses/${courseId}/lessons/${lessonId}/video-tracking`, { params: { page, size, sort }, ...config });
     return data;
   },
 
@@ -282,8 +282,8 @@ export const AssignmentService = {
     return data;
   },
 
-  async getAssignmentSubmissions({ assignmentId, page, size, query, sort }: { assignmentId: string; page?: number; size?: number; query?: string; sort?: string }, config?: AxiosRequestConfig): Promise<PaginatedApiResponse<AssignmentSubmissionResponse>> {
-    const { data } = await axiosClient.get('/api/v1/learning/assignment-submissions/list', { params: { assignmentId, page, size, query, sort }, ...config });
+  async getAssignmentSubmissions({ assignmentId, page, size, sort }: { assignmentId: string; page?: number; size?: number; sort?: string }, config?: AxiosRequestConfig): Promise<PaginatedApiResponse<AssignmentSubmissionResponse>> {
+    const { data } = await axiosClient.get('/api/v1/learning/assignment-submissions/list', { params: { assignmentId, page, size, sort }, ...config });
     return data;
   },
 

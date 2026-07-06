@@ -122,7 +122,7 @@ export async function createQuizSessionAction(courseId: string, lessonId: string
 
 export async function getQuizSessionsAction(lessonId: string) {
   try {
-    const res = await QuizSessionApi.getQuizSessions(lessonId, { page: 1, size: 20, sort: "startTime,desc" });
+    const res = await QuizSessionApi.getQuizSessions(lessonId, { page: 1, size: 20, sort: JSON.stringify({ startTime: "DESC" }) });
     return { success: true, data: res.data || [] };
   } catch (error: any) {
     return { success: false, error: error?.message || "Failed to load quiz sessions" };

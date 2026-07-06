@@ -1,9 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import type {
   ProfileCourseFilter,
   ProfileCourseItem,
@@ -12,6 +12,9 @@ import type {
   UserProfileDashboardData,
   UserProfileSettingsData,
 } from "@/data/user-profile";
+import { EnrollmentApi } from "@/services/api/enrollment-api";
+import { LearningProgressApi } from "@/services/api/learning-api";
+import { getCourseImage, getCourseInstructorName } from "@/lib/format";
 import { UserProfileCourseCard } from "./UserProfileCourseCard";
 import { UserProfileCourseFilters } from "./UserProfileCourseFilters";
 import { UserProfileLearningCard } from "./UserProfileLearningCard";
@@ -40,9 +43,9 @@ const tabs: Array<{ key: ProfileTabKey; label: string }> = [
   { key: "courses", label: "Courses" },
   { key: "wishlist", label: "Wishlist" },
   { key: "purchase-history", label: "Purchase History" },
-  { key: "settings", label: "Settings" },
   { key: "notifications", label: "Notifications" },
   { key: "certificates", label: "Certificates" },
+  { key: "settings", label: "Settings" },
 ];
 
 export function UserProfileSpaShell({
@@ -120,48 +123,155 @@ export function UserProfileSpaShell({
   );
 }
 
-function applyCourseFilters(courses: ProfileCourseItem[], filters: ProfileCourseFilter) {
-  const query = filters.query?.trim().toLowerCase();
-  let next = courses.filter((course) => {
-    if (query) {
-      const haystack = `${course.title} ${course.teacher} ${course.lesson}`.toLowerCase();
-      if (!haystack.includes(query)) return false;
-    }
-    if (filters.status && filters.status !== "all" && course.status !== filters.status) return false;
-    if (filters.teacher && filters.teacher !== "all" && course.teacher !== filters.teacher) return false;
-    return true;
+function CoursesTab({ courses, filters }: { courses: ProfileCourseItem[]; filters: any }) {
+  const [list, setList] = useState<ProfileCourseItem[]>(courses);
+  const [activeFilters, setActiveFilters] = useState({
+    query: "",
+    sort: JSON.stringify({ enrolledAt: "DESC" }),
   });
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(courses.length >= 20);
 
-  if (filters.sort === "progress") {
-    next = [...next].sort((a, b) => (b.progress || 0) - (a.progress || 0));
-  } else if (filters.sort === "title") {
-    next = [...next].sort((a, b) => a.title.localeCompare(b.title));
+  const loaderRef = useRef<HTMLDivElement>(null);
+
+  async function hydrateEnrolledCoursesProgress(enrolledCourses: any[]) {
+    const enrolledIds = enrolledCourses.map((item) => item.course?.id).filter(Boolean) as string[];
+    let progressList: any[] = [];
+    if (enrolledIds.length > 0) {
+      try {
+        const progressRes = await LearningProgressApi.getCourseProgressByCourseIds(enrolledIds.join(","));
+        progressList = progressRes.data || [];
+      } catch (e) {
+        console.error("Failed to fetch course progresses client-side:", e);
+      }
+    }
+    return enrolledCourses.map((item, index) => {
+      const course = item.course || {};
+      const progressItem = progressList.find((p) => p.courseId === course.id);
+      const progress = progressItem?.totalItems
+        ? Math.round(((progressItem.completedItems || 0) / progressItem.totalItems) * 100)
+        : undefined;
+
+      return {
+        id: course.id || `course-${index}-${Date.now()}`,
+        title: course.title || "Untitled course",
+        lesson: "Continue your learning",
+        image: getCourseImage(course, index),
+        progress,
+        href: `/learning/${course.id}`,
+        featured: false,
+        teacher: getCourseInstructorName(course),
+        isPassed: progressItem?.isPassed,
+        status: (progressItem?.isCompleted && progressItem?.isPassed ? "completed" as const : "active" as const) as "all" | "active" | "completed",
+        enrolledAt: item.enrolledAt,
+      };
+    });
   }
 
-  return next;
-}
+  // Reset and fetch first page on filter change
+  useEffect(() => {
+    let active = true;
+    const fetchFirstPage = async () => {
+      setLoading(true);
+      try {
+        const res = await EnrollmentApi.getEnrolledCourses({
+          page: 1,
+          size: 12,
+          query: activeFilters.query || undefined,
+          sort: activeFilters.sort || undefined,
+        });
+        if (!active) return;
+        const enrolled = res.data || [];
+        const mapped = await hydrateEnrolledCoursesProgress(enrolled);
+        setList(mapped);
+        setPage(1);
+        setHasMore(enrolled.length >= 12);
+      } catch (err) {
+        console.error("Failed to fetch enrolled courses:", err);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
 
-function CoursesTab({ courses, filters }: { courses: ProfileCourseItem[]; filters: ProfileCourseFilter }) {
-  const [activeFilters, setActiveFilters] = useState<ProfileCourseFilter>(filters);
-  const filteredCourses = useMemo(() => applyCourseFilters(courses, activeFilters), [activeFilters, courses]);
+    const timer = setTimeout(() => {
+      fetchFirstPage();
+    }, 300);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [activeFilters]);
+
+  const loadMore = async () => {
+    if (loading || !hasMore) return;
+    setLoading(true);
+    try {
+      const nextPage = page + 1;
+      const res = await EnrollmentApi.getEnrolledCourses({
+        page: nextPage,
+        size: 12,
+        query: activeFilters.query || undefined,
+        sort: activeFilters.sort || undefined,
+      });
+      const enrolled = res.data || [];
+      const mapped = await hydrateEnrolledCoursesProgress(enrolled);
+      setList((prev) => [...prev, ...mapped]);
+      setPage(nextPage);
+      setHasMore(enrolled.length >= 12);
+    } catch (err) {
+      console.error("Failed to load more courses:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentLoader = loaderRef.current;
+    if (currentLoader) {
+      observer.observe(currentLoader);
+    }
+
+    return () => {
+      if (currentLoader) {
+        observer.unobserve(currentLoader);
+      }
+    };
+  }, [hasMore, loading, page, activeFilters]);
 
   return (
     <>
       <h2 className="text-2xl font-semibold tracking-normal text-[#1D2026]">
-        Courses <span className="font-normal">({filteredCourses.length})</span>
+        Courses <span className="font-normal">({list.length})</span>
       </h2>
       <div className="mt-6">
-        <UserProfileCourseFilters filters={activeFilters} courses={courses} onChange={setActiveFilters} />
+        <UserProfileCourseFilters filters={activeFilters} onChange={setActiveFilters} />
       </div>
       <div className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        {filteredCourses.map((course) => (
+        {list.map((course) => (
           <UserProfileCourseCard key={course.id} course={course} />
         ))}
       </div>
-      {!filteredCourses.length ? (
+
+      {/* Infinite Scroll Loader Target */}
+      <div ref={loaderRef} className="flex justify-center py-6">
+        {loading && <Loader2 className="size-6 animate-spin text-[#564FFD]" />}
+      </div>
+
+      {!list.length && !loading ? (
         <div className="mt-8 rounded-[18px] border border-dashed border-[#D8D6FF] bg-white px-6 py-12 text-center">
           <p className="text-base font-semibold text-[#1D2026]">No courses match your filters.</p>
-          <p className="mt-2 text-sm text-[#6E7485]">Try a different keyword, status, or instructor.</p>
+          <p className="mt-2 text-sm text-[#6E7485]">Try a different keyword.</p>
         </div>
       ) : null}
     </>
