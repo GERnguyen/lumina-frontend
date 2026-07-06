@@ -30,37 +30,37 @@ export function mapNotificationUrl(n: any): string {
     case "COURSE_CONTENT_PUBLISHED":
     case "COURSE_COMPLETED":
       return `/courses/${referenceId || metadata.courseId || ""}`;
-      
+
     case "COURSE_APPROVAL_REQUESTED":
       return "/instructor/courses";
-      
+
     case "CERTIFICATE_REQUESTED":
       return `/instructor/certificates?query=${referenceId || metadata.requestId || ""}`;
-      
+
     case "CERTIFICATE_APPROVED":
       return n.actionUrl || metadata.certificateUrl || "/my-learning";
-      
+
     case "DAILY_LEARNING_REMINDER":
       if (metadata.targetItemId || referenceId) {
         return `/learning/items/${referenceId || metadata.targetItemId}`;
       }
       return "/learning";
-      
+
     case "PAYMENT_SUCCEEDED":
     case "ORDER_CREATED":
     case "ORDER_CANCELLED":
       return "/user-profile/purchase-history";
-      
+
     case "COURSE_REVIEW_CREATED":
       return "/instructor/courses";
-      
+
     case "COURSE_QUESTION_CREATED":
     case "COURSE_ANSWER_CREATED":
       if (metadata.courseId) {
         return `/courses/${metadata.courseId}/watch`;
       }
       return "/instructor/dashboard";
-      
+
     default:
       return n.actionUrl || "#";
   }
@@ -87,7 +87,7 @@ export function getNotificationHelper(n: any): NotificationDetails {
       icon = BookOpen;
       color = "bg-emerald-50 border-emerald-100 text-emerald-600";
       displayTitle = displayTitle || "Khóa học đã xuất bản";
-      if (metadata.courseTitle) {
+      if (!displayMessage && metadata.courseTitle) {
         displayMessage = `Khóa học "${metadata.courseTitle}" đã được duyệt và xuất bản thành công.`;
       }
       break;
@@ -95,7 +95,7 @@ export function getNotificationHelper(n: any): NotificationDetails {
       icon = BookOpen;
       color = "bg-indigo-50 border-indigo-100 text-indigo-600";
       displayTitle = displayTitle || "Nội dung khóa học mới";
-      if (metadata.courseTitle) {
+      if (!displayMessage && metadata.courseTitle) {
         displayMessage = `Khóa học "${metadata.courseTitle}" có nội dung cập nhật mới.`;
       }
       break;
@@ -103,7 +103,7 @@ export function getNotificationHelper(n: any): NotificationDetails {
       icon = BookOpen;
       color = "bg-purple-50 border-purple-100 text-purple-600";
       displayTitle = displayTitle || "Hoàn thành khóa học";
-      if (metadata.courseTitle) {
+      if (!displayMessage && metadata.courseTitle) {
         displayMessage = `Chúc mừng bạn đã hoàn thành tất cả nội dung khóa học "${metadata.courseTitle}".`;
       }
       break;
@@ -111,7 +111,7 @@ export function getNotificationHelper(n: any): NotificationDetails {
       icon = BookOpen;
       color = "bg-amber-50 border-amber-100 text-amber-600";
       displayTitle = displayTitle || "Yêu cầu duyệt khóa học";
-      if (metadata.courseTitle) {
+      if (!displayMessage && metadata.courseTitle) {
         displayMessage = `Khóa học "${metadata.courseTitle}" đang chờ bạn duyệt nội dung giáo trình.`;
       }
       break;
@@ -119,7 +119,7 @@ export function getNotificationHelper(n: any): NotificationDetails {
       icon = Award;
       color = "bg-amber-50 border-amber-100 text-amber-600";
       displayTitle = displayTitle || "Yêu cầu cấp chứng chỉ";
-      if (metadata.courseTitle) {
+      if (!displayMessage && metadata.courseTitle) {
         displayMessage = `Học viên đã hoàn thành khóa học "${metadata.courseTitle}" và gửi yêu cầu cấp chứng chỉ.`;
       }
       break;
@@ -127,7 +127,7 @@ export function getNotificationHelper(n: any): NotificationDetails {
       icon = Award;
       color = "bg-emerald-50 border-emerald-100 text-emerald-600";
       displayTitle = displayTitle || "Chứng chỉ đã được duyệt";
-      if (metadata.courseTitle) {
+      if (!displayMessage && metadata.courseTitle) {
         displayMessage = `Yêu cầu cấp chứng chỉ cho khóa học "${metadata.courseTitle}" đã được giảng viên phê duyệt thành công.`;
       }
       break;
@@ -135,7 +135,7 @@ export function getNotificationHelper(n: any): NotificationDetails {
       icon = Clock;
       color = "bg-sky-50 border-sky-100 text-sky-600";
       displayTitle = displayTitle || "Nhắc nhở học tập";
-      if (metadata.goalType) {
+      if (!displayMessage && metadata.goalType) {
         displayMessage = `Nhắc nhở hoàn thành mục tiêu học tập hàng ngày: mục tiêu ${metadata.goalType}.`;
       }
       break;
@@ -143,8 +143,8 @@ export function getNotificationHelper(n: any): NotificationDetails {
       icon = CreditCard;
       color = "bg-emerald-50 border-emerald-100 text-emerald-600";
       displayTitle = displayTitle || "Thanh toán thành công";
-      if (metadata.orderId) {
-        const priceStr = metadata.totalPrice ? new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(metadata.totalPrice) : "";
+      if (!displayMessage && metadata.orderId) {
+        const priceStr = metadata.totalPrice ? metadata.totalPrice : "";
         displayMessage = `Thanh toán thành công đơn hàng ${metadata.orderId} ${priceStr ? 'với số tiền ' + priceStr : ''}.`;
       }
       break;
@@ -152,7 +152,7 @@ export function getNotificationHelper(n: any): NotificationDetails {
       icon = CreditCard;
       color = "bg-blue-50 border-blue-100 text-blue-600";
       displayTitle = displayTitle || "Đơn hàng đã tạo";
-      if (metadata.orderId) {
+      if (!displayMessage && metadata.orderId) {
         displayMessage = `Đơn hàng ${metadata.orderId} đã được khởi tạo thành công.`;
       }
       break;
@@ -160,7 +160,7 @@ export function getNotificationHelper(n: any): NotificationDetails {
       icon = CreditCard;
       color = "bg-red-50 border-red-100 text-red-600";
       displayTitle = displayTitle || "Đơn hàng đã hủy";
-      if (metadata.orderId) {
+      if (!displayMessage && metadata.orderId) {
         displayMessage = `Đơn hàng ${metadata.orderId} đã bị hủy bỏ.`;
       }
       break;
@@ -168,7 +168,7 @@ export function getNotificationHelper(n: any): NotificationDetails {
       icon = MessageSquare;
       color = "bg-indigo-50 border-indigo-100 text-[#5D5FEF]";
       displayTitle = displayTitle || "Đánh giá khóa học mới";
-      if (metadata.courseTitle) {
+      if (!displayMessage && metadata.courseTitle) {
         const ratingStr = metadata.rating ? `(${metadata.rating} sao)` : "";
         displayMessage = `Bạn nhận được đánh giá mới ${ratingStr} từ học viên cho khóa học "${metadata.courseTitle}".`;
       }
