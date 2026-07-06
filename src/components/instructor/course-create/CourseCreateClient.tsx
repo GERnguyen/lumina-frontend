@@ -56,33 +56,31 @@ export default function CourseCreateClient({ categories, courseId: initialCourse
     setError(null);
     try {
       let courseData = null;
-      let isPublished = false;
+      let curriculumData = null;
+      let isDraftLoaded = false;
 
+      // Always try to load the editable draft first, which contains latest edits and its correct publishStatus
       try {
-        const pubRes = await CourseApi.getReadableCourseById(id);
-        if (pubRes?.data?.publishStatus === "PUBLISHED") {
-          courseData = pubRes.data;
-          isPublished = true;
+        const draftRes = await CourseApi.getEditableCourseDraft(id);
+        if (draftRes?.data) {
+          courseData = draftRes.data;
+          isDraftLoaded = true;
+          const curriculumRes = await CourseApi.getEditableDraftCurriculum(id).catch(() => ({ data: { courseId: id, sections: [] } }));
+          if (curriculumRes?.data) {
+            curriculumData = curriculumRes.data;
+          }
         }
       } catch (e) {
-        // Safe to ignore: it's not published yet or has no public version
+        console.warn("Failed to load draft course info, falling back to public info:", e);
       }
 
-      let curriculumData = null;
-
-      if (isPublished && courseData) {
-        // If course is published, fetch public/published curriculum
+      // If no draft was loaded (e.g. error or not found), try public/readable version
+      if (!isDraftLoaded) {
+        const pubRes = await CourseApi.getReadableCourseById(id);
+        courseData = pubRes?.data || null;
         const pubCurriculumRes = await CourseApi.getReadableCurriculum(id).catch(() => ({ data: { courseId: id, sections: [] } }));
         if (pubCurriculumRes?.data) {
           curriculumData = pubCurriculumRes.data;
-        }
-      } else {
-        // Otherwise, fetch draft details and draft curriculum
-        const draftRes = await CourseApi.getEditableCourseDraft(id);
-        courseData = draftRes?.data || null;
-        const curriculumRes = await CourseApi.getEditableDraftCurriculum(id).catch(() => ({ data: { courseId: id, sections: [] } }));
-        if (curriculumRes?.data) {
-          curriculumData = curriculumRes.data;
         }
       }
 
@@ -249,7 +247,7 @@ export default function CourseCreateClient({ categories, courseId: initialCourse
         </div>
         {courseId && (
           <div className="hidden sm:block text-xs font-semibold text-gray-400 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg select-none">
-            Status: <span className="text-primary-600 font-bold">{course?.status || "DRAFT"}</span>
+            Status: <span className="text-primary-600 font-bold">{course?.publishStatus || "DRAFT"}</span>
           </div>
         )}
       </div>

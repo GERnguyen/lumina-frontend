@@ -53,6 +53,15 @@ export function InstructorCertificatesClient({
 }: InstructorCertificatesClientProps) {
   const router = useRouter();
   const [searchVal, setSearchVal] = useState(filters.query);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchVal.trim() !== (filters.query || "")) {
+        updateFilters({ query: searchVal.trim() });
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchVal, filters.query]);
   const [isApproveOpen, setIsApproveOpen] = useState(false);
   const [isRejectOpen, setIsRejectOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<CertificateRequestResponse | null>(null);

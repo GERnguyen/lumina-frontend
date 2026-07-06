@@ -167,12 +167,14 @@ export default function CourseCurriculumBuilder({
     setActionLoading(true);
     setError(null);
 
+    const actualIsPreview = (editingLesson ? editingLesson.lessonType : lessonType) === "QUIZ" || (editingLesson ? editingLesson.lessonType : lessonType) === "ASSIGNMENT" ? false : isPreview;
+
     try {
       if (editingLesson?.id) {
         // Update lesson
         await LessonApi.updateLesson(courseId, targetSectionId, editingLesson.id, {
           title: lessonTitle,
-          isPreview,
+          isPreview: actualIsPreview,
           duration: lessonDuration || undefined,
         });
       } else {
@@ -180,7 +182,7 @@ export default function CourseCurriculumBuilder({
         await LessonApi.createLesson(courseId, targetSectionId, {
           title: lessonTitle,
           lessonType,
-          isPreview,
+          isPreview: actualIsPreview,
           duration: lessonDuration || undefined,
         });
       }
@@ -768,16 +770,19 @@ export default function CourseCurriculumBuilder({
               value={lessonDuration || ""}
               onChange={(e) => setLessonDuration(e.target.value ? Number(e.target.value) : undefined)}
               placeholder="e.g. 15"
+              className={lessonType === "QUIZ" || lessonType === "ASSIGNMENT" ? "sm:col-span-2" : ""}
             />
 
-            <div className="mt-5 flex items-center justify-center rounded-lg border border-gray-100 bg-gray-50/50 p-3">
-              <InstructorSwitch
-                checked={isPreview}
-                onChange={setIsPreview}
-                label="Free Preview Unit"
-                description="Allow non-enrolled users to view."
-              />
-            </div>
+            {lessonType !== "QUIZ" && lessonType !== "ASSIGNMENT" && (
+              <div className="mt-5 flex items-center justify-center rounded-lg border border-gray-100 bg-gray-50/50 p-3">
+                <InstructorSwitch
+                  checked={isPreview}
+                  onChange={setIsPreview}
+                  label="Free Preview Unit"
+                  description="Allow non-enrolled users to view."
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-end space-x-2 pt-2">

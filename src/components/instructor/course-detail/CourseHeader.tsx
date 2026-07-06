@@ -54,8 +54,10 @@ export function CourseHeader({ course }: CourseHeaderProps) {
         <div className="min-w-0 flex-1">
           <div className="mb-2.5 flex flex-wrap items-center gap-2">
             <InstructorBadge type="status" value={course?.status || ""} />
-            {course?.status !== "DRAFT" ? (
-              <InstructorBadge type="publishStatus" value={course?.publishStatus || ""} />
+            {course?.status === "PUBLISHED" && !course?.publishStatus ? (
+              <InstructorBadge type="publishStatus" value="CHANGED" />
+            ) : course?.publishStatus ? (
+              <InstructorBadge type="publishStatus" value={course.publishStatus} />
             ) : null}
             <span className="inline-flex rounded-full bg-zinc-100 px-3 py-0.5 text-xs font-semibold text-zinc-600 border border-zinc-200/50">
               {course?.category?.name || "Chưa phân loại"}

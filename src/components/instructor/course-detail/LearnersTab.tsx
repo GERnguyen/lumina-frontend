@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Users, Eye, BookOpen } from "lucide-react";
 import type {
@@ -29,7 +29,16 @@ function ProgressBar({ value }: { value: number }) {
 }
 
 export function LearnersTab({ courseId, learners, curriculum }: LearnersTabProps) {
+  const [searchVal, setSearchVal] = useState("");
   const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setQuery(searchVal);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchVal]);
+
   const [selected, setSelected] = useState<InstructorLearnerProgress | null>(null);
   const [items, setItems] = useState<LearningItemProgressResponse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -171,8 +180,8 @@ export function LearnersTab({ courseId, learners, curriculum }: LearnersTabProps
         className="border-zinc-200/50 shadow-xs"
         headerAction={
           <Input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            value={searchVal}
+            onChange={(event) => setSearchVal(event.target.value)}
             placeholder="Tìm học viên..."
             className="w-64 text-sm bg-zinc-50/50 border-zinc-200"
           />

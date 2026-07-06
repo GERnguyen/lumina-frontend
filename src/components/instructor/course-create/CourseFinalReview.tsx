@@ -114,17 +114,18 @@ export default function CourseFinalReview({ course, curriculum, onBack }: Course
             ))}
           </ul>
         </div>
-      ) : (
-        <div className="rounded-lg border border-emerald-150 bg-emerald-50/30 p-5 flex items-center space-x-3 select-none">
-          <CheckCircle className="size-6 text-emerald-600 shrink-0" />
-          <div>
-            <h3 className="text-sm font-extrabold text-emerald-800">Ready to Submit!</h3>
-            <p className="text-xs text-emerald-700/80 font-medium mt-0.5">
-              All validations passed. Once submitted, administrators will review and approve your curriculum for listing.
-            </p>
+      ) :
+        course?.publishStatus !== "PUBLISHED" && (
+          <div className="rounded-lg border border-emerald-150 bg-emerald-50/30 p-5 flex items-center space-x-3 select-none">
+            <CheckCircle className="size-6 text-emerald-600 shrink-0" />
+            <div>
+              <h3 className="text-sm font-extrabold text-emerald-800">Ready to Submit!</h3>
+              <p className="text-xs text-emerald-700/80 font-medium mt-0.5">
+                All validations passed. Once submitted, administrators will review and approve your curriculum for listing.
+              </p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Review details */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -237,15 +238,17 @@ export default function CourseFinalReview({ course, curriculum, onBack }: Course
         <InstructorButton variant="outline" icon={ArrowLeft} onClick={onBack} className="px-3 py-2.5 text-sm font-medium">
           Back
         </InstructorButton>
-        <InstructorButton
-          icon={Send}
-          onClick={handleSubmit}
-          loading={submitting}
-          disabled={!isValid}
-          className="px-3 py-2.5 text-sm font-medium shadow-sm"
-        >
-          Submit for Review
-        </InstructorButton>
+        {course?.publishStatus !== "PUBLISHED" && (
+          <InstructorButton
+            icon={Send}
+            onClick={handleSubmit}
+            loading={submitting}
+            disabled={!isValid}
+            className="px-3 py-2.5 text-sm font-medium shadow-sm"
+          >
+            Submit for Review
+          </InstructorButton>
+        )}
       </div>
 
     </div>
