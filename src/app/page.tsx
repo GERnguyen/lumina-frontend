@@ -67,12 +67,13 @@ export default async function Home() {
       return {
         course,
         progressPercent,
+        isPassed: progress?.isPassed || false,
         completedItems: progress?.completedItems || 0,
         totalItems: progress?.totalItems || 0,
         index,
       };
     })
-    .filter((item): item is NonNullable<typeof item> => !!item && item.progressPercent < 100);
+    .filter((item): item is NonNullable<typeof item> => !!item && (item.progressPercent < 100 || !item.isPassed));
 
   return (
     <HomeMarketplacePage

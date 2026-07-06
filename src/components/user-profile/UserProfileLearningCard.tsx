@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ProfileLearningCourse } from "@/data/user-profile";
+import { cn } from "@/lib/utils";
 
 export function UserProfileLearningCard({ course }: { course: ProfileLearningCourse }) {
   return (
@@ -26,7 +27,24 @@ export function UserProfileLearningCard({ course }: { course: ProfileLearningCou
               Watch Lecture
             </Link>
             {typeof course.progress === "number" ? (
-              <span className="text-sm font-medium text-[#23BD33]">{course.progress}% {course.featured ? "Finish" : "Completed"}</span>
+              <span className="flex flex-wrap items-center gap-1.5 whitespace-nowrap text-sm font-medium">
+                <span className="text-[#23BD33]">{course.progress}% {course.featured ? "Finish" : "Completed"}</span>
+                {course.progress >= 100 && (
+                  <>
+                    <span className="text-gray-300">•</span>
+                    <span
+                      className={cn(
+                        "rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase leading-none",
+                        course.isPassed
+                          ? "bg-[#E6FBD9] text-[#1E7E34]"
+                          : "bg-[#FFF4E5] text-[#B85C00]"
+                      )}
+                    >
+                      {course.isPassed ? "Passed" : "Not Passed"}
+                    </span>
+                  </>
+                )}
+              </span>
             ) : null}
           </div>
         </div>
@@ -34,7 +52,13 @@ export function UserProfileLearningCard({ course }: { course: ProfileLearningCou
 
       {typeof course.progress === "number" ? (
         <div className="h-0.5 bg-transparent">
-          <div className="h-full bg-[#564FFD]" style={{ width: `${course.progress}%` }} />
+          <div
+            className={cn(
+              "h-full transition-all duration-300",
+              course.progress >= 100 && !course.isPassed ? "bg-[#F5A623]" : "bg-[#564FFD]"
+            )}
+            style={{ width: `${course.progress}%` }}
+          />
         </div>
       ) : null}
     </article>

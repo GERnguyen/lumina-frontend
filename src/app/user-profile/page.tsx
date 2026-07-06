@@ -78,7 +78,7 @@ export default async function Page() {
       ? await LearningProgressApi.getCourseProgressByCourseIds(enrolledIds.join(",")).catch(() => ({ data: [] }))
       : { data: [] };
     const progressList = progressRes.data || [];
-    const completedCourses = progressList.filter((item) => item.isCompleted).length;
+    const completedCourses = progressList.filter((item) => item.isCompleted && item.isPassed).length;
 
     const mappedCourses = enrolledCourses.map((item, index) => {
       const course = item.course || {};
@@ -96,7 +96,8 @@ export default async function Page() {
         href: `/learning/${course.id}`,
         featured: index === 3,
         teacher: getCourseInstructorName(course),
-        status: (progressItem?.isCompleted ? "completed" as const : "active" as const) as "all" | "active" | "completed",
+        isPassed: progressItem?.isPassed,
+        status: (progressItem?.isCompleted && progressItem?.isPassed ? "completed" as const : "active" as const) as "all" | "active" | "completed",
         enrolledAt: item.enrolledAt,
       };
     });

@@ -20,8 +20,8 @@ type LearningPageProps = {
   data: LearningPageData;
 };
 
-function completionModalStorageKey(courseId: string) {
-  return `cinx:completion-modal-shown:${courseId}`;
+function passModalStorageKey(courseId: string) {
+  return `cinx:pass-modal-shown:${courseId}`;
 }
 
 export function LearningPage({ data }: LearningPageProps) {
@@ -82,11 +82,23 @@ export function LearningPage({ data }: LearningPageProps) {
   );
   const displayedLessonTotal = useMemo(() => sections.reduce((total, section) => total + section.lessons.length, 0), [sections]);
   const displayedCompletedTotal = useMemo(() => sections.reduce((total, section) => total + section.completedCount, 0), [sections]);
+  const displayedPassedTotal = useMemo(
+    () =>
+      sections.reduce(
+        (total, section) =>
+          total +
+          section.lessons.filter(
+            (lesson) =>
+              lesson.isCompleted &&
+              (lesson.isPassed === true || (lesson.isPassed === undefined && lesson.type !== "QUIZ" && lesson.type !== "ASSIGNMENT"))
+          ).length,
+        0
+      ),
+    [sections]
+  );
   // displayedCourseComplete: local/optimistic UI only (sidebar checkmarks, progress bar)
   const displayedCourseComplete = displayedLessonTotal > 0 && displayedCompletedTotal >= displayedLessonTotal;
-  // serverCourseComplete: authoritative BE value — used for cert gating
-  const serverCourseComplete = data.progressPercent >= 100;
-  const canRequestCertificate = Boolean(data.hasCertificate && serverCourseComplete && !certificate?.id);
+  const canRequestCertificate = Boolean(data.hasCertificate && data.isCoursePassed && !certificate?.id);
 
   useEffect(() => {
     setCertificate(data.certificate);
@@ -95,7 +107,7 @@ export function LearningPage({ data }: LearningPageProps) {
   useEffect(() => {
     if (!canRequestCertificate) return;
     try {
-      const key = completionModalStorageKey(data.courseId);
+      const key = passModalStorageKey(data.courseId);
       if (window.localStorage.getItem(key)) return;
       window.localStorage.setItem(key, "1");
       setCompletionModalOpen(true);
@@ -150,7 +162,7 @@ export function LearningPage({ data }: LearningPageProps) {
     if (certificate?.status === "APPROVED") return "Certificate issued";
     if (certificate?.status === "PENDING") return "Certificate requested";
     if (certificate?.status === "REJECTED") return "Certificate rejected";
-    if (!serverCourseComplete) return "Complete course to request";
+    if (!data.isCoursePassed) return "Pass course to request";
     return "Request Certificate";
   })();
   const certificateButtonDisabled = !canRequestCertificate || isCertificatePending;
@@ -271,7 +283,13 @@ export function LearningPage({ data }: LearningPageProps) {
               ) : null}
 
               {currentContent.type === "QUIZ" ? (
-                <LearningQuizLesson courseId={data.courseId} lessonId={data.currentLesson.id} quiz={currentContent.quiz} onComplete={handleComplete} />
+                <LearningQuizLesson
+                  courseId={data.courseId}
+                  lessonId={data.currentLesson.id}
+                  lessonTitle={data.currentLesson.title}
+                  quiz={currentContent.quiz}
+                  onComplete={handleComplete}
+                />
               ) : null}
 
               {currentContent.type === "ASSIGNMENT" ? (
@@ -291,9 +309,48 @@ export function LearningPage({ data }: LearningPageProps) {
                   </div>
                   <h2 className="text-[32px] font-semibold leading-10 text-[#1D2026]">{data.currentLesson.title}</h2>
                 </div>
-                <div className="flex shrink-0 gap-6 text-sm text-[#6E7485]">
+                <div className="flex flex-wrap items-center gap-6 text-sm text-[#6E7485]">
                   <span>
-                    Progress: <strong className="font-medium text-[#1D2026]">{data.progressPercent}% Completed</strong>
+                    Progress:{" "}
+                    <strong className="font-medium text-[#1D2026]">
+                      {displayedCompletedTotal}/{displayedLessonTotal} Completed ({data.progressPercent}%)
+                    </strong>
+                  </span>
+                  <span>
+                    Passed:{" "}
+                    <strong className="font-medium text-[#1D2026]">
+                      {displayedPassedTotal}/{displayedLessonTotal} Required
+                    </strong>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    Course Status:{" "}
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold leading-5",
+                        data.isCoursePassed
+                          ? "bg-[#E6FBD9] text-[#1E7E34]"
+                          : data.progressPercent >= 100
+                          ? "bg-[#FFF4E5] text-[#B85C00]"
+                          : "bg-gray-100 text-gray-700"
+                      )}
+                    >
+                      {data.isCoursePassed ? (
+                        <>
+                          <CheckCircle2 className="size-3" />
+                          Passed
+                        </>
+                      ) : data.progressPercent >= 100 ? (
+                        <>
+                          <AlertCircle className="size-3" />
+                          Completed (Not Passed)
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="size-3" />
+                          In Progress
+                        </>
+                      )}
+                    </span>
                   </span>
                   <span>
                     Instructor: <strong className="font-medium text-[#1D2026]">{data.instructorName || "Cinx Instructor"}</strong>
@@ -320,7 +377,7 @@ export function LearningPage({ data }: LearningPageProps) {
                 contentsOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0",
               )}
             >
-              <LearningCurriculumDrawer courseId={data.courseId} sections={sections} onClose={() => setContentsOpen(false)} />
+              <LearningCurriculumDrawer courseId={data.courseId} sections={sections} isCoursePassed={data.isCoursePassed} onClose={() => setContentsOpen(false)} />
             </div>
             {!contentsOpen ? (
               <button
@@ -348,7 +405,7 @@ export function LearningPage({ data }: LearningPageProps) {
             >
               <X className="size-5" />
             </button>
-            <LearningCurriculumDrawer courseId={data.courseId} sections={sections} />
+            <LearningCurriculumDrawer courseId={data.courseId} sections={sections} isCoursePassed={data.isCoursePassed} />
           </div>
         </div>
       ) : null}
@@ -369,9 +426,9 @@ export function LearningPage({ data }: LearningPageProps) {
                 <X className="size-5" />
               </button>
             </div>
-            <h2 className="mt-6 text-3xl font-bold leading-tight text-[#1D2026]">Course completed</h2>
+            <h2 className="mt-6 text-3xl font-bold leading-tight text-[#1D2026]">Course Passed!</h2>
             <p className="mt-3 text-sm font-medium leading-6 text-[#6E7485]">
-              Nice work. You finished every lesson in {data.courseTitle}. You can request your certificate now, or come back to it later from this page.
+              Congratulations! You have successfully passed {data.courseTitle} and met all requirements. You can request your certificate now, or come back to it later from this page.
             </p>
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-end">

@@ -55,8 +55,6 @@ export function CoursePurchaseCard({
     { label: "Course Duration", value: formatCourseLength(course.duration) },
     { label: "Course Level", value: "All levels" },
     { label: "Students Enrolled", value: fullNumber(course.enrollmentCount) },
-    { label: "Language", value: "English" },
-    { label: "Subtitle Language", value: "English" },
   ];
 
   const includes = [

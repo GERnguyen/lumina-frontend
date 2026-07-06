@@ -14,11 +14,11 @@ import {
 export function CourseDetailHeader({ course, reviewsCount }: { course: CourseResponse; reviewsCount: number }) {
   const category = getCourseCategory(course);
   const categoryTrail = ["Courses", category];
-  
+
   const ratingValue = course.rating || 0;
   const ratingText = getCourseRating(course.rating);
   const reviewsCountText = fullNumber(reviewsCount);
-  
+
   const instructor = getCourseInstructorName(course);
   const avatar = getProfileAvatar(course.instructor, instructor);
 
@@ -43,9 +43,6 @@ export function CourseDetailHeader({ course, reviewsCount }: { course: CourseRes
           <h1 className="max-w-[780px] text-[28px] font-semibold leading-[1.22] tracking-normal text-[#1D2026] md:text-[36px]">
             {course.title || "Untitled Course"}
           </h1>
-          <p className="mt-4 max-w-[860px] text-base leading-6 text-[#4E5566] md:text-lg">
-            {course.description || ""}
-          </p>
 
           <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">

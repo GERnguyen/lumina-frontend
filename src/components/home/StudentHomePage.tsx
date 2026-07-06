@@ -197,8 +197,14 @@ export function StudentHomePage({
       <section className="mx-auto flex max-w-[1320px] flex-col gap-8 px-5 py-8 sm:px-8">
         <div>
           <p className="text-sm font-semibold uppercase text-[#7872FD]">Student home</p>
-          <h1 className="mt-2 text-3xl font-semibold leading-tight text-[#1D2026] sm:text-4xl">
+          <h1 className="mt-2 flex flex-wrap items-center gap-3 text-3xl font-semibold leading-tight text-[#1D2026] sm:text-4xl">
             Welcome back, {welcomeName}.
+            {user?.xp !== undefined && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#EBEBFF] px-3.5 py-1 text-sm font-bold text-[#7872FD] shadow-sm">
+                <Sparkles className="size-4 animate-pulse" />
+                {user.xp} XP
+              </span>
+            )}
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-7 text-[#6E7485]">
             Continue learning, keep your goals visible, and discover the next course that fits your IT path.
@@ -207,10 +213,11 @@ export function StudentHomePage({
 
         <HomeStats
           stats={{
-            activeCourses: enrolledCourses.length - courseProgresses.filter((p) => p.isCompleted).length,
-            completedCourses: courseProgresses.filter((p) => p.isCompleted).length,
+            activeCourses: enrolledCourses.length - courseProgresses.filter((p) => p.isCompleted && p.isPassed).length,
+            completedCourses: courseProgresses.filter((p) => p.isCompleted && p.isPassed).length,
             currentStreak: streak?.currentStreak || 0,
             unreadNotifications: localUnreadCount,
+            xp: user?.xp || 0,
           }}
           isLoading={isLoading}
         />
@@ -257,11 +264,14 @@ function RoadmapStudio({
     if (!course?.id) return false;
     const progress = courseProgresses.find((p) => p.courseId === course.id);
     const percentage = getCourseProgressPercentage(progress);
-    return progress && !progress.isCompleted && percentage > 0 && percentage < 100;
+    return progress && (!progress.isCompleted || !progress.isPassed) && percentage > 0;
   });
   const activeCourses = inProgressCourses.length
     ? inProgressCourses
-    : enrolledCourses.filter((item) => !courseProgresses.find((p) => p.courseId === item.course?.id)?.isCompleted);
+    : enrolledCourses.filter((item) => {
+        const progress = courseProgresses.find((p) => p.courseId === item.course?.id);
+        return !progress || !progress.isCompleted || !progress.isPassed;
+      });
 
   return (
     <div className="grid gap-8">
@@ -334,12 +344,12 @@ function RoadmapStudio({
         <GoalCalendar goals={monthGoals} />
       </div>
 
-      <section>
-        <HomeSectionHeader
-          title={activePath ? `Lộ trình học: ${activePath.title}` : "Next courses in your path"}
-          action={activePath ? "/learning-paths" : "/user-profile?tab=courses"}
-        />
-        {activePath ? (
+      {activePath && (
+        <section>
+          <HomeSectionHeader
+            title={`Lộ trình học: ${activePath.title}`}
+            action="/learning-paths"
+          />
           <div className="mt-4 rounded-[18px] border border-[#E9EAF0] bg-white p-6">
             <div className="flex items-center justify-between text-sm mb-4">
               <span className="font-semibold text-[#1D2026]">Tiến trình của lộ trình</span>
@@ -395,34 +405,8 @@ function RoadmapStudio({
               )}
             </div>
           </div>
-        ) : (
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {enrolledCourses.length ? (
-              enrolledCourses.slice(0, 4).map((item, index) => {
-                const progress = courseProgresses.find((p) => p.courseId === item.course?.id);
-                return (
-                  <ContinueCourseCard
-                    key={item.course?.id || index}
-                    course={item.course!}
-                    progress={progress}
-                    index={index}
-                    compact
-                    isLoading={isLoading}
-                    enrolledAt={item.enrolledAt}
-                  />
-                );
-              })
-            ) : (
-              <EmptyHomeState
-                title="No path yet"
-                copy="Enroll in your first course and Cinx will build this path from your activity."
-                href="/courses"
-                action="Start learning"
-              />
-            )}
-          </div>
-        )}
-      </section>
+        </section>
+      )}
 
       <section>
         <HomeSectionHeader title="Recommended next" action="/courses" />
