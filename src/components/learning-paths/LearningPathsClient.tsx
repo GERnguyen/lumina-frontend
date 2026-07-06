@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { LearningPathApi, LearningProgressApi } from "@/services/api/learning-api";
 import { CourseApi } from "@/services/api/course-api";
+import { EnrollmentApi } from "@/services/api/enrollment-api";
+import { CartApi } from "@/services/api/cart-api";
 import type { LearningPathResponse, LearningPathItemResponse } from "@/types";
 import { Award, BookOpen, Calendar, ChevronRight, Loader2, PlayCircle, Plus, Trash2, CheckCircle } from "lucide-react";
 import { formatShortDate } from "@/lib/format";
@@ -24,6 +27,7 @@ type LearningPathWithDetails = LearningPathResponse & {
 };
 
 export function LearningPathsClient({ header, footer }: LearningPathsClientProps) {
+  const router = useRouter();
   const addToast = useToastStore((state) => state.addToast);
   const [activePath, setActivePath] = useState<LearningPathWithDetails | null>(null);
   const [allPaths, setAllPaths] = useState<LearningPathResponse[]>([]);
@@ -31,6 +35,35 @@ export function LearningPathsClient({ header, footer }: LearningPathsClientProps
   const [error, setError] = useState<string | null>(null);
   const [showDropConfirm, setShowDropConfirm] = useState(false);
   const [dropping, setDropping] = useState(false);
+  const [checkingCourseId, setCheckingCourseId] = useState<string | null>(null);
+
+  const handleGoToStudy = async (courseId: string, lessonId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    if (checkingCourseId) return;
+
+    try {
+      setCheckingCourseId(courseId);
+      const res = await EnrollmentApi.checkEnrollmentStatus([courseId]);
+      const status = res?.data?.[0];
+
+      if (status?.isEnrolled) {
+        router.push(`/learning/${courseId}?lessonId=${lessonId}`);
+      } else {
+        addToast("Khóa học chưa được đăng ký. Đang chuyển đến giỏ hàng...", "info", "Thông báo");
+        try {
+          await CartApi.addToCart({ courseId });
+        } catch (cartErr) {
+          console.error("Failed to add course to cart", cartErr);
+        }
+        router.push("/cart");
+      }
+    } catch (err) {
+      console.error("Failed to check enrollment status", err);
+      addToast("Có lỗi xảy ra khi kiểm tra trạng thái khóa học.", "error", "Lỗi");
+    } finally {
+      setCheckingCourseId(null);
+    }
+  };
 
   async function loadData() {
     try {
@@ -268,15 +301,21 @@ export function LearningPathsClient({ header, footer }: LearningPathsClientProps
                                   <h5 className="text-base font-semibold text-[#1D2026] mt-0.5">{item.lessonTitle}</h5>
                                 </div>
 
-                                <Link
-                                  href={`/learning/${item.courseId}?lessonId=${item.lessonId}`}
+                                <button
+                                  onClick={(e) => handleGoToStudy(item.courseId || "", item.lessonId || "", e)}
+                                  disabled={checkingCourseId !== null}
                                   className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-xl px-4 text-xs font-semibold tracking-normal transition ${
                                     isCompleted
                                       ? "bg-[#E6FBD9] text-[#1E7E34] hover:bg-[#d4f7c5]"
                                       : "bg-[#564FFD] text-white hover:bg-[#433EE8]"
-                                  }`}
+                                  } ${checkingCourseId !== null ? "opacity-50 cursor-not-allowed" : ""}`}
                                 >
-                                  {isCompleted ? (
+                                  {checkingCourseId === item.courseId ? (
+                                    <>
+                                      <Loader2 className="size-4 animate-spin" />
+                                      <span>Đang kiểm tra...</span>
+                                    </>
+                                  ) : isCompleted ? (
                                     <>
                                       <CheckCircle className="size-4" />
                                       <span>Học lại</span>
@@ -287,7 +326,7 @@ export function LearningPathsClient({ header, footer }: LearningPathsClientProps
                                       <span>Học ngay</span>
                                     </>
                                   )}
-                                </Link>
+                                </button>
                               </div>
                             </div>
                           );
