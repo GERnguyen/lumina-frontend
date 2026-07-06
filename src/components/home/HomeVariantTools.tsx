@@ -245,12 +245,8 @@ function CalendarGoalForm({
   const [isPending, startTransition] = useTransition();
 
   const existingGoal = useMemo(() => {
-    return goalsForDate.find(
-      (g) =>
-        g.goalType === goalType &&
-        (goalType === "SPECIFIC_LESSON_COMPLETED" ? g.targetItemId === targetItemId : true)
-    );
-  }, [goalsForDate, goalType, targetItemId]);
+    return goalsForDate[0];
+  }, [goalsForDate]);
 
   // Load lesson options if needed
   useEffect(() => {
@@ -268,21 +264,29 @@ function CalendarGoalForm({
     });
   }, [goalType, goalsForDate]);
 
-  // Sync inputs with existing goal or fallback defaults when goalType / existingGoal changes
+  // Sync inputs with existing goal when it loads/changes
   useEffect(() => {
     if (existingGoal) {
+      if (existingGoal.goalType) {
+        setGoalType(existingGoal.goalType);
+      }
       setTargetValue(String(existingGoal.targetValue || "1"));
       if (existingGoal.targetItemId) {
         setTargetItemId(existingGoal.targetItemId);
       }
-    } else {
+    }
+  }, [existingGoal]);
+
+  // Sync default target values when the goalType changes (only when no existing goal is present)
+  useEffect(() => {
+    if (!existingGoal) {
       if (goalType === "XP") {
         setTargetValue("30");
       } else {
         setTargetValue("1");
       }
     }
-  }, [existingGoal, goalType]);
+  }, [goalType, existingGoal]);
 
   function submitGoal() {
     setMessage("");
@@ -356,7 +360,8 @@ function CalendarGoalForm({
           <select
             value={goalType}
             onChange={(event) => setGoalType(event.target.value as GoalType)}
-            className="w-full h-11 rounded-[12px] border-[#E9EAF0] text-sm focus:border-[#7872FD] focus:ring-[#7872FD]"
+            disabled={!!existingGoal}
+            className="w-full h-11 rounded-[12px] border-[#E9EAF0] text-sm focus:border-[#7872FD] focus:ring-[#7872FD] disabled:bg-[#F5F7FA] disabled:text-[#8C94A3]"
           >
             {(["XP", "LEARNING_ITEMS_COMPLETED", "VIDEOS_COMPLETED", "QUIZZES_PASSED", "ASSIGNMENTS_SUBMITTED", "SPECIFIC_LESSON_COMPLETED"] as const).map((type) => (
               <option key={type} value={type}>

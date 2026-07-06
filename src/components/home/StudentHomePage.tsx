@@ -264,14 +264,14 @@ function RoadmapStudio({
     if (!course?.id) return false;
     const progress = courseProgresses.find((p) => p.courseId === course.id);
     const percentage = getCourseProgressPercentage(progress);
-    return progress && (!progress.isCompleted || !progress.isPassed) && percentage > 0;
+    return progress && (!progress.isCompleted || !progress.isPassed) && percentage >= 0;
   });
   const activeCourses = inProgressCourses.length
     ? inProgressCourses
     : enrolledCourses.filter((item) => {
-        const progress = courseProgresses.find((p) => p.courseId === item.course?.id);
-        return !progress || !progress.isCompleted || !progress.isPassed;
-      });
+      const progress = courseProgresses.find((p) => p.courseId === item.course?.id);
+      return !progress || !progress.isCompleted || !progress.isPassed;
+    });
 
   return (
     <div className="grid gap-8">
@@ -287,11 +287,8 @@ function RoadmapStudio({
               href="/ai-assistant"
               className="inline-flex h-11 items-center justify-center gap-2 rounded-[14px] bg-[#7872FD] px-5 text-sm font-semibold text-white transition hover:bg-[#5F58F0]"
             >
-              <Sparkles className="size-4" /> Ask AI Career Assistant
+              <Sparkles className="size-4" /> Ask AI Assistant
             </Link>
-          </div>
-          <div className="mt-6">
-            <MiniGoalList goals={goals} />
           </div>
         </div>
         <div className="grid gap-4">
