@@ -195,13 +195,6 @@ export function OverviewTab({ course, curriculum, overview }: OverviewTabProps) 
               variant="amber"
             />
             <MetricCard
-              title="Câu hỏi chưa trả lời"
-              value={overview.qnaStats?.unansweredQuestionCount || 0}
-              subtitle={`Tỷ lệ phản hồi ${percent(overview.qnaStats?.instructorAnswerRate)}`}
-              icon={HelpCircle}
-              variant="primary"
-            />
-            <MetricCard
               title="Học viên active"
               value={overview.engagement?.activeLearnersInRange || 0}
               subtitle="Trong khoảng thống kê"

@@ -15,7 +15,7 @@ import {
   CheckCircle2,
   RefreshCw,
 } from "lucide-react";
-import type { QuizLessonResponse, QuizQuestionResponse, CreateQuizOptionRequest } from "@/types";
+import type { QuizLessonResponse, QuizQuestionResponse, CreateQuizOptionRequest, UpdateQuizOptionRequest } from "@/types";
 import { useToastStore } from "@/stores/toast-store";
 import { useConfirmStore } from "@/stores/confirm-store";
 
@@ -30,6 +30,7 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
   const confirm = useConfirmStore((state) => state.confirm);
   const [quizData, setQuizData] = useState<QuizLessonResponse | null>(null);
   const [hasQuiz, setHasQuiz] = useState(false);
+  const [hasPendingSync, setHasPendingSync] = useState(false);
   const [deletedQuestionIds, setDeletedQuestionIds] = useState<string[]>([]);
   // Settings states
   const [numberOfQuestionPerQuizSession, setNumberOfQuestionPerQuizSession] = useState(3);
@@ -57,7 +58,7 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
   const [questionText, setQuestionText] = useState("");
   const [questionType, setQuestionType] = useState<"SINGLE_CHOICE" | "MULTI_CHOICE" | "SHORT_TEXT" | "MATCHING" | "ORDERING">("SINGLE_CHOICE");
   const [scoringMethod, setScoringMethod] = useState<"ALL_OR_NOTHING" | "PARTIAL_CREDIT" | "NEGATIVE_MARK">("ALL_OR_NOTHING");
-  const [options, setOptions] = useState<CreateQuizOptionRequest[]>([
+  const [options, setOptions] = useState<UpdateQuizOptionRequest[]>([
     { optionText: "", isCorrect: false },
     { optionText: "", isCorrect: false },
   ]);
@@ -70,6 +71,7 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
       const res = await QuizLessonApi.getQuizByLessonId(courseId, lessonId);
       if (res?.data) {
         setHasQuiz(true);
+        setHasPendingSync(res.data.hasPendingSync || false);
         setNumberOfQuestionPerQuizSession(res.data.numberOfQuestionPerQuizSession || 3);
         setMaxAttempt(res.data.maxAttempt);
         setDuration(res.data.duration);
@@ -113,12 +115,18 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
       questionText: q.questionText || "",
       questionType: q.questionType as any,
       scoringMethod: q.scoringMethod as any,
-      options: (q.options || []).map((o) => ({
-        optionText: o.optionText || "",
-        isCorrect: o.isCorrect || false,
-        optionOrder: o.optionOrder,
-        matchText: o.matchText,
-      })),
+      options: (q.options || []).map((o) => {
+        const optBody: any = {
+          optionText: o.optionText || "",
+          isCorrect: o.isCorrect || false,
+          optionOrder: o.optionOrder,
+          matchText: o.matchText,
+        };
+        if (o.id && !o.id.startsWith("temp_")) {
+          optBody.id = o.id;
+        }
+        return optBody;
+      }),
     }));
 
     try {
@@ -166,12 +174,18 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
             questionText: q.questionText || "",
             questionType: q.questionType as any,
             scoringMethod: q.scoringMethod as any,
-            options: (q.options || []).map((o) => ({
-              optionText: o.optionText || "",
-              isCorrect: o.isCorrect || false,
-              optionOrder: o.optionOrder,
-              matchText: o.matchText,
-            })),
+            options: (q.options || []).map((o) => {
+              const optBody: any = {
+                optionText: o.optionText || "",
+                isCorrect: o.isCorrect || false,
+                optionOrder: o.optionOrder,
+                matchText: o.matchText,
+              };
+              if (o.id && !o.id.startsWith("temp_")) {
+                optBody.id = o.id;
+              }
+              return optBody;
+            }),
           };
 
           if (q.id && !q.id.startsWith("temp_")) {
@@ -211,6 +225,7 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
         changeReason: "Draft updates synced by instructor",
       });
       setSuccessMsg("Quiz published & synced to learning services!");
+      await fetchQuizDetails();
     } catch (err: any) {
       console.error("Failed to sync quiz:", err);
       setError(err?.message || "Sync failed. Ensure you have configured the settings and added questions.");
@@ -229,7 +244,7 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
     setOptions(options.filter((_, i) => i !== index));
   };
 
-  const updateOption = (index: number, field: keyof CreateQuizOptionRequest, val: any) => {
+  const updateOption = (index: number, field: keyof UpdateQuizOptionRequest, val: any) => {
     const updated = [...options];
     if (field === "isCorrect" && questionType === "SINGLE_CHOICE") {
       updated.forEach((o, i) => {
@@ -252,6 +267,7 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
       setScoringMethod((q.scoringMethod as any) || "ALL_OR_NOTHING");
       setOptions(
         (q.options || []).map((o) => ({
+          id: o.id,
           optionText: o.optionText || "",
           isCorrect: o.isCorrect || false,
           optionOrder: o.optionOrder,
@@ -296,6 +312,7 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
       questionType,
       scoringMethod,
       options: options.map((opt, idx) => ({
+        id: opt.id,
         optionText: opt.optionText,
         isCorrect: ["SHORT_TEXT", "MATCHING", "ORDERING"].includes(questionType) ? true : opt.isCorrect,
         optionOrder: questionType === "ORDERING" ? idx + 1 : undefined,
@@ -366,20 +383,22 @@ export default function QuizLessonEditor({ courseId, lessonId }: QuizLessonEdito
           <form onSubmit={handleSaveSettings} className="rounded-lg border border-gray-200 p-6 bg-white space-y-5">
             <div className="flex items-center justify-between border-b border-gray-200 pb-3.5">
               <h3 className="text-base font-bold text-gray-900">Quiz Configurations</h3>
-              <button
-                type="button"
-                onClick={handleSyncQuiz}
-                disabled={syncingQuiz || questions.length === 0}
-                className="flex cursor-pointer items-center space-x-1.5 rounded-lg bg-primary-50 px-3 py-2.5 text-sm font-medium text-primary-600 transition-all hover:bg-primary-100 disabled:pointer-events-none disabled:opacity-40"
-                title="Sync quiz changes to learning service"
-              >
-                {syncingQuiz ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <RefreshCw className="size-3.5" />
-                )}
-                <span>Publish</span>
-              </button>
+              {hasPendingSync && (
+                <button
+                  type="button"
+                  onClick={handleSyncQuiz}
+                  disabled={syncingQuiz}
+                  className="flex cursor-pointer items-center space-x-1.5 rounded-lg bg-primary-50 px-3 py-2.5 text-sm font-medium text-primary-600 transition-all hover:bg-primary-100 disabled:pointer-events-none disabled:opacity-40 animate-in fade-in zoom-in-95 duration-200"
+                  title="Sync quiz changes to learning service"
+                >
+                  {syncingQuiz ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="size-3.5" />
+                  )}
+                  <span>Publish</span>
+                </button>
+              )}
             </div>
 
             <Input
