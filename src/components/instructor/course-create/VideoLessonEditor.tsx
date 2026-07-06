@@ -10,6 +10,7 @@ import { Video, Trash2, Plus, Play, Pause, Save, Loader2, FileVideo, Subtitles }
 import type { VideoLessonResponse, VideoQuestionResponse, CreateVideoOptionRequest } from "@/types";
 import VideoSubtitleEditor from "./VideoSubtitleEditor";
 import { useToastStore } from "@/stores/toast-store";
+import { useConfirmStore } from "@/stores/confirm-store";
 
 
 interface VideoLessonEditorProps {
@@ -19,6 +20,7 @@ interface VideoLessonEditorProps {
 
 export default function VideoLessonEditor({ courseId, lessonId }: VideoLessonEditorProps) {
   const addToast = useToastStore((state) => state.addToast);
+  const confirm = useConfirmStore((state) => state.confirm);
   const [videoData, setVideoData] = useState<VideoLessonResponse | null>(null);
 
   const [questions, setQuestions] = useState<VideoQuestionResponse[]>([]);
@@ -250,7 +252,14 @@ export default function VideoLessonEditor({ courseId, lessonId }: VideoLessonEdi
 
   // Delete Question
   const handleDeleteQuestion = async (questionId: string) => {
-    if (!confirm("Are you sure you want to delete this interactive question marker?")) return;
+    const confirmed = await confirm({
+      title: "Delete Question Marker",
+      message: "Are you sure you want to delete this interactive question marker?",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      type: "danger",
+    });
+    if (!confirmed) return;
 
     try {
       await VideoQuestionApi.deleteQuestion(courseId, lessonId, questionId);

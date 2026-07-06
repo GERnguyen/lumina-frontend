@@ -8,6 +8,7 @@ import { CourseApi } from "@/services/api/course-api";
 import { EnrollmentApi } from "@/services/api/enrollment-api";
 import type { CourseResponse, LessonResponse, LearningPathItemRequest } from "@/types";
 import { ArrowLeft, ArrowUp, ArrowDown, Trash2, Plus, Loader2, BookOpen, GripVertical } from "lucide-react";
+import { useToastStore } from "@/stores/toast-store";
 
 interface LearningPathCreateClientProps {
   header: React.ReactNode;
@@ -23,6 +24,7 @@ interface PathSelectedItem {
 
 export function LearningPathCreateClient({ header, footer }: LearningPathCreateClientProps) {
   const router = useRouter();
+  const addToast = useToastStore((state) => state.addToast);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   
@@ -115,7 +117,7 @@ export function LearningPathCreateClient({ header, footer }: LearningPathCreateC
     );
 
     if (isDuplicate) {
-      alert("Bài học này đã có trong lộ trình của bạn.");
+      addToast("Bài học này đã có trong lộ trình của bạn.", "warning", "Trùng bài học");
       return;
     }
 

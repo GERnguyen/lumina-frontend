@@ -7,6 +7,7 @@ import { CourseApi } from "@/services/api/course-api";
 import type { LearningPathResponse, LearningPathItemResponse } from "@/types";
 import { Award, BookOpen, Calendar, ChevronRight, Loader2, PlayCircle, Plus, Trash2, CheckCircle } from "lucide-react";
 import { formatShortDate } from "@/lib/format";
+import { useToastStore } from "@/stores/toast-store";
 
 interface LearningPathsClientProps {
   header: React.ReactNode;
@@ -23,6 +24,7 @@ type LearningPathWithDetails = LearningPathResponse & {
 };
 
 export function LearningPathsClient({ header, footer }: LearningPathsClientProps) {
+  const addToast = useToastStore((state) => state.addToast);
   const [activePath, setActivePath] = useState<LearningPathWithDetails | null>(null);
   const [allPaths, setAllPaths] = useState<LearningPathResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -147,7 +149,7 @@ export function LearningPathsClient({ header, footer }: LearningPathsClientProps
       await loadData();
     } catch (err) {
       console.error("Failed to drop learning path:", err);
-      alert("Hủy lộ trình thất bại. Vui lòng thử lại.");
+      addToast("Hủy lộ trình thất bại. Vui lòng thử lại.", "error", "Lỗi");
     } finally {
       setDropping(false);
     }

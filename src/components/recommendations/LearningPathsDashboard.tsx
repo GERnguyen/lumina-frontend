@@ -23,6 +23,8 @@ import { cn } from "@/lib/utils";
 import { LearningPathApi } from "@/services/api/learning-api";
 import { CourseApi } from "@/services/api/course-api";
 import type { LearningPathResponse, CourseResponse, CourseCurriculumResponse } from "@/types";
+import { useConfirmStore } from "@/stores/confirm-store";
+import { useToastStore } from "@/stores/toast-store";
 
 interface ResolvedPathItem {
   id?: string;
@@ -40,6 +42,8 @@ export function LearningPathsDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const showCreatedAlert = searchParams.get("created") === "true";
+  const confirm = useConfirmStore((state) => state.confirm);
+  const addToast = useToastStore((state) => state.addToast);
 
   const [activePath, setActivePath] = useState<LearningPathResponse | null>(null);
   const [historyPaths, setHistoryPaths] = useState<LearningPathResponse[]>([]);
@@ -174,12 +178,17 @@ export function LearningPathsDashboard() {
   }, [activePath]);
 
   // Drop active learning path
-  const handleDropActivePath = () => {
+  const handleDropActivePath = async () => {
     if (!activePath) return;
 
-    if (!confirm("Bạn có chắc chắn muốn xóa lộ trình học tập đang hoạt động này không? Hành động này không thể hoàn tác.")) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: "Xóa lộ trình học tập",
+      message: "Bạn có chắc chắn muốn xóa lộ trình học tập đang hoạt động này không? Hành động này không thể hoàn tác.",
+      confirmText: "Xóa lộ trình",
+      cancelText: "Không",
+      type: "danger",
+    });
+    if (!confirmed) return;
 
     startDropTransition(async () => {
       try {
@@ -190,7 +199,7 @@ export function LearningPathsDashboard() {
         loadPathsData();
       } catch (err) {
         console.error("Failed to drop learning path", err);
-        alert("Có lỗi xảy ra khi xóa lộ trình học tập.");
+        addToast("Có lỗi xảy ra khi xóa lộ trình học tập.", "error", "Lỗi");
       }
     });
   };
