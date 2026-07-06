@@ -86,6 +86,18 @@ export function InstructorBadge({ type, value, className = "" }: InstructorBadge
         </span>
       );
     }
+    if (normalizedValue === "CHANGED") {
+      return (
+        <span
+          className={cn(
+            "inline-flex items-center rounded-full border border-amber-250 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 transition-colors shadow-xs select-none",
+            className
+          )}
+        >
+          Có thay đổi
+        </span>
+      );
+    }
   }
 
   return (

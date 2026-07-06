@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { BookOpen, Plus } from "lucide-react";
 import type { CategoryResponse, CourseResponse, PaginatedMetadata } from "@/types";
@@ -33,6 +33,15 @@ export function InstructorCoursesClient({
 }: InstructorCoursesClientProps) {
   const router = useRouter();
   const [searchVal, setSearchVal] = useState(filters.query);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchVal.trim() !== (filters.query || "")) {
+        updateFilters({ query: searchVal.trim() });
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchVal, filters.query]);
 
   const totalElements = meta.totalElements ?? 0;
   const totalPages = meta.totalPages ?? 1;

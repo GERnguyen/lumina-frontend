@@ -50,14 +50,19 @@ export const getDashboardColumns = (): ColumnDef<CourseResponse>[] => [
   {
     id: "status",
     header: "Trạng thái",
-    cell: ({ row }) => (
-      <div className="flex flex-wrap items-center gap-1.5">
-        <InstructorBadge type="status" value={row.original.status || ""} />
-        {row.original.status !== "DRAFT" ? (
-          <InstructorBadge type="publishStatus" value={row.original.publishStatus || ""} />
-        ) : null}
-      </div>
-    ),
+    cell: ({ row }) => {
+      const course = row.original;
+      return (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <InstructorBadge type="status" value={course.status || ""} />
+          {course.status === "PUBLISHED" && !course.publishStatus ? (
+            <InstructorBadge type="publishStatus" value="CHANGED" />
+          ) : course.publishStatus ? (
+            <InstructorBadge type="publishStatus" value={course.publishStatus} />
+          ) : null}
+        </div>
+      );
+    },
   },
   {
     id: "students",
