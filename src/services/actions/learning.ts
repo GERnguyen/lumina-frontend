@@ -1,9 +1,9 @@
 "use server";
 
-import { AssignmentApi, CertificateApi, DailyGoalApi, LearningProgressApi, QuizSessionApi, VideoNoteApi, VideoTrackingApi } from "@/services/api/learning-api";
+import { AssignmentApi, CertificateApi, DailyGoalApi, LearningActivityApi, LearningProgressApi, QuizSessionApi, VideoNoteApi, VideoTrackingApi } from "@/services/api/learning-api";
 import { CourseApi, VideoQuestionApi } from "@/services/api/course-api";
 import { EnrollmentApi } from "@/services/api/enrollment-api";
-import type { CreateAssignmentSubmissionRequest, CreateVideoNoteRequest, ChooseQuizAnswerRequest, SetDailyGoalRequest, SubmitQuizSessionRequest, SubmitVideoQuestionRequest, TrackingVideoLessonRequest, UpdateVideoNoteRequest, GradeEssayRequest, CourseResponse } from "@/types";
+import type { CreateAssignmentSubmissionRequest, CreateVideoNoteRequest, ChooseQuizAnswerRequest, SetDailyGoalRequest, SubmitQuizSessionRequest, SubmitVideoQuestionRequest, TrackingVideoLessonRequest, UpdateVideoNoteRequest, GradeEssayRequest, CourseResponse, LearningActivityRequest } from "@/types";
 import { revalidatePath } from "next/cache";
 
 export async function setDailyGoalAction(body: SetDailyGoalRequest) {
@@ -266,5 +266,14 @@ export async function gradeQuizEssayAction(sessionId: string, body: GradeEssayRe
     return { success: true, data: res.data };
   } catch (error: any) {
     return { success: false, error: error?.message || "Failed to grade essay" };
+  }
+}
+
+export async function recordActivityAction(body: LearningActivityRequest) {
+  try {
+    const res = await LearningActivityApi.recordActivity(body);
+    return { success: true, data: res.data };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to record activity" };
   }
 }

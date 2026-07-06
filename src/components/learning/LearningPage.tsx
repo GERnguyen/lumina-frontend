@@ -8,8 +8,7 @@ import type { LearningPageData } from "@/types/learning-page";
 import type { CertificateRequestResponse } from "@/types/learning";
 import { formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { applyForCertificateAction, markItemAsCompleteAction } from "@/services/actions/learning";
-import { API_BASE_URL } from "@/lib/api-base";
+import { applyForCertificateAction, markItemAsCompleteAction, recordActivityAction } from "@/services/actions/learning";
 import { LearningArticleLesson } from "./LearningArticleLesson";
 import { LearningAssignmentLesson } from "./LearningAssignmentLesson";
 import { LearningCurriculumDrawer } from "./LearningCurriculumDrawer";
@@ -59,12 +58,10 @@ export function LearningPage({ data }: LearningPageProps) {
 
   useEffect(() => {
     const interval = window.setInterval(() => {
-      fetch(`${API_BASE_URL}/api/v1/learning/activity`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courseId: data.courseId, itemId: data.currentLesson.id, activeSeconds: 10 }),
-        keepalive: true,
+      recordActivityAction({
+        courseId: data.courseId,
+        itemId: data.currentLesson.id,
+        activeSeconds: 10,
       }).catch(() => undefined);
     }, 10000);
 

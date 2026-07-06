@@ -14,6 +14,7 @@ import type {
   GradeEssayRequest,
   InVideoAssessmentSubmissionResponse,
   LearningItemProgressResponse,
+  LearningActivityRequest,
   LearningPathRequest,
   LearningPathResponse,
   QuizQuestionAnalyticsResponse,
@@ -268,7 +269,7 @@ export const AssignmentApi = {
 
 // ── LearningActivityApi ──────────────────────────────────────────────
 export const LearningActivityApi = {
-  async recordActivity(body: { activityType: string; durationSeconds: number; courseId?: string; lessonId?: string }): Promise<ApiResponse<Record<string, unknown>>> {
+  async recordActivity(body: LearningActivityRequest): Promise<ApiResponse<Record<string, unknown>>> {
     return apiClient.post("/api/v1/learning/activity", body);
   },
 };
