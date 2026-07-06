@@ -80,6 +80,8 @@ export const EnrollmentApi = {
   async getEnrolledCourses(params: {
     page?: number;
     size?: number;
+    query?: string;
+    sort?: string;
   }): Promise<PaginatedApiResponse<EnrolledCourseResponse>> {
     return apiClient.get("/api/v1/enrollments", { params });
   },

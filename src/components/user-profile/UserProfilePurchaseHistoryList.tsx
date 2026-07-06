@@ -2,14 +2,22 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { ChevronDown, CreditCard, DollarSign, PlayCircle, Search, Star } from "lucide-react";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { ChevronDown, CreditCard, DollarSign, Loader2, PlayCircle, Search, Star } from "lucide-react";
 import { useConfirmStore } from "@/stores/confirm-store";
 import type { ProfilePurchaseCourse, ProfilePurchaseHistoryItem } from "@/data/user-profile";
-import { OrderService } from "@/services/enrollmentService";
+import { OrderApi } from "@/services/api/enrollment-api";
+import { CourseApi } from "@/services/api/course-api";
 import { PaymentService } from "@/services/paymentService";
-
-type PurchaseSort = "latest" | "oldest" | "highest" | "lowest";
+import {
+  formatPurchaseDate,
+  getCourseImage,
+  getCourseInstructorName,
+  getCourseRating,
+  money,
+  moneyWithCurrency,
+  paymentMethodLabel,
+} from "@/lib/format";
 
 function SelectField({
   label,
@@ -43,54 +51,6 @@ function SelectField({
   );
 }
 
-function parseMoneyValue(value: string) {
-  const numeric = value.replace(/[^\d]/g, "");
-  return numeric ? Number(numeric) : 0;
-}
-
-function parsePurchaseDate(value: string) {
-  const timestamp = new Date(value).getTime();
-  return Number.isNaN(timestamp) ? 0 : timestamp;
-}
-
-function filterPurchases(
-  purchases: ProfilePurchaseHistoryItem[],
-  filters: { query: string; status: string; paymentMethod: string; sort: PurchaseSort },
-) {
-  const query = filters.query.trim().toLowerCase();
-  let next = purchases.filter((purchase) => {
-    if (query) {
-      const haystack = [
-        purchase.id,
-        purchase.purchasedAt,
-        purchase.total,
-        purchase.paymentMethod,
-        purchase.status,
-        ...purchase.courses.flatMap((course) => [course.title, course.instructor]),
-      ]
-        .join(" ")
-        .toLowerCase();
-      if (!haystack.includes(query)) return false;
-    }
-
-    if (filters.status !== "all" && purchase.status !== filters.status) return false;
-    if (filters.paymentMethod !== "all" && purchase.paymentMethod !== filters.paymentMethod) return false;
-    return true;
-  });
-
-  if (filters.sort === "oldest") {
-    next = [...next].sort((a, b) => parsePurchaseDate(a.purchasedAt) - parsePurchaseDate(b.purchasedAt));
-  } else if (filters.sort === "highest") {
-    next = [...next].sort((a, b) => parseMoneyValue(b.total) - parseMoneyValue(a.total));
-  } else if (filters.sort === "lowest") {
-    next = [...next].sort((a, b) => parseMoneyValue(a.total) - parseMoneyValue(b.total));
-  } else {
-    next = [...next].sort((a, b) => parsePurchaseDate(b.purchasedAt) - parsePurchaseDate(a.purchasedAt));
-  }
-
-  return next;
-}
-
 function PurchaseStatusBadge({ status }: { status: string }) {
   const normalized = status.toUpperCase();
   let classes = "bg-[#FFF4E5] text-[#B85C00]"; // default PENDING
@@ -112,6 +72,9 @@ function PurchaseStatusBadge({ status }: { status: string }) {
 function PurchaseMeta({ purchase }: { purchase: ProfilePurchaseHistoryItem }) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm tracking-normal text-[#4E5566]">
+      <span className="text-xs bg-[#F5F7FA] border border-[#E9EAF0] px-2 py-0.5 rounded-md font-mono select-all text-zinc-500">
+        ID: {purchase.id}
+      </span>
       <span className="inline-flex items-center gap-1.5">
         <PlayCircle className="size-4 text-[#564FFD]" />
         {purchase.courseCount} {purchase.courseCount === 1 ? "Course" : "Courses"}
@@ -180,7 +143,7 @@ function ExpandedPurchaseContent({ purchase }: { purchase: ProfilePurchaseHistor
     setIsActionPending(true);
     setError(undefined);
     try {
-      const res = await OrderService.cancelOrder({ orderId: purchase.id });
+      const res = await OrderApi.cancelOrder(purchase.id);
       if (res.success) {
         window.location.reload();
       } else {
@@ -344,29 +307,144 @@ function PurchaseHistoryItem({ purchase, defaultOpen }: { purchase: ProfilePurch
 }
 
 export function UserProfilePurchaseHistoryList({ purchases }: { purchases: ProfilePurchaseHistoryItem[] }) {
+  const [list, setList] = useState<ProfilePurchaseHistoryItem[]>(purchases);
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("all");
-  const [paymentMethod, setPaymentMethod] = useState("all");
-  const [sort, setSort] = useState<PurchaseSort>("latest");
+  const [sort, setSort] = useState(JSON.stringify({ orderDate: "DESC" }));
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(purchases.length >= 10);
 
-  const paymentOptions = useMemo(() => {
-    const methods = Array.from(new Set(purchases.map((purchase) => purchase.paymentMethod).filter(Boolean)));
-    return [{ label: "All methods", value: "all" }, ...methods.map((method) => ({ label: method, value: method }))];
-  }, [purchases]);
+  const loaderRef = useRef<HTMLDivElement>(null);
 
-  const statusOptions = useMemo(() => {
-    const statuses = Array.from(new Set(purchases.map((purchase) => purchase.status).filter(Boolean)));
-    return [{ label: "All statuses", value: "all" }, ...statuses.map((item) => ({ label: item, value: item }))];
-  }, [purchases]);
+  async function hydrateOrders(orders: any[]) {
+    const courseIds = orders.flatMap((o) => o.items || []).map((i) => i.courseId).filter(Boolean) as string[];
+    let relatedCourses: any[] = [];
+    if (courseIds.length > 0) {
+      try {
+        const coursesRes = await CourseApi.getCoursesByIds(Array.from(new Set(courseIds)).join(","));
+        relatedCourses = coursesRes.data || [];
+      } catch (e) {
+        console.error("Failed to fetch related courses client-side:", e);
+      }
+    }
 
-  const filteredPurchases = useMemo(
-    () => filterPurchases(purchases, { query, status, paymentMethod, sort }),
-    [paymentMethod, purchases, query, sort, status],
-  );
+    return orders.map((order, index) => {
+      const mappedOrderCourses = (order.items || []).map((item: any, itemIndex: number) => {
+        const course = relatedCourses.find((candidate) => candidate.id === item.courseId);
+        const price = item.discountedPrice ?? item.price ?? course?.discountedPrice ?? course?.price;
+
+        return {
+          id: item.id || `${order.id || "order"}-${item.courseId || itemIndex}`,
+          courseId: item.courseId || course?.id || `course-${itemIndex}`,
+          title: item.title || course?.title || "Untitled course",
+          image: course ? getCourseImage(course, itemIndex) : `/courses/course-0${(itemIndex % 8) + 1}.png`,
+          rating: course ? getCourseRating(course.rating) : "No reviews yet",
+          reviews: course?.enrollmentCount ? new Intl.NumberFormat("en-US").format(course.enrollmentCount) : "",
+          instructor: course ? getCourseInstructorName(course) : "Course Instructor",
+          price: typeof price === "number" ? money(price) : "Free",
+        };
+      });
+
+      const total = Math.max(0, (order.totalPrice || 0) - (order.discounted || 0));
+
+      return {
+        id: order.id || `order-${index}-${Date.now()}`,
+        purchasedAt: formatPurchaseDate(order.orderDate),
+        summaryDate: formatPurchaseDate(order.orderDate),
+        courseCount: order.items?.length || 0,
+        total: moneyWithCurrency(total),
+        paymentMethod: paymentMethodLabel(order.paymentMethod),
+        status: order.status || "PENDING",
+        paymentName: order.payment?.paymentInfo || "Learner",
+        paymentId: order.payment?.id,
+        courses: mappedOrderCourses,
+      };
+    });
+  }
+
+  // Reset and fetch first page on filter change
+  useEffect(() => {
+    let active = true;
+    const fetchFirstPage = async () => {
+      setLoading(true);
+      try {
+        const res = await OrderApi.getOrders({
+          page: 1,
+          size: 10,
+          query: query || undefined,
+          sort: sort || undefined,
+        });
+        if (!active) return;
+        const orders = res.data || [];
+        const mapped = await hydrateOrders(orders);
+        setList(mapped);
+        setPage(1);
+        setHasMore(orders.length >= 10);
+      } catch (err) {
+        console.error("Failed to fetch orders:", err);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      fetchFirstPage();
+    }, 300);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [query, sort]);
+
+  const loadMore = async () => {
+    if (loading || !hasMore) return;
+    setLoading(true);
+    try {
+      const nextPage = page + 1;
+      const res = await OrderApi.getOrders({
+        page: nextPage,
+        size: 10,
+        query: query || undefined,
+        sort: sort || undefined,
+      });
+      const orders = res.data || [];
+      const mapped = await hydrateOrders(orders);
+      setList((prev) => [...prev, ...mapped]);
+      setPage(nextPage);
+      setHasMore(orders.length >= 10);
+    } catch (err) {
+      console.error("Failed to load more orders:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentLoader = loaderRef.current;
+    if (currentLoader) {
+      observer.observe(currentLoader);
+    }
+
+    return () => {
+      if (currentLoader) {
+        observer.unobserve(currentLoader);
+      }
+    };
+  }, [hasMore, loading, page, query, sort]);
 
   return (
     <div>
-      <div className="mb-6 grid gap-6 lg:grid-cols-[minmax(280px,528px)_repeat(3,minmax(180px,240px))]">
+      <div className="mb-6 grid gap-6 sm:grid-cols-[1fr_240px]">
         <label className="flex min-w-0 flex-col gap-2">
           <span className="text-xs leading-4 text-[#6E7485]">Search:</span>
           <span className="flex h-12 items-center gap-3 rounded-[18px] border border-[#E9EAF0] bg-white px-4 transition focus-within:border-[#564FFD]">
@@ -375,35 +453,38 @@ export function UserProfilePurchaseHistoryList({ purchases }: { purchases: Profi
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               className="w-full border-0 p-0 text-base text-[#1D2026] placeholder:text-[#8C94A3] focus:ring-0"
-              placeholder="Search orders or courses..."
+              placeholder="Search orders..."
             />
           </span>
         </label>
         <SelectField
           label="Sort by:"
           value={sort}
-          onChange={(value) => setSort(value as PurchaseSort)}
+          onChange={setSort}
           options={[
-            { label: "Latest", value: "latest" },
-            { label: "Oldest", value: "oldest" },
-            { label: "Highest total", value: "highest" },
-            { label: "Lowest total", value: "lowest" },
+            { label: "Latest", value: JSON.stringify({ orderDate: "DESC" }) },
+            { label: "Oldest", value: JSON.stringify({ orderDate: "ASC" }) },
+            { label: "Highest total", value: JSON.stringify({ totalPrice: "DESC" }) },
+            { label: "Lowest total", value: JSON.stringify({ totalPrice: "ASC" }) },
           ]}
         />
-        <SelectField label="Status:" value={status} onChange={setStatus} options={statusOptions} />
-        <SelectField label="Payment:" value={paymentMethod} onChange={setPaymentMethod} options={paymentOptions} />
       </div>
 
       <div className="space-y-4">
-        {filteredPurchases.map((purchase, index) => (
+        {list.map((purchase, index) => (
           <PurchaseHistoryItem key={purchase.id} purchase={purchase} defaultOpen={index === 0} />
         ))}
       </div>
 
-      {!filteredPurchases.length ? (
+      {/* Infinite Scroll Loader Target */}
+      <div ref={loaderRef} className="flex justify-center py-6">
+        {loading && <Loader2 className="size-6 animate-spin text-[#564FFD]" />}
+      </div>
+
+      {!list.length && !loading ? (
         <div className="rounded-[18px] border border-dashed border-[#D8D6FF] bg-white px-6 py-12 text-center">
           <p className="text-base font-semibold text-[#1D2026]">No purchases match your filters.</p>
-          <p className="mt-2 text-sm text-[#6E7485]">Try another keyword, status, or payment method.</p>
+          <p className="mt-2 text-sm text-[#6E7485]">Try another keyword.</p>
         </div>
       ) : null}
     </div>

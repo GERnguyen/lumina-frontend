@@ -154,7 +154,6 @@ export const QuizSessionApi = {
     params: {
       page?: number;
       size?: number;
-      query?: string;
       sort?: string;
     }
   ): Promise<PaginatedApiResponse<QuizSessionQuestionResponse>> {
@@ -167,7 +166,6 @@ export const QuizSessionApi = {
       userId?: string;
       page?: number;
       size?: number;
-      query?: string;
       sort?: string;
     }
   ): Promise<PaginatedApiResponse<QuizSessionResponse>> {
@@ -187,7 +185,6 @@ export const VideoTrackingApi = {
     params: {
       page?: number;
       size?: number;
-      query?: string;
       sort?: string;
     }
   ): Promise<PaginatedApiResponse<VideoLessonTrackingHistoryResponse>> {
@@ -256,7 +253,6 @@ export const AssignmentApi = {
     assignmentId: string;
     page?: number;
     size?: number;
-    query?: string;
     sort?: string;
   }): Promise<PaginatedApiResponse<AssignmentSubmissionResponse>> {
     return apiClient.get("/api/v1/learning/assignment-submissions/list", { params });

@@ -23,6 +23,7 @@ export type ProfileLearningCourse = {
   href: string;
   featured?: boolean;
   enrolledAt?: string;
+  isPassed?: boolean;
 };
 
 export type ProfileCourseFilter = {

@@ -5,6 +5,7 @@ import { CoursesTopNav } from "@/components/courses/CoursesTopNav";
 import { CourseListingCard } from "@/components/courses/CourseListingCard";
 import { getCourseImage, getCourseInstructorName } from "@/lib/format";
 import type { CategoryResponse, CourseResponse } from "@/types";
+import { cn } from "@/lib/utils";
 
 type ContinueLearningCourse = {
   course: CourseResponse;
@@ -12,6 +13,7 @@ type ContinueLearningCourse = {
   completedItems: number;
   totalItems: number;
   index: number;
+  isPassed?: boolean;
 };
 
 type HomeMarketplacePageProps = {
@@ -105,7 +107,7 @@ function ContinueLearningSection({ courses }: { courses: ContinueLearningCourse[
           action="Open my learning"
         />
         <div className="mt-8 grid gap-6 lg:grid-cols-3">
-          {courses.map(({ course, progressPercent, completedItems, totalItems, index }) => {
+          {courses.map(({ course, progressPercent, completedItems, totalItems, index, isPassed }) => {
             const courseId = course.id || "";
             const title = course.title || "Untitled course";
             return (
@@ -122,13 +124,36 @@ function ContinueLearningSection({ courses }: { courses: ContinueLearningCourse[
                   <h3 className="mt-2 line-clamp-2 min-h-[56px] text-lg font-semibold leading-7 text-[#1D2026] transition group-hover:text-[#564FFD]">{title}</h3>
                   <div className="mt-5">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-[#1D2026]">{progressPercent}% complete</span>
+                      <span className="flex flex-wrap items-center gap-1.5 font-medium text-[#1D2026]">
+                        <span>{progressPercent}% complete</span>
+                        {progressPercent >= 100 && (
+                          <>
+                            <span className="text-gray-300">•</span>
+                            <span
+                              className={cn(
+                                "rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase leading-none",
+                                isPassed
+                                  ? "bg-[#E6FBD9] text-[#1E7E34]"
+                                  : "bg-[#FFF4E5] text-[#B85C00]"
+                              )}
+                            >
+                              {isPassed ? "Passed" : "Not Passed"}
+                            </span>
+                          </>
+                        )}
+                      </span>
                       <span className="text-[#6E7485]">
                         {completedItems}/{totalItems || "?"} items
                       </span>
                     </div>
                     <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#E9EAF0]">
-                      <div className="h-full rounded-full bg-[#564FFD]" style={{ width: `${Math.max(4, progressPercent)}%` }} />
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all duration-300",
+                          progressPercent >= 100 && !isPassed ? "bg-[#F5A623]" : "bg-[#564FFD]"
+                        )}
+                        style={{ width: `${Math.max(4, progressPercent)}%` }}
+                      />
                     </div>
                   </div>
                 </div>

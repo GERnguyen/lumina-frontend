@@ -4,6 +4,7 @@ import type {
   ApiResponse,
   PaginatedApiResponse,
   AddToWishlistRequest,
+  AdminReportResponse,
   AnswerDto,
   CourseQnAStatisticsResponse,
   CreateAnswerRequest,
@@ -94,6 +95,7 @@ export const CourseQnAApi = {
     lessonId?: string;
     page?: number;
     size?: number;
+    query?: string;
     sort?: string;
   }): Promise<PaginatedApiResponse<QuestionDto>> {
     return apiClient.get("/api/v1/course-qna/questions", { params });
@@ -176,5 +178,26 @@ export const SocialStatisticsApi = {
     }
   ): Promise<ApiResponse<CourseQnAStatisticsResponse>> {
     return apiClient.get(`/api/v1/course-qna/statistics/courses/${courseId}`, { params });
+  },
+};
+
+// ── AdminReportApi ──────────────────────────────────────────────
+export const AdminReportApi = {
+  async getReports(params: {
+    type?: string;
+    page?: number;
+    size?: number;
+    query?: string;
+    sort?: string;
+  }): Promise<PaginatedApiResponse<AdminReportResponse>> {
+    return apiClient.get("/api/v1/reports", { params });
+  },
+
+  async dismissReport(reportId: string): Promise<ApiResponse<Record<string, unknown>>> {
+    return apiClient.delete(`/api/v1/reports/${reportId}/dismiss`);
+  },
+
+  async deleteReportedContent(reportId: string): Promise<ApiResponse<Record<string, unknown>>> {
+    return apiClient.delete(`/api/v1/reports/${reportId}/content`);
   },
 };

@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, Trash2 } from "lucide-react";
 import type { DailyGoalResponse } from "@/types";
 import { cn } from "@/lib/utils";
-import { setDailyGoalAction, editDailyGoalAction, getDailyGoalsInMonthAction, getIncompleteEnrolledLessonsAction } from "@/services/actions/learning";
+import { setDailyGoalAction, editDailyGoalAction, deleteDailyGoalAction, getDailyGoalsInMonthAction, getIncompleteEnrolledLessonsAction } from "@/services/actions/learning";
 
 const months = [
   "January",
@@ -48,10 +48,23 @@ export function GoalCalendar({ goals }: { goals: DailyGoalResponse[] }) {
   const yearOptions = Array.from({ length: 5 }, (_, index) => today.getFullYear() - 2 + index);
   const daysInMonth = new Date(year, month, 0).getDate();
   const firstDayOffset = new Date(year, month - 1, 1).getDay();
-  const goalByDay = new Set(visibleGoals.filter((goal) => goal.goalDate).map((goal) => Number(goal.goalDate?.slice(-2))));
-  const completedByDay = new Set(visibleGoals.filter((goal) => goal.isCompleted && goal.goalDate).map((goal) => Number(goal.goalDate?.slice(-2))));
+
+  const monthPrefix = `${year}-${String(month).padStart(2, "0")}`;
+  const goalByDay = new Set(
+    visibleGoals
+      .filter((goal) => goal.goalDate && goal.goalDate.startsWith(monthPrefix))
+      .map((goal) => Number(goal.goalDate?.slice(-2)))
+  );
+  const completedByDay = new Set(
+    visibleGoals
+      .filter((goal) => goal.isCompleted && goal.goalDate && goal.goalDate.startsWith(monthPrefix))
+      .map((goal) => Number(goal.goalDate?.slice(-2)))
+  );
+
   const selectedDate = `${year}-${String(month).padStart(2, "0")}-${String(selectedDay).padStart(2, "0")}`;
-  const selectedGoal = visibleGoals.find((goal) => goal.goalDate === selectedDate);
+  const goalsForDate = useMemo(() => {
+    return visibleGoals.filter((goal) => goal.goalDate === selectedDate);
+  }, [visibleGoals, selectedDate]);
 
   useEffect(() => {
     let active = true;
@@ -74,12 +87,36 @@ export function GoalCalendar({ goals }: { goals: DailyGoalResponse[] }) {
 
   function handleSaved(goal: DailyGoalResponse) {
     setVisibleGoals((current) => {
-      const exists = current.some((item) => item.goalDate === goal.goalDate && item.goalType === goal.goalType);
+      const exists = current.some(
+        (item) =>
+          item.goalDate === goal.goalDate &&
+          item.goalType === goal.goalType &&
+          (goal.goalType === "SPECIFIC_LESSON_COMPLETED" ? item.targetItemId === goal.targetItemId : true)
+      );
       if (exists) {
-        return current.map((item) => (item.goalDate === goal.goalDate && item.goalType === goal.goalType ? goal : item));
+        return current.map((item) =>
+          item.goalDate === goal.goalDate &&
+          item.goalType === goal.goalType &&
+          (goal.goalType === "SPECIFIC_LESSON_COMPLETED" ? item.targetItemId === goal.targetItemId : true)
+            ? goal
+            : item
+        );
       }
       return [...current, goal];
     });
+  }
+
+  function handleDeleted(goalType: string, targetItemId?: string) {
+    setVisibleGoals((current) =>
+      current.filter(
+        (item) =>
+          !(
+            item.goalDate === selectedDate &&
+            item.goalType === goalType &&
+            (targetItemId ? item.targetItemId === targetItemId : true)
+          )
+      )
+    );
   }
 
   function handleMonthChange(nextMonth: number) {
@@ -178,36 +215,74 @@ export function GoalCalendar({ goals }: { goals: DailyGoalResponse[] }) {
         {isLoading ? <span className="text-[#7872FD]">Loading goals...</span> : null}
       </div>
 
-      <CalendarGoalForm key={`${selectedDate}-${selectedGoal?.id || "new"}`} date={selectedDate} existingGoal={selectedGoal} onSaved={handleSaved} />
+      <CalendarGoalForm
+        key={selectedDate}
+        date={selectedDate}
+        goalsForDate={goalsForDate}
+        onSaved={handleSaved}
+        onDeleted={handleDeleted}
+      />
     </div>
   );
 }
 
 function CalendarGoalForm({
   date,
-  existingGoal,
+  goalsForDate,
   onSaved,
+  onDeleted,
 }: {
   date: string;
-  existingGoal?: DailyGoalResponse;
+  goalsForDate: DailyGoalResponse[];
   onSaved: (goal: DailyGoalResponse) => void;
+  onDeleted: (goalType: string, targetItemId?: string) => void;
 }) {
-  const [goalType, setGoalType] = useState<GoalType>((existingGoal?.goalType as GoalType) || "XP");
-  const [targetValue, setTargetValue] = useState(String(existingGoal?.targetValue || 30));
-  const [targetItemId, setTargetItemId] = useState(existingGoal?.targetItemId || "");
+  const [goalType, setGoalType] = useState<GoalType>("XP");
+  const [targetValue, setTargetValue] = useState("30");
+  const [targetItemId, setTargetItemId] = useState("");
   const [lessonOptions, setLessonOptions] = useState<Array<{ id: string; title: string; lessons: Array<{ id: string; title: string; type: string; sectionTitle: string }> }>>([]);
   const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
 
+  const existingGoal = useMemo(() => {
+    return goalsForDate.find(
+      (g) =>
+        g.goalType === goalType &&
+        (goalType === "SPECIFIC_LESSON_COMPLETED" ? g.targetItemId === targetItemId : true)
+    );
+  }, [goalsForDate, goalType, targetItemId]);
+
+  // Load lesson options if needed
   useEffect(() => {
     if (goalType !== "SPECIFIC_LESSON_COMPLETED") return;
     getIncompleteEnrolledLessonsAction().then((res) => {
       if (res.success && res.data) {
         setLessonOptions(res.data);
-        if (!targetItemId) setTargetItemId(res.data[0]?.lessons[0]?.id || "");
+        const existingLessonGoal = goalsForDate.find((g) => g.goalType === "SPECIFIC_LESSON_COMPLETED");
+        if (existingLessonGoal?.targetItemId) {
+          setTargetItemId(existingLessonGoal.targetItemId);
+        } else if (res.data[0]?.lessons[0]?.id) {
+          setTargetItemId(res.data[0].lessons[0].id);
+        }
       }
     });
-  }, [goalType, targetItemId]);
+  }, [goalType, goalsForDate]);
+
+  // Sync inputs with existing goal or fallback defaults when goalType / existingGoal changes
+  useEffect(() => {
+    if (existingGoal) {
+      setTargetValue(String(existingGoal.targetValue || "1"));
+      if (existingGoal.targetItemId) {
+        setTargetItemId(existingGoal.targetItemId);
+      }
+    } else {
+      if (goalType === "XP") {
+        setTargetValue("30");
+      } else {
+        setTargetValue("1");
+      }
+    }
+  }, [existingGoal, goalType]);
 
   function submitGoal() {
     setMessage("");
@@ -233,11 +308,44 @@ function CalendarGoalForm({
     });
   }
 
+  function deleteGoal() {
+    setMessage("");
+    startTransition(async () => {
+      const res = await deleteDailyGoalAction({
+        date,
+        goalType,
+        targetItemId: goalType === "SPECIFIC_LESSON_COMPLETED" ? targetItemId : undefined,
+      });
+
+      if (!res.success) {
+        setMessage(res.error || "Could not delete this goal. Please try again.");
+        return;
+      }
+
+      onDeleted(goalType, goalType === "SPECIFIC_LESSON_COMPLETED" ? targetItemId : undefined);
+      setMessage("Goal deleted.");
+    });
+  }
+
+  const isPastDate = useMemo(() => {
+    const localToday = new Date();
+    const todayStr = `${localToday.getFullYear()}-${String(localToday.getMonth() + 1).padStart(2, "0")}-${String(localToday.getDate()).padStart(2, "0")}`;
+    return date < todayStr;
+  }, [date]);
+
   return (
     <div className="mt-5 border-t border-[#E9EAF0] pt-5">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h4 className="text-sm font-semibold text-[#1D2026]">{existingGoal ? "Update goal" : "Set goal"}</h4>
+          <h4 className="text-sm font-semibold text-[#1D2026]">
+            {isPastDate
+              ? existingGoal
+                ? "Goal details"
+                : "No goal set"
+              : existingGoal
+              ? "Update goal"
+              : "Set goal"}
+          </h4>
           <p className="mt-1 text-xs text-[#6E7485]">{date}</p>
         </div>
         {existingGoal?.isCompleted ? <CheckCircle2 className="size-5 text-[#23BD33]" /> : null}
@@ -248,7 +356,7 @@ function CalendarGoalForm({
           <select
             value={goalType}
             onChange={(event) => setGoalType(event.target.value as GoalType)}
-            className="h-11 rounded-[12px] border-[#E9EAF0] text-sm focus:border-[#7872FD] focus:ring-[#7872FD]"
+            className="w-full h-11 rounded-[12px] border-[#E9EAF0] text-sm focus:border-[#7872FD] focus:ring-[#7872FD]"
           >
             {(["XP", "LEARNING_ITEMS_COMPLETED", "VIDEOS_COMPLETED", "QUIZZES_PASSED", "ASSIGNMENTS_SUBMITTED", "SPECIFIC_LESSON_COMPLETED"] as const).map((type) => (
               <option key={type} value={type}>
@@ -263,7 +371,8 @@ function CalendarGoalForm({
             <select
               value={targetItemId}
               onChange={(event) => setTargetItemId(event.target.value)}
-              className="h-11 rounded-[12px] border-[#E9EAF0] text-sm focus:border-[#7872FD] focus:ring-[#7872FD]"
+              disabled={isPastDate}
+              className="w-full h-11 rounded-[12px] border-[#E9EAF0] text-sm focus:border-[#7872FD] focus:ring-[#7872FD] disabled:bg-[#F5F7FA] disabled:text-[#8C94A3]"
             >
               {lessonOptions.flatMap((course) =>
                 course.lessons.map((lesson) => (
@@ -275,27 +384,52 @@ function CalendarGoalForm({
             </select>
           </label>
         ) : (
-          <label className="grid gap-2 text-sm font-medium text-[#4E5566]">
-            Target
-            <input
-              type="number"
-              min="1"
-              value={targetValue}
-              onChange={(event) => setTargetValue(event.target.value)}
-              className="h-11 rounded-[12px] border-[#E9EAF0] text-sm focus:border-[#7872FD] focus:ring-[#7872FD]"
-            />
-          </label>
+          (!isPastDate || existingGoal) && (
+            <label className="grid gap-2 text-sm font-medium text-[#4E5566]">
+              Target
+              <input
+                type="number"
+                min="1"
+                value={targetValue}
+                onChange={(event) => setTargetValue(event.target.value)}
+                disabled={isPastDate}
+                className="w-full h-11 rounded-[12px] border-[#E9EAF0] text-sm focus:border-[#7872FD] focus:ring-[#7872FD] disabled:bg-[#F5F7FA] disabled:text-[#8C94A3]"
+              />
+            </label>
+          )
         )}
       </div>
-      <button
-        type="button"
-        onClick={submitGoal}
-        disabled={isPending || (goalType === "SPECIFIC_LESSON_COMPLETED" ? !targetItemId : Number(targetValue) < 1)}
-        className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#7872FD] text-sm font-semibold text-white transition hover:bg-[#5F58F0] disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isPending ? <Loader2 className="size-4 animate-spin" /> : null}
-        {existingGoal ? "Update goal" : "Set goal"}
-      </button>
+      {isPastDate ? (
+        <div className="mt-4 rounded-[12px] bg-[#F5F7FA] p-3 text-center text-xs text-[#6E7485]">
+          {existingGoal
+            ? "Goals on past dates cannot be modified."
+            : "No goal was set for this date. Goals cannot be set for past dates."}
+        </div>
+      ) : (
+        <div className="mt-4 flex gap-2">
+          <button
+            type="button"
+            onClick={submitGoal}
+            disabled={isPending || (goalType === "SPECIFIC_LESSON_COMPLETED" ? !targetItemId : Number(targetValue) < 1)}
+            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-[#7872FD] text-sm font-semibold text-white transition hover:bg-[#5F58F0] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isPending ? <Loader2 className="size-4 animate-spin" /> : null}
+            {existingGoal ? "Update goal" : "Set goal"}
+          </button>
+          {existingGoal ? (
+            <button
+              type="button"
+              onClick={deleteGoal}
+              disabled={isPending}
+              className="flex size-11 items-center justify-center rounded-full border border-[#E9EAF0] text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+              title="Delete goal"
+              aria-label="Delete goal"
+            >
+              {isPending ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+            </button>
+          ) : null}
+        </div>
+      )}
       {message ? <p className="mt-3 text-sm text-[#6E7485]">{message}</p> : null}
     </div>
   );

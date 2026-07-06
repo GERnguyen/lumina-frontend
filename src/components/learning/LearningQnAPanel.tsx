@@ -59,11 +59,11 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
   }, []);
 
   // Fetch questions
-  const fetchQuestions = async () => {
+  const fetchQuestions = async (queryVal?: string) => {
     setLoadingQuestions(true);
     try {
       const activeLessonId = filterMode === "this-lesson" ? lessonId : undefined;
-      const res = await getQuestionsAction(courseId, activeLessonId);
+      const res = await getQuestionsAction(courseId, activeLessonId, 1, 20, queryVal);
       if (res.success && res.data) {
         setQuestions(res.data);
 
@@ -79,8 +79,12 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
   };
 
   useEffect(() => {
-    fetchQuestions();
-  }, [courseId, lessonId, filterMode]);
+    const delayDebounceFn = setTimeout(() => {
+      fetchQuestions(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [courseId, lessonId, filterMode, searchQuery]);
 
   // Fetch answers when a question is selected
   useEffect(() => {
@@ -343,12 +347,7 @@ export function LearningQnAPanel({ courseId, lessonId }: LearningQnAPanelProps) 
   };
 
   // Filtered questions
-  const filteredQuestions = questions.filter((q) => {
-    const matchesSearch = searchQuery
-      ? [q.title, q.content].some((s) => s?.toLowerCase().includes(searchQuery.toLowerCase()))
-      : true;
-    return matchesSearch;
-  });
+  const filteredQuestions = questions;
 
   return (
     <div className="mt-12 rounded-[22px] border border-[#E9EAF0] bg-white p-6 shadow-sm">

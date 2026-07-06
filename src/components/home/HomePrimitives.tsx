@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { ArrowRight, BookOpen, Bell, Flame, Trophy } from "lucide-react";
+import { ArrowRight, BookOpen, Bell, Flame, Trophy, Sparkles } from "lucide-react";
 import type {
   CourseResponse,
   CourseProgressResponse,
@@ -60,11 +60,12 @@ export function HomeStats({
     completedCourses: number;
     currentStreak: number;
     unreadNotifications: number;
+    xp: number;
   };
   isLoading?: boolean;
 }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
       <HomeStatCard
         icon={BookOpen}
         label="Active courses"
@@ -78,6 +79,12 @@ export function HomeStats({
       />
       <HomeStatCard icon={Flame} label="Day streak" value={stats.currentStreak} tone="orange" />
       <HomeStatCard icon={Bell} label="Unread updates" value={stats.unreadNotifications} tone="blue" />
+      <HomeStatCard
+        icon={Sparkles}
+        label="Total XP"
+        value={isLoading ? "..." : stats.xp}
+        tone="purple"
+      />
     </div>
   );
 }
@@ -129,9 +136,32 @@ export function ContinueCourseCard({
         ) : (
           <>
             <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#E9EAF0]">
-              <div className="h-full rounded-full bg-[#7872FD]" style={{ width: `${percentage}%` }} />
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-300",
+                  progress?.isCompleted && !progress?.isPassed ? "bg-[#F5A623]" : "bg-[#7872FD]"
+                )}
+                style={{ width: `${percentage}%` }}
+              />
             </div>
-            <p className="mt-1 text-xs text-[#6E7485]">{percentage}% complete</p>
+            <p className="mt-1 text-xs text-[#6E7485] flex flex-wrap items-center gap-1.5">
+              <span>{percentage}% complete</span>
+              {progress?.isCompleted && (
+                <>
+                  <span className="text-gray-300">•</span>
+                  <span
+                    className={cn(
+                      "rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase leading-none",
+                      progress?.isPassed
+                        ? "bg-[#E6FBD9] text-[#1E7E34]"
+                        : "bg-[#FFF4E5] text-[#B85C00]"
+                    )}
+                  >
+                    {progress?.isPassed ? "Passed" : "Not Passed"}
+                  </span>
+                </>
+              )}
+            </p>
           </>
         )}
       </div>

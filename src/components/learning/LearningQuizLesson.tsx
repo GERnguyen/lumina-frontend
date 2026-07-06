@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, CheckCircle2, GripVertical, HelpCircle, Loader2, RefreshCw, Send, Trophy, X } from "lucide-react";
 import type { QuizLessonResponse } from "@/types/course";
@@ -13,10 +13,12 @@ import {
   submitQuizSessionAction,
 } from "@/services/actions/learning";
 import { cn } from "@/lib/utils";
+import { QuizReviewMode } from "./QuizReviewMode";
 
 type LearningQuizLessonProps = {
   courseId: string;
   lessonId: string;
+  lessonTitle?: string;
   quiz?: QuizLessonResponse;
   onComplete: (lessonId: string) => Promise<void> | void;
 };
@@ -33,7 +35,21 @@ function shuffleValues<T>(items: T[]) {
   return next;
 }
 
-export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: LearningQuizLessonProps) {
+function formatTimeLeft(seconds: number) {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
+function parseUtcDate(dateStr: string) {
+  if (!dateStr) return 0;
+  const formatted = dateStr.endsWith("Z") || dateStr.includes("+") || /-\d{2}:\d{2}$/.test(dateStr)
+    ? dateStr
+    : `${dateStr}Z`;
+  return new Date(formatted).getTime();
+}
+
+export function LearningQuizLesson({ courseId, lessonId, lessonTitle, quiz, onComplete }: LearningQuizLessonProps) {
   const router = useRouter();
   const [session, setSession] = useState<QuizSessionResponse>();
   const [questions, setQuestions] = useState<QuizSessionQuestionResponse[]>([]);
@@ -41,6 +57,12 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
   const [message, setMessage] = useState<string>();
   const [isResultOpen, setIsResultOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [timeLeftSeconds, setTimeLeftSeconds] = useState<number>(0);
+  const [reviewSession, setReviewSession] = useState<QuizSessionResponse>();
+  const [reviewQuestions, setReviewQuestions] = useState<QuizSessionQuestionResponse[]>([]);
+  const [isReviewing, setIsReviewing] = useState<boolean>(false);
+
+  const submitQuizRef = useRef<() => void>(() => {});
   
   // Attempt tracking from server
   const [sessions, setSessions] = useState<QuizSessionResponse[]>([]);
@@ -67,22 +89,43 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
   const isQuizPassed = typeof highestScore === "number" ? highestScore >= 5 : false;
   const hasAttempted = submittedSessions.length > 0;
 
+  // Helper to check if a session is active and not expired
+  function isSessionActive(s: QuizSessionResponse, durationMinutes?: number) {
+    if (s.status !== "IN_PROGRESS") return false;
+    if (!durationMinutes) return true; // self-paced
+    if (!s.startTime) return true;
+    const startTimeMs = parseUtcDate(s.startTime);
+    const deadline = s.endTime ? parseUtcDate(s.endTime) : startTimeMs + durationMinutes * 60 * 1000;
+    return deadline > Date.now();
+  }
+
   // Load attempts/sessions from server on mount
   useEffect(() => {
     setIsLoadingAttempts(true);
     getQuizSessionsAction(lessonId)
-      .then((payload) => {
+      .then(async (payload) => {
         if (payload.success && payload.data) {
           setSessions(payload.data);
           const submitted = payload.data.filter(
             (s) => s.status === "SUBMITTED" || s.status === "GRADED" || s.status === "PENDING_GRADE",
           );
           setAttemptCount(submitted.length);
+
+          // Auto-resume active in-progress session if exists and not expired
+          const activeSession = payload.data.find(
+            (s) => s.status === "IN_PROGRESS" && isSessionActive(s, quiz?.duration)
+          );
+          if (activeSession) {
+            const didResume = await loadSessionQuestions(activeSession);
+            if (didResume) {
+              setMessage("Resumed your in-progress quiz session.");
+            }
+          }
         }
       })
       .catch(() => undefined)
       .finally(() => setIsLoadingAttempts(false));
-  }, [lessonId]);
+  }, [lessonId, quiz?.duration]);
 
   function getRequestQuestionId(question: QuizSessionQuestionResponse) {
     return question.questionId || question.id || "";
@@ -174,7 +217,7 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
   }
 
   function submitQuiz() {
-    if (!session?.id) return;
+    if (!session?.id || isPending) return;
     setMessage(undefined);
     startTransition(async () => {
       const payload = await submitQuizSessionAction(session.id!, {
@@ -210,6 +253,21 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
     });
   }
 
+  function startReview(sessionToReview: QuizSessionResponse) {
+    if (!sessionToReview.id) return;
+    setMessage(undefined);
+    startTransition(async () => {
+      const payload = await getQuizSessionQuestionsAction(sessionToReview.id!);
+      if (!payload.success) {
+        setMessage(payload.error || "Could not load quiz review questions.");
+        return;
+      }
+      setReviewSession(sessionToReview);
+      setReviewQuestions(payload.data || []);
+      setIsReviewing(true);
+    });
+  }
+
   const hasStarted = Boolean(session?.id);
   const isSubmitted = session?.status === "SUBMITTED" || session?.status === "GRADED" || session?.status === "PENDING_GRADE";
   const result = session?.quizSessionSubmission;
@@ -219,6 +277,39 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
   // After submit attemptCount already incremented
   const attemptsLeftAfterSubmit = maxAttempt > 0 ? Math.max(0, maxAttempt - attemptCount) : null;
   const canRetry = isPassed === false && (attemptsLeftAfterSubmit === null || attemptsLeftAfterSubmit > 0);
+
+  useEffect(() => {
+    submitQuizRef.current = submitQuiz;
+  }, [submitQuiz]);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!hasStarted || isSubmitted || !quiz?.duration || !session?.startTime) {
+      return;
+    }
+
+    const durationMs = quiz.duration * 60 * 1000;
+    const startTimeMs = parseUtcDate(session.startTime);
+    const deadlineMs = session.endTime ? parseUtcDate(session.endTime) : startTimeMs + durationMs;
+
+    // Calculate initial remaining seconds immediately to prevent flicker
+    const initialMs = deadlineMs - Date.now();
+    setTimeLeftSeconds(Math.max(0, Math.floor(initialMs / 1000)));
+
+    function updateTimer() {
+      const remainingMs = deadlineMs - Date.now();
+      const remainingSec = Math.max(0, Math.floor(remainingMs / 1000));
+      setTimeLeftSeconds(remainingSec);
+
+      if (remainingSec <= 0) {
+        submitQuizRef.current();
+      }
+    }
+
+    const interval = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(interval);
+  }, [hasStarted, isSubmitted, quiz?.duration, session?.startTime, session?.endTime]);
 
   function arrayAnswer(question: QuizSessionQuestionResponse) {
     const value = answers[getRequestQuestionId(question)];
@@ -258,6 +349,23 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
     setAnswer(question, next);
   }
 
+  if (isReviewing && reviewSession) {
+    return (
+      <section className="rounded-[18px] border border-[#E9EAF0] bg-white p-6 shadow-[0_18px_48px_rgba(29,32,38,0.06)] lg:p-8">
+        <QuizReviewMode
+          session={reviewSession}
+          questions={reviewQuestions}
+          title={lessonTitle}
+          onExit={() => {
+            setIsReviewing(false);
+            setReviewSession(undefined);
+            setReviewQuestions([]);
+          }}
+        />
+      </section>
+    );
+  }
+
   return (
     <section className="rounded-[18px] border border-[#E9EAF0] bg-white p-6 shadow-[0_18px_48px_rgba(29,32,38,0.06)] lg:p-8">
       {/* Header */}
@@ -271,9 +379,25 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
             Answer the questions and submit when you are ready.
           </p>
         </div>
-        <div className="rounded-[18px] bg-[#F9FAFB] p-4 text-sm font-semibold text-[#4E5566]">
+        <div className="rounded-[18px] bg-[#F9FAFB] p-4 text-sm font-semibold text-[#4E5566] min-w-[160px] text-center">
           <p>{quiz?.numberOfQuestionPerQuizSession || questions.length || 0} questions</p>
-          <p className="mt-1 text-[#8C94A3]">{quiz?.duration ? `${quiz.duration} minutes` : "Self-paced"}</p>
+          {quiz?.duration ? (
+            hasStarted && !isSubmitted ? (
+              <div className="mt-2 border-t border-[#E9EAF0] pt-2">
+                <p className="text-[10px] text-[#8C94A3] font-bold uppercase tracking-wider">Time Remaining</p>
+                <p className={cn(
+                  "mt-1 text-xl font-black tabular-nums transition-colors",
+                  timeLeftSeconds < 60 ? "text-[#E34444] animate-pulse" : "text-[#564FFD]"
+                )}>
+                  {formatTimeLeft(timeLeftSeconds)}
+                </p>
+              </div>
+            ) : (
+              <p className="mt-1 text-[#8C94A3]">{quiz.duration} minutes</p>
+            )
+          ) : (
+            <p className="mt-1 text-[#8C94A3]">Self-paced</p>
+          )}
           {/* Attempts remaining — from DB */}
           {isLoadingAttempts ? (
             <p className="mt-2 text-xs text-[#8C94A3]">Loading attempts...</p>
@@ -340,13 +464,14 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
                       <th className="py-2.5">Time</th>
                       <th className="py-2.5">Score</th>
                       <th className="py-2.5">Result</th>
+                      <th className="py-2.5 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#E9EAF0]">
                     {submittedSessions.map((s, idx) => {
                       const attemptScore = s.quizSessionSubmission?.score;
                       const attemptPassed = typeof attemptScore === "number" ? attemptScore >= 5 : false;
-                      const dateStr = s.endTime ? new Date(s.endTime).toLocaleString() : s.startTime ? new Date(s.startTime).toLocaleString() : "Unknown";
+                      const dateStr = s.endTime ? new Date(parseUtcDate(s.endTime)).toLocaleString() : s.startTime ? new Date(parseUtcDate(s.startTime)).toLocaleString() : "Unknown";
 
                       return (
                         <tr key={s.id || idx} className="hover:bg-gray-50/50">
@@ -366,6 +491,20 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
                               </span>
                             )}
                           </td>
+                          <td className="py-3 text-right">
+                            {s.isReviewAllowed ? (
+                              <button
+                                type="button"
+                                onClick={() => startReview(s)}
+                                disabled={isPending}
+                                className="inline-flex items-center gap-1 text-xs font-bold text-[#564FFD] hover:text-[#4338CA] hover:underline disabled:opacity-50"
+                              >
+                                Review
+                              </button>
+                            ) : (
+                              <span className="text-xs text-[#8C94A3]">Not Allowed</span>
+                            )}
+                          </td>
                         </tr>
                       );
                     })}
@@ -379,7 +518,7 @@ export function LearningQuizLesson({ courseId, lessonId, quiz, onComplete }: Lea
             <button
               type="button"
               onClick={startQuiz}
-              disabled={isPending || !hasAttemptsLeft}
+              disabled={isPending || isLoadingAttempts || !hasAttemptsLeft}
               className="inline-flex items-center gap-2 rounded-full bg-[#564FFD] px-6 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-[#4338CA] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isPending ? <Loader2 className="size-4 animate-spin" /> : <HelpCircle className="size-4" />}

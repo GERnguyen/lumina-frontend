@@ -56,6 +56,88 @@ export function LearningPathsDashboard() {
 
   const [isDropPending, startDropTransition] = useTransition();
 
+  const [selectedPathForDetail, setSelectedPathForDetail] = useState<LearningPathResponse | null>(null);
+  const [resolvedDetailItems, setResolvedDetailItems] = useState<ResolvedPathItem[]>([]);
+  const [resolvingDetailItems, setResolvingDetailItems] = useState(false);
+
+  const handleViewDetails = async (path: LearningPathResponse) => {
+    setSelectedPathForDetail(path);
+    if (!path.id) return;
+
+    setResolvingDetailItems(true);
+    try {
+      const pathDetailRes = await LearningPathApi.getLearningPath(path.id);
+      const fullPath = pathDetailRes.data || path;
+
+      if (!fullPath.items || fullPath.items.length === 0) {
+        setResolvedDetailItems([]);
+        return;
+      }
+
+      const uniqueCourseIds = Array.from(
+        new Set(fullPath.items.map((item) => item.courseId).filter(Boolean) as string[])
+      );
+
+      if (uniqueCourseIds.length === 0) {
+        setResolvedDetailItems([]);
+        return;
+      }
+
+      const [coursesRes, curriculumsRes] = await Promise.all([
+        CourseApi.getCoursesByIds(uniqueCourseIds.join(",")).catch(() => ({ data: [] })),
+        Promise.all(
+          uniqueCourseIds.map((cId) =>
+            CourseApi.getReadableCurriculum(cId)
+              .then((res) => ({ courseId: cId, curriculum: res.data }))
+              .catch(() => ({ courseId: cId, curriculum: undefined }))
+          )
+        ),
+      ]);
+
+      const coursesList = coursesRes.data || [];
+
+      const lessonMap = new Map<string, { title: string; type: string }>();
+      curriculumsRes.forEach(({ curriculum }) => {
+        if (!curriculum || !curriculum.sections) return;
+        curriculum.sections.forEach((section) => {
+          if (!section.lessons) return;
+          section.lessons.forEach((lesson) => {
+            if (lesson.id && lesson.title) {
+              lessonMap.set(lesson.id, {
+                title: lesson.title,
+                type: lesson.lessonType || "VIDEO",
+              });
+            }
+          });
+        });
+      });
+
+      const resolved = fullPath.items.map((item) => {
+        const course = coursesList.find((c) => c.id === item.courseId);
+        const lessonDetails = item.lessonId ? lessonMap.get(item.lessonId) : undefined;
+
+        return {
+          id: item.id,
+          courseId: item.courseId,
+          courseTitle: course?.title || "Khóa học đã lưu",
+          lessonId: item.lessonId,
+          lessonTitle: lessonDetails?.title || "Bài học đã lưu",
+          lessonType: lessonDetails?.type || "VIDEO",
+          isCompleted: item.isCompleted,
+          isSuggested: item.isSuggested,
+          orderIndex: item.orderIndex,
+        };
+      });
+
+      resolved.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
+      setResolvedDetailItems(resolved);
+    } catch (err) {
+      console.error("Failed to resolve details for historical path", err);
+    } finally {
+      setResolvingDetailItems(false);
+    }
+  };
+
   // Load active and history paths
   const loadPathsData = async () => {
     setLoading(true);
@@ -482,11 +564,7 @@ export function LearningPathsDashboard() {
                     </div>
 
                     <button
-                      onClick={async () => {
-                        // Make this pathway active (we can request confirmation or call endpoint)
-                        // If endpoint supports activating a path, we do that. For now we fetch its details
-                        // or link to its components.
-                      }}
+                      onClick={() => handleViewDetails(path)}
                       className="text-xs font-semibold text-[#7872FD] hover:text-[#564FFD] flex items-center gap-1 hover:underline"
                     >
                       Chi tiết <ArrowRight className="size-3" />
@@ -498,6 +576,122 @@ export function LearningPathsDashboard() {
           </section>
         )}
       </div>
+
+      {/* Historical Pathway Detail Modal */}
+      {selectedPathForDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="relative w-full max-w-2xl rounded-[24px] border border-[#E9EAF0] bg-white p-6 md:p-8 shadow-xl max-h-[85vh] overflow-y-auto">
+            {/* Close button */}
+            <button
+              onClick={() => setSelectedPathForDetail(null)}
+              className="absolute top-6 right-6 text-xl font-bold text-[#6E7485] hover:text-[#1D2026] transition"
+              aria-label="Close modal"
+            >
+              ✕
+            </button>
+
+            <div>
+              <span className={cn(
+                "rounded-full px-2.5 py-0.5 text-[10px] font-semibold",
+                selectedPathForDetail.status === "COMPLETED"
+                  ? "bg-[#E7F7ED] text-[#19703E]"
+                  : "bg-[#F1F2F4] text-[#717684]"
+              )}>
+                {selectedPathForDetail.status}
+              </span>
+              <h2 className="text-2xl font-bold text-[#1D2026] mt-3">
+                {selectedPathForDetail.title}
+              </h2>
+              <p className="mt-2 text-sm text-[#6E7485] leading-relaxed">
+                {selectedPathForDetail.description}
+              </p>
+            </div>
+
+            {/* Progress visual */}
+            <div className="mt-6">
+              <div className="flex justify-between items-center text-sm font-semibold mb-2">
+                <span className="text-[#1D2026]">Tiến độ lộ trình học tập</span>
+                <span className="text-[#564FFD]">
+                  {selectedPathForDetail.currentProgress?.toFixed(1) || 0}% ({selectedPathForDetail.completedItems} / {selectedPathForDetail.totalItems} bài)
+                </span>
+              </div>
+              <div className="h-3 overflow-hidden rounded-full bg-[#EBEBFF]">
+                <div
+                  className="h-full rounded-full bg-[#564FFD] transition-all duration-500"
+                  style={{ width: `${selectedPathForDetail.currentProgress || 0}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Items checklist timeline */}
+            <div className="space-y-4 pt-6 mt-6 border-t border-[#E9EAF0]">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-[#8C94A3]">
+                Danh sách bài học
+              </h3>
+
+              {resolvingDetailItems ? (
+                <div className="flex py-10 items-center justify-center gap-2 text-sm text-[#6E7485]">
+                  <Loader2 className="size-4 animate-spin text-[#7872FD]" /> Đang tải chi tiết bài học...
+                </div>
+              ) : (
+                <div className="max-h-[40vh] overflow-y-auto pr-2 pl-8">
+                  <div className="relative border-l-2 border-[#EBEBFF] ml-3 pl-6 space-y-4">
+                    {resolvedDetailItems.map((item, idx) => {
+                      const isCompleted = item.isCompleted;
+
+                      return (
+                        <div key={item.id || idx} className="relative group">
+                          {/* Stepper icon/node */}
+                          <span className="absolute -left-[35px] top-1 flex size-[14px] items-center justify-center rounded-full bg-white">
+                            {isCompleted ? (
+                              <CheckCircle2 className="size-4 text-[#27ae60] shrink-0 bg-white" />
+                            ) : (
+                              <Circle className="size-4 text-[#C6CAD1] shrink-0 bg-white" />
+                            )}
+                          </span>
+
+                          <div className="flex items-start justify-between gap-4 border border-[#E9EAF0] p-3 rounded-[12px] bg-[#FAFAFD] hover:bg-white transition hover:shadow-sm">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-[#8C94A3]">
+                                  {getLessonIcon(item.lessonType)}
+                                  {item.lessonType}
+                                </span>
+                              </div>
+                              <h4 className={cn("text-xs font-semibold text-[#1D2026]", isCompleted && "text-[#8E94A3] line-through")}>
+                                {item.lessonTitle}
+                              </h4>
+                              <p className="text-[10px] text-[#6E7485] mt-0.5">
+                                {item.courseTitle}
+                              </p>
+                            </div>
+
+                            <Link
+                              href={`/learning/${item.courseId}?lessonId=${item.lessonId}`}
+                              className="h-8 rounded-lg bg-white border border-[#E9EAF0] hover:border-[#7872FD] px-3 text-[11px] font-semibold text-[#1D2026] hover:text-[#564FFD] transition flex items-center gap-1 shrink-0"
+                            >
+                              Vào học <ArrowRight className="size-3" />
+                            </Link>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-8 flex justify-end">
+              <button
+                onClick={() => setSelectedPathForDetail(null)}
+                className="h-10 rounded-xl border border-[#E9EAF0] px-5 text-sm font-semibold text-[#1D2026] hover:bg-[#FAFAFD] transition"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
