@@ -1,7 +1,6 @@
 # Cinx - Modern E-Learning & Course Authoring Platform
 
 <div align="center">
-  <img src="./public/icon.svg" alt="Cinx Logo" width="80" height="80" />
   <p><em>A state-of-the-art e-learning client application with advanced course authoring and interactive learning portals.</em></p>
 
   [![Next.js](https://img.shields.io/badge/Next.js-16.2.4-black?style=for-the-badge&logo=nextdotjs)](https://nextjs.org/)
@@ -39,27 +38,6 @@
 * Curated dark/light layout variations, sleek glassmorphism panels, and smooth micro-animations.
 * Global, responsive state tables (`@tanstack/react-table`) with multi-field search and pagination.
 * Custom, non-intrusive notification banner system powered by Zustand.
-
----
-
-## 📸 Screenshots
-
-> [!NOTE]
-> *Giảng viên hãy cập nhật hình ảnh chụp thực tế vào thư mục `/public/screenshots/` rồi thay thế các đường dẫn bên dưới.*
-
-<div align="center">
-  <h3>Student Learning Portal</h3>
-  <!-- TODO: Replace with student portal screenshot -->
-  <img src="https://via.placeholder.com/800x450.png?text=Cinx+Student+Learning+Space" alt="Student Portal Screenshot" width="80%" />
-
-  <h3>Instructor Curriculum Drag & Drop Editor</h3>
-  <!-- TODO: Replace with curriculum builder screenshot -->
-  <img src="https://via.placeholder.com/800x450.png?text=Instructor+Curriculum+Builder" alt="Curriculum Builder Screenshot" width="80%" />
-
-  <h3>Quiz Architect & Question Builder</h3>
-  <!-- TODO: Replace with quiz builder screenshot -->
-  <img src="https://via.placeholder.com/800x450.png?text=Quiz+Architect+Designer" alt="Quiz Builder Screenshot" width="80%" />
-</div>
 
 ---
 
@@ -108,8 +86,8 @@ Ensure you have Node.js (v18.x or higher) installed.
 
 ### 2. Clone the repository
 ```bash
-git clone <your-repository-url>
-cd FE/my-app
+git clone https://github.com/GERnguyen/lumina-frontend.git
+cd lumina-frontend
 ```
 
 ### 3. Install dependencies
